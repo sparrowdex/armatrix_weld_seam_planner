@@ -50,6 +50,20 @@ function buildRoboticTorch(): THREE.Group {
   return group;
 }
 
+// Helper to position and orient a cylinder precisely between two 3D points
+function positionCylinderBetweenPoints(mesh: THREE.Mesh, p1: THREE.Vector3, p2: THREE.Vector3, radius: number) {
+  const dir = new THREE.Vector3().subVectors(p2, p1);
+  const len = dir.length();
+  if (len < 0.05) {
+    mesh.visible = false;
+    return;
+  }
+  mesh.visible = true;
+  mesh.scale.set(radius, len, radius);
+  mesh.position.copy(p1).addScaledVector(dir, 0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+}
+
 interface ViewportCanvasProps {
   isRightCollapsed?: boolean;
 }
@@ -439,10 +453,24 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
         metalness: 0.85,
       });
 
-      const beadMesh = new THREE.Mesh(cylinderGeom, cylinderMat);
-      beadMesh.position.copy(p1);
-      beadMesh.lookAt(p2);
-      seamContainer.add(beadMesh);
+      if (!isSimulating) {
+        // In Planning Mode: Render full high-visibility CAD cylinder
+        const beadMesh = new THREE.Mesh(cylinderGeom, cylinderMat);
+        beadMesh.position.copy(p1);
+        beadMesh.lookAt(p2);
+        seamContainer.add(beadMesh);
+      } else {
+        // In Simulation Mode: Render thin centerline toolpath guide,
+        // so the dynamically deposited METALLIC BEAD is 100% visible and not occluded!
+        const lineGeom = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+        const lineMat = new THREE.LineBasicMaterial({
+          color: isSelected ? '#e97f01' : '#4ADE80',
+          opacity: 0.5,
+          transparent: true,
+        });
+        const line = new THREE.Line(lineGeom, lineMat);
+        seamContainer.add(line);
+      }
 
       const startSphere = new THREE.Mesh(
         new THREE.SphereGeometry(isSelected ? 3.0 : 2.2, 16, 16),
@@ -492,7 +520,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
 
       group.add(seamContainer);
     });
-  }, [seams, selectedSeamId, showNormals, showWaypoints]);
+  }, [seams, selectedSeamId, showNormals, showWaypoints, isSimulating]);
 
   // Live Preview Seam during interactive 'add_seam' click
   useEffect(() => {
@@ -551,25 +579,23 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
     dynamicGroup.clear();
     torch.visible = true;
 
-    // Active Deposited Bead Segment (Solidifying Metallic Alloy)
-    const activeBeadGeom = new THREE.CylinderGeometry(2.3, 2.3, 1, 16);
-    activeBeadGeom.translate(0, 0.5, 0);
-    activeBeadGeom.rotateX(Math.PI / 2);
+    // Active Deposited Bead Segment (Unit cylinder scaled precisely between pStart and currentPos)
+    const activeBeadGeom = new THREE.CylinderGeometry(1, 1, 1, 16);
     const activeBeadMat = new THREE.MeshStandardMaterial({
-      color: '#B5C4B5',
-      metalness: 0.88,
-      roughness: 0.28,
+      color: '#D4E2D4',
+      metalness: 0.92,
+      roughness: 0.18,
     });
     const activeBeadMesh = new THREE.Mesh(activeBeadGeom, activeBeadMat);
     activeBeadMesh.visible = false;
     dynamicGroup.add(activeBeadMesh);
 
     // Glowing Molten Weld Puddle right at torch tip
-    const moltenPuddleGeom = new THREE.SphereGeometry(2.8, 14, 14);
+    const moltenPuddleGeom = new THREE.SphereGeometry(3.0, 14, 14);
     const moltenPuddleMat = new THREE.MeshStandardMaterial({
       color: '#FF4500',
       emissive: '#FF8800',
-      emissiveIntensity: 3.2,
+      emissiveIntensity: 3.5,
     });
     const moltenPuddleMesh = new THREE.Mesh(moltenPuddleGeom, moltenPuddleMat);
     moltenPuddleMesh.visible = false;
@@ -648,13 +674,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
         safeQuaternion(normal);
 
         // Progressive Metallic Weld Bead Deposition behind torch tip
-        const beadLen = pStart.distanceTo(currentPos);
-        if (beadLen > 0.4) {
-          activeBeadMesh.visible = true;
-          activeBeadMesh.position.copy(pStart);
-          activeBeadMesh.scale.set(1, 1, beadLen);
-          activeBeadMesh.lookAt(currentPos);
-        }
+        positionCylinderBetweenPoints(activeBeadMesh, pStart, currentPos, 2.5);
 
         // Active glowing molten puddle at contact point
         moltenPuddleMesh.visible = true;
@@ -672,17 +692,14 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
 
         if (progress >= 1) {
           // Permanently solidify finished metallic weld bead for this completed seam
-          const finishedGeom = new THREE.CylinderGeometry(2.3, 2.3, seam.length, 16);
-          finishedGeom.translate(0, seam.length / 2, 0);
-          finishedGeom.rotateX(Math.PI / 2);
+          const finishedGeom = new THREE.CylinderGeometry(1, 1, 1, 16);
           const finishedMat = new THREE.MeshStandardMaterial({
-            color: '#B5C4B5',
-            metalness: 0.88,
-            roughness: 0.28,
+            color: '#D4E2D4',
+            metalness: 0.92,
+            roughness: 0.18,
           });
           const finishedMesh = new THREE.Mesh(finishedGeom, finishedMat);
-          finishedMesh.position.copy(pStart);
-          finishedMesh.lookAt(pEnd);
+          positionCylinderBetweenPoints(finishedMesh, pStart, pEnd, 2.5);
           dynamicGroup.add(finishedMesh);
 
           activeBeadMesh.visible = false;
