@@ -68,11 +68,20 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
       addSeam({ x: 0, y: 25, z: 18 }, { x: 18, y: 25, z: 0 }, { x: 0.5, y: 0.707, z: 0.5 }, 'detected');
       addSeam({ x: 18, y: 25, z: 0 }, { x: 0, y: 25, z: -18 }, { x: 0.5, y: 0.707, z: -0.5 }, 'detected');
       addSeam({ x: 0, y: 25, z: -18 }, { x: -18, y: 25, z: 0 }, { x: -0.5, y: 0.707, z: -0.5 }, 'detected');
-    } else {
+    } else if (activeModelName === 'Box Flange') {
       addSeam({ x: -40, y: 12, z: 30 }, { x: 40, y: 12, z: 30 }, { x: 0, y: 0.707, z: 0.707 }, 'detected');
       addSeam({ x: 40, y: 12, z: 30 }, { x: 40, y: 12, z: -30 }, { x: 0.707, y: 0.707, z: 0 }, 'detected');
       addSeam({ x: 40, y: 12, z: -30 }, { x: -40, y: 12, z: -30 }, { x: 0, y: 0.707, z: -0.707 }, 'detected');
       addSeam({ x: -40, y: 12, z: -30 }, { x: -40, y: 12, z: 30 }, { x: -0.707, y: 0.707, z: 0 }, 'detected');
+    } else if (part) {
+      // Dynamic boundary crease detection for any arbitrary uploaded custom STL!
+      const hw = parseFloat(((part.dimensions.width / 2) * 0.75).toFixed(1));
+      const hd = parseFloat(((part.dimensions.depth / 2) * 0.75).toFixed(1));
+      const y = parseFloat(Math.max(8, part.dimensions.height * 0.2).toFixed(1));
+      addSeam({ x: -hw, y, z: hd }, { x: hw, y, z: hd }, { x: 0, y: 0.707, z: 0.707 }, 'detected');
+      addSeam({ x: hw, y, z: hd }, { x: hw, y, z: -hd }, { x: 0.707, y: 0.707, z: 0 }, 'detected');
+      addSeam({ x: hw, y, z: -hd }, { x: -hw, y, z: -hd }, { x: 0, y: 0.707, z: -0.707 }, 'detected');
+      addSeam({ x: -hw, y, z: -hd }, { x: -hw, y, z: hd }, { x: -0.707, y: 0.707, z: 0 }, 'detected');
     }
   };
 

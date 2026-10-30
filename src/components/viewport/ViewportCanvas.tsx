@@ -175,6 +175,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
   const viewPreset = useWeldStore((s) => s.viewPreset);
   const setViewPreset = useWeldStore((s) => s.setViewPreset);
   const activeModelName = useWeldStore((s) => s.activeModelName);
+  const customModels = useWeldStore((s) => s.customModels);
   const manualStartPoint = useWeldStore((s) => s.manualStartPoint);
   const setManualStartPoint = useWeldStore((s) => s.setManualStartPoint);
   const setManualCandidatePoint = useWeldStore((s) => s.setManualCandidatePoint);
@@ -457,94 +458,118 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
     }
     dynamicBeadGroupRef.current.clear();
 
-    let modelUrl = `/models/bracket.stl`;
-    if (activeModelName === 'Pipe T-Joint') modelUrl = `/models/pipe_joint.stl`;
-    if (activeModelName === 'Box Flange') modelUrl = `/models/box_flange.stl`;
-
-    const loader = new STLLoader();
-    loader.load(
-      modelUrl,
-      (geometry) => {
-        // Double check modelGroup is cleared for this arrival
-        while (modelGroup.children.length > 0) {
-          const child = modelGroup.children[0];
-          modelGroup.remove(child);
-          if ((child as any).geometry) (child as any).geometry.dispose();
-        }
-
-        geometry.computeVertexNormals();
-        geometry.center();
-        geometry.computeBoundingBox();
-        const bbox = geometry.boundingBox!;
-        const minY = bbox.min.y;
-        geometry.translate(0, -minY, 0);
-
-        geometry.computeBoundingBox();
-        const finalBox = geometry.boundingBox!;
-        const width = parseFloat((finalBox.max.x - finalBox.min.x).toFixed(1));
-        const height = parseFloat((finalBox.max.y - finalBox.min.y).toFixed(1));
-        const depth = parseFloat((finalBox.max.z - finalBox.min.z).toFixed(1));
-
-        // Refined industrial machine alloy material (natural metal contrast, no harsh white wash)
-        const material = new THREE.MeshStandardMaterial({
-          color: '#5C6D60',
-          metalness: 0.28,
-          roughness: 0.48,
-          side: THREE.DoubleSide,
-          polygonOffset: true,
-          polygonOffsetFactor: 1,
-          polygonOffsetUnits: 1,
-        });
-
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.castShadow = false;
-        mesh.receiveShadow = false;
-        modelGroup.add(mesh);
-        meshRef.current = mesh;
-
-        // Clean CAD feature edges (threshold 35° avoids dense black triangle grids on curved cylinders)
-        const edgeGeometry = new THREE.EdgesGeometry(geometry, 35);
-        const edgeMaterial = new THREE.LineBasicMaterial({ color: '#243523', linewidth: 1.2 });
-        const edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
-        modelGroup.add(edgeLines);
-        edgesRef.current = edgeLines;
-
-        const wireframeGeom = new THREE.WireframeGeometry(geometry);
-        const wireframeMat = new THREE.LineBasicMaterial({ color: '#3A5239', opacity: 0.35, transparent: true });
-        const wireframe = new THREE.LineSegments(wireframeGeom, wireframeMat);
-        wireframe.visible = showWireframe;
-        modelGroup.add(wireframe);
-        wireframeRef.current = wireframe;
-
-        const boxHelper = new THREE.BoxHelper(mesh, new THREE.Color('#e97f01'));
-        boxHelper.visible = showBoundingBox;
-        modelGroup.add(boxHelper);
-        boundingBoxRef.current = boxHelper;
-
-        setPart({
-          name: activeModelName,
-          triangleCount: geometry.attributes.position.count / 3,
-          vertexCount: geometry.attributes.position.count,
-          dimensions: { width, height, depth },
-          boundingBox: {
-            min: { x: finalBox.min.x, y: finalBox.min.y, z: finalBox.min.z },
-            max: { x: finalBox.max.x, y: finalBox.max.y, z: finalBox.max.z },
-          },
-        });
-        setPartLoading(false);
-
-        if (controlsRef.current) {
-          controlsRef.current.target.set(0, height / 2, 0);
-          controlsRef.current.update();
-        }
-      },
-      undefined,
-      (err) => {
-        console.error('Error loading STL:', err);
-        setPartLoading(false);
+    const applyGeometry = (geometry: THREE.BufferGeometry) => {
+      // Double check modelGroup is cleared for this arrival
+      while (modelGroup.children.length > 0) {
+        const child = modelGroup.children[0];
+        modelGroup.remove(child);
+        if ((child as any).geometry) (child as any).geometry.dispose();
       }
-    );
-  }, [activeModelName, setPart, setPartLoading]);
+
+      geometry.computeVertexNormals();
+      geometry.center();
+      geometry.computeBoundingBox();
+      const bbox = geometry.boundingBox!;
+      const minY = bbox.min.y;
+      geometry.translate(0, -minY, 0);
+
+      geometry.computeBoundingBox();
+      const finalBox = geometry.boundingBox!;
+      const width = parseFloat((finalBox.max.x - finalBox.min.x).toFixed(1));
+      const height = parseFloat((finalBox.max.y - finalBox.min.y).toFixed(1));
+      const depth = parseFloat((finalBox.max.z - finalBox.min.z).toFixed(1));
+
+      // Dynamic Camera Auto-Framing: Fit ANY uploaded STL or standard benchmark perfectly
+      geometry.computeBoundingSphere();
+      const sphere = geometry.boundingSphere!;
+      if (cameraRef.current && controlsRef.current) {
+        const radius = Math.max(25, sphere.radius);
+        controlsRef.current.target.set(0, height * 0.45, 0);
+        cameraRef.current.position.set(radius * 1.5, height + radius * 0.8, radius * 1.5);
+        cameraRef.current.near = Math.max(0.1, radius * 0.01);
+        cameraRef.current.far = Math.max(2000, radius * 20);
+        cameraRef.current.updateProjectionMatrix();
+        controlsRef.current.update();
+      }
+
+      // Refined industrial machine alloy material
+      const material = new THREE.MeshStandardMaterial({
+        color: '#5C6D60',
+        metalness: 0.28,
+        roughness: 0.48,
+        side: THREE.DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1,
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      modelGroup.add(mesh);
+      meshRef.current = mesh;
+
+      // Clean CAD feature edges (threshold 35° avoids dense black triangle grids on curved cylinders)
+      const edgeGeometry = new THREE.EdgesGeometry(geometry, 35);
+      const edgeMaterial = new THREE.LineBasicMaterial({ color: '#243523', linewidth: 1.2 });
+      const edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+      modelGroup.add(edgeLines);
+      edgesRef.current = edgeLines;
+
+      const wireframeGeom = new THREE.WireframeGeometry(geometry);
+      const wireframeMat = new THREE.LineBasicMaterial({ color: '#3A5239', opacity: 0.35, transparent: true });
+      const wireframe = new THREE.LineSegments(wireframeGeom, wireframeMat);
+      wireframe.visible = showWireframe;
+      modelGroup.add(wireframe);
+      wireframeRef.current = wireframe;
+
+      const boxHelper = new THREE.BoxHelper(mesh, new THREE.Color('#e97f01'));
+      boxHelper.visible = showBoundingBox;
+      modelGroup.add(boxHelper);
+      boundingBoxRef.current = boxHelper;
+
+      setPart({
+        name: activeModelName,
+        triangleCount: geometry.attributes.position.count / 3,
+        vertexCount: geometry.attributes.position.count,
+        dimensions: { width, height, depth },
+        boundingBox: {
+          min: { x: finalBox.min.x, y: finalBox.min.y, z: finalBox.min.z },
+          max: { x: finalBox.max.x, y: finalBox.max.y, z: finalBox.max.z },
+        },
+      });
+    };
+
+    // Check if loading a user-uploaded custom STL or standard benchmark
+    const custom = customModels.find((m) => m.name === activeModelName);
+    if (custom) {
+      try {
+        const loader = new STLLoader();
+        const geometry = loader.parse(custom.buffer);
+        applyGeometry(geometry);
+      } catch (err) {
+        console.error('Failed to parse custom STL:', err);
+      }
+    } else {
+      let modelUrl = `/models/bracket.stl`;
+      if (activeModelName === 'Pipe T-Joint') modelUrl = `/models/pipe_joint.stl`;
+      if (activeModelName === 'Box Flange') modelUrl = `/models/box_flange.stl`;
+
+      const loader = new STLLoader();
+      loader.load(
+        modelUrl,
+        (geometry) => {
+          applyGeometry(geometry);
+          setPartLoading(false);
+        },
+        undefined,
+        (err) => {
+          console.error('Failed to load standard model:', err);
+          setPartLoading(false);
+        }
+      );
+    }
+  }, [activeModelName, customModels, setPart, setPartLoading]);
 
   // Wireframe & Bounding Box toggles
   useEffect(() => {

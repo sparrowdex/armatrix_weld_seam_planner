@@ -20,6 +20,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
   const {
     activeModelName,
     setActiveModelName,
+    customModels,
+    addCustomModel,
     setPart,
     setPartLoading,
     showWireframe,
@@ -63,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
         const height = parseFloat((finalBox.max.y - finalBox.min.y).toFixed(1));
         const depth = parseFloat((finalBox.max.z - finalBox.min.z).toFixed(1));
 
-        setActiveModelName(file.name);
+        addCustomModel(file.name, buffer);
         setPart({
           name: file.name,
           triangleCount: geometry.attributes.position.count / 3,
@@ -97,16 +99,28 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
 
       {/* Center Controls: Seamless Dropdowns & Feature Toggles */}
       <div className="flex items-center gap-2">
-        {/* CAD Part Selector: Seamless Dropdown */}
+        {/* CAD Part Selector: Seamless Dropdown with Standard Parts & Custom Uploads */}
         <div className="relative flex items-center">
           <select
             value={activeModelName}
             onChange={(e) => setActiveModelName(e.target.value)}
-            className="bg-[#121912] hover:bg-[#1A231A] text-xs font-mono text-[#DCE6DB] pl-3 pr-7 py-1.5 rounded border border-[#283626] focus:outline-none focus:border-[#e97f01] transition cursor-pointer appearance-none"
+            className="bg-[#121912] hover:bg-[#1A231A] text-xs font-mono text-[#DCE6DB] pl-3 pr-7 py-1.5 rounded border border-[#283626] focus:outline-none focus:border-[#e97f01] transition cursor-pointer appearance-none max-w-[210px] truncate"
+            title="Switch CAD Workpiece"
           >
-            <option value="Structural L-Bracket">Structural L-Bracket</option>
-            <option value="Pipe T-Joint">Pipe T-Joint</option>
-            <option value="Box Flange">Confined Box Flange</option>
+            <optgroup label="Standard CAD Parts" className="bg-[#0E140E] text-[#8EA28D]">
+              <option value="Structural L-Bracket" className="text-white">Structural L-Bracket</option>
+              <option value="Pipe T-Joint" className="text-white">Pipe T-Joint</option>
+              <option value="Box Flange" className="text-white">Confined Box Flange</option>
+            </optgroup>
+            {customModels.length > 0 && (
+              <optgroup label="Uploaded Custom STLs" className="bg-[#0E140E] text-[#e97f01]">
+                {customModels.map((m) => (
+                  <option key={m.name} value={m.name} className="text-white">
+                    {m.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
           <ChevronDown className="w-3.5 h-3.5 text-[#e97f01] absolute right-2 pointer-events-none" />
         </div>

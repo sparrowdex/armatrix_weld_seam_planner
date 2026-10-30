@@ -6,6 +6,7 @@ export interface WeldState {
   part: PartMetadata | null;
   partLoading: boolean;
   activeModelName: string;
+  customModels: Array<{ name: string; buffer: ArrayBuffer }>;
 
   // Viewport & Interaction
   mode: ViewportMode;
@@ -49,6 +50,7 @@ export interface WeldState {
   setPart: (part: PartMetadata | null) => void;
   setPartLoading: (loading: boolean) => void;
   setActiveModelName: (name: string) => void;
+  addCustomModel: (name: string, buffer: ArrayBuffer) => void;
   setMode: (mode: ViewportMode) => void;
   toggleWireframe: () => void;
   toggleNormals: () => void;
@@ -109,6 +111,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   part: null,
   partLoading: false,
   activeModelName: 'Structural L-Bracket',
+  customModels: [],
 
   mode: 'orbit',
   showWireframe: false,
@@ -146,6 +149,18 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   setPartLoading: (loading) => set({ partLoading: loading }),
   // When switching models, atomically clear old seams so they never stack up or float in space!
   setActiveModelName: (name) => set({ activeModelName: name, seams: [], seamHistory: [], selectedSeamId: null, completedSeamIds: [] }),
+  addCustomModel: (name, buffer) =>
+    set((state) => {
+      const filtered = state.customModels.filter((m) => m.name !== name);
+      return {
+        customModels: [...filtered, { name, buffer }],
+        activeModelName: name,
+        seams: [],
+        seamHistory: [],
+        selectedSeamId: null,
+        completedSeamIds: [],
+      };
+    }),
   setMode: (mode) => set({ mode, manualStartPoint: null, manualCandidatePoint: null }),
   toggleWireframe: () => set((s) => ({ showWireframe: !s.showWireframe })),
   toggleNormals: () => set((s) => ({ showNormals: !s.showNormals })),
