@@ -24,6 +24,8 @@ export interface WeldState {
   // Seams
   seams: WeldSeam[];
   selectedSeamId: string | null;
+  completedSeamIds: string[];
+  torchStyle: 'robotic_gooseneck' | 'sleek_pencil';
 
   // Robot / Planner Config
   rapidTraverseSpeed: number; // mm/s
@@ -53,6 +55,7 @@ export interface WeldState {
   toggleWaypoints: () => void;
   setViewPreset: (preset: 'iso' | 'top' | 'front' | 'right' | null) => void;
   setNozzleType: (nozzle: TorchNozzleType) => void;
+  setTorchStyle: (style: 'robotic_gooseneck' | 'sleek_pencil') => void;
 
   setManualStartPoint: (point: Vector3D | null, normal: Vector3D | null) => void;
   setManualCandidatePoint: (point: Vector3D | null, normal: Vector3D | null) => void;
@@ -61,6 +64,9 @@ export interface WeldState {
   removeSeam: (id: string) => void;
   updateSeamParameters: (id: string, params: Partial<WeldParameters>) => void;
   selectSeam: (id: string | null) => void;
+  markSeamCompleted: (id: string) => void;
+  resetCompletedSeams: () => void;
+  optimizeSeamSequence: () => void;
   reorderSeams: (newOrder: WeldSeam[]) => void;
   reverseSeamDirection: (id: string) => void;
   clearSeams: () => void;
@@ -116,6 +122,8 @@ export const useWeldStore = create<WeldState>((set, get) => ({
 
   seams: [],
   selectedSeamId: null,
+  completedSeamIds: [],
+  torchStyle: 'robotic_gooseneck',
 
   rapidTraverseSpeed: 120, // mm/s
   approachClearance: 25,
@@ -134,7 +142,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   setPart: (part) => set({ part }),
   setPartLoading: (loading) => set({ partLoading: loading }),
   // When switching models, atomically clear old seams so they never stack up or float in space!
-  setActiveModelName: (name) => set({ activeModelName: name, seams: [], selectedSeamId: null }),
+  setActiveModelName: (name) => set({ activeModelName: name, seams: [], selectedSeamId: null, completedSeamIds: [] }),
   setMode: (mode) => set({ mode, manualStartPoint: null, manualCandidatePoint: null }),
   toggleWireframe: () => set((s) => ({ showWireframe: !s.showWireframe })),
   toggleNormals: () => set((s) => ({ showNormals: !s.showNormals })),
@@ -142,6 +150,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   toggleWaypoints: () => set((s) => ({ showWaypoints: !s.showWaypoints })),
   setViewPreset: (preset) => set({ viewPreset: preset }),
   setNozzleType: (nozzle) => set({ nozzleType: nozzle }),
+  setTorchStyle: (style) => set({ torchStyle: style }),
 
   setManualStartPoint: (point, normal) => set({ manualStartPoint: point, manualStartNormal: normal }),
   setManualCandidatePoint: (point, normal) => set({ manualCandidatePoint: point, manualCandidateNormal: normal }),
@@ -188,6 +197,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       return {
         seams: reindexed,
         selectedSeamId: state.selectedSeamId === id ? (reindexed[0]?.id ?? null) : state.selectedSeamId,
+        completedSeamIds: state.completedSeamIds.filter((cid) => cid !== id),
       };
     }),
 
@@ -197,6 +207,47 @@ export const useWeldStore = create<WeldState>((set, get) => ({
     })),
 
   selectSeam: (id) => set({ selectedSeamId: id }),
+
+  markSeamCompleted: (id) =>
+    set((state) => ({
+      completedSeamIds: state.completedSeamIds.includes(id)
+        ? state.completedSeamIds
+        : [...state.completedSeamIds, id],
+    })),
+
+  resetCompletedSeams: () => set({ completedSeamIds: [] }),
+
+  optimizeSeamSequence: () =>
+    set((state) => {
+      if (state.seams.length <= 1) return state;
+
+      // Professional Thermal Mitigation: Alternate weld seams across workpiece geometry
+      // to distribute heat input symmetrically and prevent angular thermal warpage/distortion.
+      const sorted = [...state.seams].sort((a, b) => {
+        const midA = (a.startPoint.x + a.endPoint.x) / 2;
+        const midB = (b.startPoint.x + b.endPoint.x) / 2;
+        return midA - midB;
+      });
+
+      // Interleave left and right halves (skip-welding pattern)
+      const half = Math.ceil(sorted.length / 2);
+      const left = sorted.slice(0, half);
+      const right = sorted.slice(half).reverse();
+      const interleaved: WeldSeam[] = [];
+
+      for (let i = 0; i < half; i++) {
+        if (left[i]) interleaved.push(left[i]);
+        if (right[i]) interleaved.push(right[i]);
+      }
+
+      return {
+        seams: interleaved.map((s, idx) => ({
+          ...s,
+          sequenceOrder: idx + 1,
+        })),
+        completedSeamIds: [],
+      };
+    }),
 
   reorderSeams: (newOrder) =>
     set({
@@ -215,7 +266,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       }),
     })),
 
-  clearSeams: () => set({ seams: [], selectedSeamId: null }),
+  clearSeams: () => set({ seams: [], selectedSeamId: null, completedSeamIds: [] }),
 
   setRobotConfig: (config) =>
     set((state) => ({
@@ -230,7 +281,14 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       defaultParameters: { ...state.defaultParameters, ...params },
     })),
 
-  startSimulation: () => set({ isSimulating: true, mode: 'simulate' }),
+  startSimulation: () =>
+    set((state) => ({
+      isSimulating: true,
+      mode: 'simulate',
+      selectedSeamId: null, // Clear selection during active welding so beads transition to shiny metal without fighting
+      completedSeamIds:
+        state.completedSeamIds.length === state.seams.length ? [] : state.completedSeamIds,
+    })),
   pauseSimulation: () => set({ isSimulating: false }),
   resetSimulation: () =>
     set({
@@ -238,6 +296,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       simProgress: 0,
       simCurrentSeamIndex: 0,
       simPhase: 'idle',
+      completedSeamIds: [],
     }),
   setSimProgress: (progress) => set({ simProgress: progress }),
   setSimPhase: (phase) => set({ simPhase: phase }),

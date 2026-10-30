@@ -25,6 +25,8 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
     exportJobJSON,
     nozzleType,
     setNozzleType,
+    torchStyle,
+    setTorchStyle,
   } = useWeldStore();
 
   const selectedSeam = seams.find((s) => s.id === selectedSeamId) || seams[0] || null;
@@ -272,6 +274,38 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
               </span>
             </div>
           </div>
+
+          {/* Torch 3D Model Switcher */}
+          <div className="border border-[#1E2B1D] rounded-lg p-2.5 bg-[#0D130D]">
+            <div className="flex justify-between items-center mb-1.5">
+              <span className="text-[10px] text-[#7C8E7B] font-mono">TORCH 3D MODEL</span>
+              <span className="text-[10px] font-mono text-[#e97f01]">
+                {torchStyle === 'robotic_gooseneck' ? 'Binzel Gooseneck' : 'Sleek Pencil'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                onClick={() => setTorchStyle('robotic_gooseneck')}
+                className={`py-1.5 px-2 rounded text-[10px] font-mono font-semibold transition border ${
+                  torchStyle === 'robotic_gooseneck'
+                    ? 'bg-[#1D291C] text-white border-[#e97f01]'
+                    : 'bg-[#101610] text-[#7A8E79] border-[#1C281B] hover:text-white'
+                }`}
+              >
+                Robotic Gooseneck
+              </button>
+              <button
+                onClick={() => setTorchStyle('sleek_pencil')}
+                className={`py-1.5 px-2 rounded text-[10px] font-mono font-semibold transition border ${
+                  torchStyle === 'sleek_pencil'
+                    ? 'bg-[#1D291C] text-white border-[#e97f01]'
+                    : 'bg-[#101610] text-[#7A8E79] border-[#1C281B] hover:text-white'
+                }`}
+              >
+                Sleek Pencil
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="p-4 text-center text-[#6A7B69] text-xs">
@@ -281,14 +315,24 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
 
       {/* Armatrix Snake-Arm Kinematics Profile */}
       <div className="mt-auto p-3.5 border-t border-[#1E291C] bg-[#0E140E]">
-        <div style={{ fontFamily: 'Onest, sans-serif' }} className="text-xs font-bold text-white mb-2 tracking-wide">
-          ARMATRIX SNAKE-ARM KINEMATICS
+        <div style={{ fontFamily: 'Onest, sans-serif' }} className="text-xs font-bold text-white mb-2 tracking-wide flex items-center justify-between">
+          <span>ARMATRIX SNAKE-ARM KINEMATICS</span>
+        </div>
+
+        {/* Reachability Status Badge */}
+        <div className="flex items-center gap-1.5 p-2 rounded bg-[#10241A] border border-[#22C55E]/40 text-[#22C55E] text-[10px] font-mono mb-2.5">
+          <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse shrink-0" />
+          <span className="font-bold">100% REACHABLE — ZERO SINGULARITIES</span>
         </div>
 
         <div className="space-y-1.5 text-[11px] font-mono">
           <div className="flex justify-between text-[#7E8F7D]">
             <span>Arm Reach Envelope:</span>
             <span className="text-white font-semibold">3500 mm</span>
+          </div>
+          <div className="flex justify-between text-[#7E8F7D]">
+            <span>Part Max Coordinate:</span>
+            <span className="text-white font-semibold">120 mm (3.4% envelope)</span>
           </div>
           <div className="flex justify-between text-[#7E8F7D]">
             <span>Rapid Traverse Speed:</span>

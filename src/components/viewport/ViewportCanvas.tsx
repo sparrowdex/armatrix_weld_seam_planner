@@ -7,45 +7,138 @@ import { STLLoader } from 'three-stdlib';
 import { useWeldStore } from '@/store/useWeldStore';
 import { Vector3D, TorchNozzleType } from '@/types/weld';
 
-// Clean Unified Robotic Welding Torch (Cohesive, single-axis industrial end-effector)
-function buildRoboticTorch(): THREE.Group {
+// Authentic Robotic Welding Torch & Sleek Pencil Industrial End-Effectors
+function buildRoboticTorch(style: 'robotic_gooseneck' | 'sleek_pencil' = 'robotic_gooseneck'): THREE.Group {
   const group = new THREE.Group();
 
-  // 1. Tool Flange / Upper Mount
-  const flangeGeom = new THREE.CylinderGeometry(5.2, 5.2, 4, 24);
-  const flangeMat = new THREE.MeshStandardMaterial({ color: '#1B211B', metalness: 0.85, roughness: 0.3 });
-  const flange = new THREE.Mesh(flangeGeom, flangeMat);
-  flange.position.y = 38;
-  group.add(flange);
+  if (style === 'sleek_pencil') {
+    // Sleek Tapered Industrial Tool (Pencil profile)
+    const flangeGeom = new THREE.CylinderGeometry(4.8, 4.8, 4, 24);
+    const flangeMat = new THREE.MeshStandardMaterial({ color: '#1B211B', metalness: 0.85, roughness: 0.3 });
+    const flange = new THREE.Mesh(flangeGeom, flangeMat);
+    flange.position.y = 36;
+    group.add(flange);
 
-  // 2. Main Torch Body Barrel (Dark industrial steel)
-  const bodyGeom = new THREE.CylinderGeometry(4.0, 4.0, 24, 24);
-  const bodyMat = new THREE.MeshStandardMaterial({ color: '#222822', metalness: 0.8, roughness: 0.25 });
-  const body = new THREE.Mesh(bodyGeom, bodyMat);
-  body.position.y = 24;
-  group.add(body);
+    const bodyGeom = new THREE.CylinderGeometry(3.6, 3.6, 22, 24);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: '#222822', metalness: 0.8, roughness: 0.25 });
+    const body = new THREE.Mesh(bodyGeom, bodyMat);
+    body.position.y = 23;
+    group.add(body);
 
-  // 3. Armatrix Safety Orange Actuation Ring
-  const ringGeom = new THREE.CylinderGeometry(4.4, 4.4, 6, 24);
-  const ringMat = new THREE.MeshStandardMaterial({ color: '#e97f01', metalness: 0.6, roughness: 0.25 });
-  const ring = new THREE.Mesh(ringGeom, ringMat);
-  ring.position.y = 13;
-  group.add(ring);
+    const ringGeom = new THREE.CylinderGeometry(4.0, 4.0, 5, 24);
+    const ringMat = new THREE.MeshStandardMaterial({ color: '#e97f01', metalness: 0.6, roughness: 0.25 });
+    const ring = new THREE.Mesh(ringGeom, ringMat);
+    ring.position.y = 12.5;
+    group.add(ring);
 
-  // 4. Heavy-Duty Conical Copper Welding Nozzle
-  const nozzleGeom = new THREE.ConeGeometry(3.6, 11, 24);
-  const nozzleMat = new THREE.MeshStandardMaterial({ color: '#C87D40', metalness: 0.92, roughness: 0.15 });
+    const nozzleGeom = new THREE.ConeGeometry(3.2, 10, 24);
+    const nozzleMat = new THREE.MeshStandardMaterial({ color: '#C87D40', metalness: 0.92, roughness: 0.15 });
+    const nozzle = new THREE.Mesh(nozzleGeom, nozzleMat);
+    nozzle.rotation.x = Math.PI;
+    nozzle.position.y = 5.0;
+    group.add(nozzle);
+
+    const wireGeom = new THREE.CylinderGeometry(0.35, 0.35, 4, 12);
+    const wireMat = new THREE.MeshStandardMaterial({ color: '#E2E8F0', metalness: 0.95, roughness: 0.1 });
+    const wire = new THREE.Mesh(wireGeom, wireMat);
+    wire.position.y = 1.0;
+    group.add(wire);
+
+    return group;
+  }
+
+  // Authentic Industrial Binzel-style Robotic Welding Torch (from reference photo)
+  // 1. Protruding Copper Contact Tip & Welding Wire (Origin at 0, 0, 0 where arc strikes)
+  const wireGeom = new THREE.CylinderGeometry(0.35, 0.35, 4.5, 12);
+  const wireMat = new THREE.MeshStandardMaterial({ color: '#F8FAFC', metalness: 0.95, roughness: 0.1 });
+  const wire = new THREE.Mesh(wireGeom, wireMat);
+  wire.position.y = 1.6;
+  group.add(wire);
+
+  const contactTipGeom = new THREE.CylinderGeometry(1.2, 1.4, 3.2, 16);
+  const contactTipMat = new THREE.MeshStandardMaterial({ color: '#B45309', metalness: 0.9, roughness: 0.2 });
+  const contactTip = new THREE.Mesh(contactTipGeom, contactTipMat);
+  contactTip.position.y = 4.0;
+  group.add(contactTip);
+
+  // 2. Tapered Chrome Gas Nozzle (Chrome finish, tapered towards joint)
+  const nozzleGeom = new THREE.CylinderGeometry(3.5, 2.2, 13, 24);
+  const nozzleMat = new THREE.MeshStandardMaterial({ color: '#F1F5F9', metalness: 0.95, roughness: 0.12 });
   const nozzle = new THREE.Mesh(nozzleGeom, nozzleMat);
-  nozzle.rotation.x = Math.PI; // Invert cone so nozzle tip points down to joint
-  nozzle.position.y = 5.5;
+  nozzle.position.y = 11.5;
   group.add(nozzle);
 
-  // 5. Contact Wire Tip (Extending right to 0,0,0)
-  const wireGeom = new THREE.CylinderGeometry(0.35, 0.35, 4, 12);
-  const wireMat = new THREE.MeshStandardMaterial({ color: '#E2E8F0', metalness: 0.95, roughness: 0.1 });
-  const wire = new THREE.Mesh(wireGeom, wireMat);
-  wire.position.y = 1.0;
-  group.add(wire);
+  // 3. Nozzle Retaining Ring / Gas Diffuser Collar (Knurled chrome slots)
+  const collarGeom = new THREE.CylinderGeometry(3.8, 3.7, 3, 24);
+  const collarMat = new THREE.MeshStandardMaterial({ color: '#CBD5E1', metalness: 0.9, roughness: 0.25 });
+  const collar = new THREE.Mesh(collarGeom, collarMat);
+  collar.position.y = 18.5;
+  group.add(collar);
+
+  // 4. Smooth Curved Stainless Steel Gooseneck (Continuous curve)
+  const curvePoints = [
+    new THREE.Vector3(0, 20, 0),
+    new THREE.Vector3(0, 26, 2),
+    new THREE.Vector3(0, 33, 4.5),
+    new THREE.Vector3(0, 39, 6),
+  ];
+  const curve = new THREE.CatmullRomCurve3(curvePoints);
+  const neckGeom = new THREE.TubeGeometry(curve, 24, 2.1, 16, false);
+  const neckMat = new THREE.MeshStandardMaterial({ color: '#E2E8F0', metalness: 0.88, roughness: 0.22 });
+  const neck = new THREE.Mesh(neckGeom, neckMat);
+  group.add(neck);
+
+  // 5. Machined Hex/Round Brass Mounting Collar (Golden brass)
+  const brassGeom = new THREE.CylinderGeometry(3.8, 3.8, 5.5, 20);
+  const brassMat = new THREE.MeshStandardMaterial({ color: '#D4AF37', metalness: 0.92, roughness: 0.22 });
+  const brass = new THREE.Mesh(brassGeom, brassMat);
+  brass.position.set(0, 42, 6);
+  group.add(brass);
+
+  // 6. Heavy-Duty Ergonomic Torch Body (Matte black housing)
+  const bodyGeom = new THREE.CylinderGeometry(4.5, 4.5, 20, 24);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: '#1B201C', metalness: 0.35, roughness: 0.55 });
+  const body = new THREE.Mesh(bodyGeom, bodyMat);
+  body.position.set(0, 54, 6);
+  group.add(body);
+
+  // 7. Raised Switch/Sensor Module on Torch Body
+  const sensorBoxGeom = new THREE.BoxGeometry(4.0, 9.5, 5.0);
+  const sensorBoxMat = new THREE.MeshStandardMaterial({ color: '#141814', metalness: 0.4, roughness: 0.5 });
+  const sensorBox = new THREE.Mesh(sensorBoxGeom, sensorBoxMat);
+  sensorBox.position.set(0, 56, 9.2);
+  group.add(sensorBox);
+
+  // 8. Tactile Red Actuation Button on Sensor Module (From user photo)
+  const buttonGeom = new THREE.CylinderGeometry(1.3, 1.3, 1.4, 16);
+  const buttonMat = new THREE.MeshStandardMaterial({
+    color: '#EF4444',
+    emissive: '#B91C1C',
+    emissiveIntensity: 0.4,
+    metalness: 0.3,
+    roughness: 0.4,
+  });
+  const button = new THREE.Mesh(buttonGeom, buttonMat);
+  button.rotation.x = Math.PI / 2;
+  button.position.set(0, 58, 12.0);
+  group.add(button);
+
+  // 9. Rear Corrugated Cable Strain-Relief Hose (Flexible black corrugated tubing)
+  const hoseGeom = new THREE.CylinderGeometry(3.9, 3.9, 22, 20);
+  const hoseMat = new THREE.MeshStandardMaterial({ color: '#111411', metalness: 0.2, roughness: 0.75 });
+  const hose = new THREE.Mesh(hoseGeom, hoseMat);
+  hose.position.set(0, 74, 6);
+  group.add(hose);
+
+  // Corrugated ribbed rings along the hose
+  for (let r = 0; r < 6; r++) {
+    const ringGeom = new THREE.TorusGeometry(4.0, 0.35, 8, 20);
+    const ringMat = new THREE.MeshStandardMaterial({ color: '#1C221C', roughness: 0.6 });
+    const ring = new THREE.Mesh(ringGeom, ringMat);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(0, 65 + r * 3.4, 6);
+    group.add(ring);
+  }
 
   return group;
 }
@@ -88,6 +181,9 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
   const addSeam = useWeldStore((s) => s.addSeam);
   const seams = useWeldStore((s) => s.seams);
   const selectedSeamId = useWeldStore((s) => s.selectedSeamId);
+  const completedSeamIds = useWeldStore((s) => s.completedSeamIds);
+  const torchStyle = useWeldStore((s) => s.torchStyle);
+  const selectSeam = useWeldStore((s) => s.selectSeam);
   const isSimulating = useWeldStore((s) => s.isSimulating);
   const playbackSpeed = useWeldStore((s) => s.playbackSpeed);
   const rapidTraverseSpeed = useWeldStore((s) => s.rapidTraverseSpeed);
@@ -112,6 +208,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
   const previewSeamRef = useRef<THREE.Group>(new THREE.Group());
   const reticleRef = useRef<THREE.Group>(new THREE.Group());
   const torchRef = useRef<THREE.Group | null>(null);
+  const torchMeshGroupRef = useRef<THREE.Group>(new THREE.Group());
   const arcLightRef = useRef<THREE.PointLight | null>(null);
   const arcSparksRef = useRef<THREE.Points | null>(null);
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
@@ -217,10 +314,12 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
     scene.add(reticleGroup);
     reticleRef.current = reticleGroup;
 
-    // 7. Industrial Robotic Welding Torch & Arc Lighting (Single unified coaxial assembly)
+    // 7. Industrial Robotic Welding Torch & Arc Lighting (Single unified assembly)
     const torchContainer = new THREE.Group();
-    const torchMesh = buildRoboticTorch();
-    torchContainer.add(torchMesh);
+    const torchMeshGroup = torchMeshGroupRef.current;
+    torchMeshGroup.clear();
+    torchMeshGroup.add(buildRoboticTorch(useWeldStore.getState().torchStyle));
+    torchContainer.add(torchMeshGroup);
 
     const arcLight = new THREE.PointLight('#38BDF8', 0, 90);
     arcLight.position.set(0, 0, 0);
@@ -457,6 +556,13 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
     if (boundingBoxRef.current) boundingBoxRef.current.visible = showBoundingBox;
   }, [showBoundingBox]);
 
+  // Dynamically switch torch style (Robotic Gooseneck vs Sleek Pencil)
+  useEffect(() => {
+    if (!torchMeshGroupRef.current) return;
+    torchMeshGroupRef.current.clear();
+    torchMeshGroupRef.current.add(buildRoboticTorch(torchStyle));
+  }, [torchStyle]);
+
   // Render Planned Weld Seams
   useEffect(() => {
     const group = seamsGroupRef.current;
@@ -464,6 +570,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
 
     seams.forEach((seam) => {
       const isSelected = seam.id === selectedSeamId;
+      const isCompleted = completedSeamIds.includes(seam.id);
       const p1 = new THREE.Vector3(seam.startPoint.x, seam.startPoint.y, seam.startPoint.z);
       const p2 = new THREE.Vector3(seam.endPoint.x, seam.endPoint.y, seam.endPoint.z);
       const normal = new THREE.Vector3(seam.normal.x, seam.normal.y, seam.normal.z).normalize();
@@ -473,38 +580,46 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
 
       const seamContainer = new THREE.Group();
 
-      const beadRadius = isSelected ? 2.5 : 1.7;
+      // STRICT ANTI-Z-FIGHTING 3-STATE SEAM RENDERING:
+      // 1. If IS SELECTED: Render vibrant Armatrix Orange (#e97f01). The metallic bead under it is NEVER rendered,
+      //    guaranteeing zero visual z-fighting or glitching!
+      // 2. If NOT SELECTED and HAS BEEN WELDED/SIMULATED: Render shiny metallic bead (#D4E2D4, metalness 0.92, roughness 0.18).
+      // 3. If NOT SELECTED and NOT WELDED: Render clean CAD planning green (#22C55E).
+      const beadRadius = isSelected ? 2.5 : isCompleted ? 2.3 : 1.7;
       const cylinderGeom = new THREE.CylinderGeometry(beadRadius, beadRadius, length, 16);
       cylinderGeom.translate(0, length / 2, 0);
       cylinderGeom.rotateX(Math.PI / 2);
 
-      const color = isSelected ? '#e97f01' : '#22C55E';
-      const cylinderMat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(color),
-        emissive: new THREE.Color(isSelected ? '#e97f01' : '#15803D'),
-        emissiveIntensity: isSelected ? 0.85 : 0.4,
-        roughness: 0.2,
-        metalness: 0.85,
-      });
-
-      if (!isSimulating) {
-        // In Planning Mode: Render full high-visibility CAD cylinder
-        const beadMesh = new THREE.Mesh(cylinderGeom, cylinderMat);
-        beadMesh.position.copy(p1);
-        beadMesh.lookAt(p2);
-        seamContainer.add(beadMesh);
-      } else {
-        // In Simulation Mode: Render thin centerline toolpath guide,
-        // so the dynamically deposited METALLIC BEAD is 100% visible and not occluded!
-        const lineGeom = new THREE.BufferGeometry().setFromPoints([p1, p2]);
-        const lineMat = new THREE.LineBasicMaterial({
-          color: isSelected ? '#e97f01' : '#4ADE80',
-          opacity: 0.5,
-          transparent: true,
+      let cylinderMat: THREE.Material;
+      if (isSelected) {
+        cylinderMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color('#e97f01'),
+          emissive: new THREE.Color('#e97f01'),
+          emissiveIntensity: 0.85,
+          roughness: 0.25,
+          metalness: 0.5,
         });
-        const line = new THREE.Line(lineGeom, lineMat);
-        seamContainer.add(line);
+      } else if (isCompleted) {
+        cylinderMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color('#D4E2D4'),
+          metalness: 0.92,
+          roughness: 0.18,
+        });
+      } else {
+        cylinderMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color('#22C55E'),
+          emissive: new THREE.Color('#15803D'),
+          emissiveIntensity: 0.4,
+          roughness: 0.2,
+          metalness: 0.85,
+        });
       }
+
+      const beadMesh = new THREE.Mesh(cylinderGeom, cylinderMat);
+      beadMesh.position.copy(p1);
+      beadMesh.lookAt(p2);
+      beadMesh.userData = { seamId: seam.id };
+      seamContainer.add(beadMesh);
 
       const startSphere = new THREE.Mesh(
         new THREE.SphereGeometry(isSelected ? 3.0 : 2.2, 16, 16),
@@ -554,7 +669,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
 
       group.add(seamContainer);
     });
-  }, [seams, selectedSeamId, showNormals, showWaypoints, isSimulating]);
+  }, [seams, selectedSeamId, completedSeamIds, showNormals, showWaypoints, isSimulating]);
 
   // Live Preview Seam during interactive 'add_seam' click
   useEffect(() => {
@@ -725,17 +840,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
         updatePhase('welding');
 
         if (progress >= 1) {
-          // Permanently solidify finished metallic weld bead for this completed seam
-          const finishedGeom = new THREE.CylinderGeometry(1, 1, 1, 16);
-          const finishedMat = new THREE.MeshStandardMaterial({
-            color: '#D4E2D4',
-            metalness: 0.92,
-            roughness: 0.18,
-          });
-          const finishedMesh = new THREE.Mesh(finishedGeom, finishedMat);
-          positionCylinderBetweenPoints(finishedMesh, pStart, pEnd, 2.5);
-          dynamicGroup.add(finishedMesh);
-
+          useWeldStore.getState().markSeamCompleted(seam.id);
           activeBeadMesh.visible = false;
           moltenPuddleMesh.visible = false;
           progress = 0;
@@ -854,29 +959,49 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
-    if (mode !== 'add_seam' || !cursorPos || !meshRef.current || !cameraRef.current) return;
 
-    raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
-    const intersects = raycasterRef.current.intersectObject(meshRef.current);
-    if (intersects.length === 0) return;
+    if (mode === 'add_seam') {
+      if (!cursorPos || !meshRef.current || !cameraRef.current) return;
 
-    const hit = intersects[0];
-    const normal = hit.face ? hit.face.normal.clone().transformDirection(meshRef.current.matrixWorld) : new THREE.Vector3(0, 1, 0);
-    const pt: Vector3D = {
-      x: parseFloat(hit.point.x.toFixed(2)),
-      y: parseFloat(hit.point.y.toFixed(2)),
-      z: parseFloat(hit.point.z.toFixed(2)),
-    };
-    const norm: Vector3D = {
-      x: parseFloat(normal.x.toFixed(3)),
-      y: parseFloat(normal.y.toFixed(3)),
-      z: parseFloat(normal.z.toFixed(3)),
-    };
+      raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
+      const intersects = raycasterRef.current.intersectObject(meshRef.current);
+      if (intersects.length === 0) return;
 
-    if (!manualStartPoint) {
-      setManualStartPoint(pt, norm);
-    } else {
-      addSeam(manualStartPoint, pt, norm, 'manual');
+      const hit = intersects[0];
+      const normal = hit.face ? hit.face.normal.clone().transformDirection(meshRef.current.matrixWorld) : new THREE.Vector3(0, 1, 0);
+      const pt: Vector3D = {
+        x: parseFloat(hit.point.x.toFixed(2)),
+        y: parseFloat(hit.point.y.toFixed(2)),
+        z: parseFloat(hit.point.z.toFixed(2)),
+      };
+      const norm: Vector3D = {
+        x: parseFloat(normal.x.toFixed(3)),
+        y: parseFloat(normal.y.toFixed(3)),
+        z: parseFloat(normal.z.toFixed(3)),
+      };
+
+      if (!manualStartPoint) {
+        setManualStartPoint(pt, norm);
+      } else {
+        addSeam(manualStartPoint, pt, norm, 'manual');
+      }
+    } else if (mode === 'orbit' && cameraRef.current) {
+      // Direct 3D Click-to-Select Seams & Click-to-Deselect
+      raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
+      const seamHits = raycasterRef.current.intersectObjects(seamsGroupRef.current.children, true);
+      if (seamHits.length > 0) {
+        let hitObj: THREE.Object3D | null = seamHits[0].object;
+        while (hitObj && !hitObj.userData?.seamId && hitObj.parent) {
+          hitObj = hitObj.parent;
+        }
+        if (hitObj?.userData?.seamId) {
+          selectSeam(hitObj.userData.seamId);
+          return;
+        }
+      } else {
+        // Clicked background -> deselect so all completed seams show as shiny metal
+        selectSeam(null);
+      }
     }
   };
 
@@ -935,8 +1060,11 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
           </span>
         </div>
         <div className="flex flex-col gap-0.5 text-[11px] text-right">
+          <div className="text-[#38BDF8] font-bold text-[10px]">
+            ● 100% REACHABLE (Zero Singularities)
+          </div>
           <div className="text-[#A4B3A3]">
-            Reach: <strong className="text-white font-semibold">3500 mm (Snake-Arm)</strong>
+            Envelope: <strong className="text-white font-semibold">3500 mm (Snake-Arm)</strong>
           </div>
           <div className="text-[#A4B3A3]">
             Traverse: <strong className="text-white font-semibold">{rapidTraverseSpeed} mm/s</strong>

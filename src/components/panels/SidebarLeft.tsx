@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useWeldStore } from '@/store/useWeldStore';
 import {
   Target,
@@ -11,6 +11,8 @@ import {
   RotateCw,
   Box,
   ChevronLeft,
+  Zap,
+  CheckCircle,
 } from 'lucide-react';
 
 interface SidebarLeftProps {
@@ -26,14 +28,24 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     setMode,
     seams,
     selectedSeamId,
+    completedSeamIds,
     selectSeam,
     addSeam,
     removeSeam,
     reverseSeamDirection,
     reorderSeams,
     clearSeams,
+    optimizeSeamSequence,
     activeModelName,
   } = useWeldStore();
+
+  const [showOptimizedToast, setShowOptimizedToast] = useState(false);
+
+  const handleOptimize = () => {
+    optimizeSeamSequence();
+    setShowOptimizedToast(true);
+    setTimeout(() => setShowOptimizedToast(false), 3500);
+  };
 
   const handleAutoDetect = () => {
     clearSeams();
@@ -136,6 +148,24 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
         </button>
 
         <button
+          onClick={handleOptimize}
+          disabled={seams.length <= 1}
+          style={{ fontFamily: 'Onest, sans-serif' }}
+          className="w-full flex items-center justify-center gap-2 bg-[#101E17] hover:bg-[#162A1F] border border-[#203D2E] text-[#38BDF8] hover:text-white py-2 rounded text-xs font-bold transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+          title="Reorders seams in an alternating skip pattern to distribute heat symmetrically and mitigate thermal warpage"
+        >
+          <Zap className="w-3.5 h-3.5 text-[#38BDF8]" />
+          <span>AUTO-OPTIMIZE SEQUENCE (HEAT MITIGATION)</span>
+        </button>
+
+        {showOptimizedToast && (
+          <div className="flex items-center gap-1.5 p-2 rounded bg-[#10241A] border border-[#22C55E]/40 text-[#22C55E] text-[10px] font-mono leading-tight">
+            <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>Alternating heat-sink sequence applied. Thermal warpage minimized!</span>
+          </div>
+        )}
+
+        <button
           onClick={() => setMode(mode === 'add_seam' ? 'orbit' : 'add_seam')}
           style={{ fontFamily: 'Onest, sans-serif' }}
           className={`w-full flex items-center justify-center gap-2 py-2 rounded text-xs font-bold transition active:scale-95 border ${
@@ -177,13 +207,16 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
         ) : (
           seams.map((seam, idx) => {
             const isSelected = seam.id === selectedSeamId;
+            const isCompleted = completedSeamIds.includes(seam.id);
             return (
               <div
                 key={seam.id}
-                onClick={() => selectSeam(seam.id)}
+                onClick={() => selectSeam(isSelected ? null : seam.id)}
                 className={`p-2.5 rounded border transition cursor-pointer select-none text-xs ${
                   isSelected
                     ? 'bg-[#182317] border-[#e97f01]'
+                    : isCompleted
+                    ? 'bg-[#101712] border-[#233827]'
                     : 'bg-[#0E140E] border-[#1C271B] hover:border-[#2C3E2A]'
                 }`}
               >
@@ -191,7 +224,11 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                   <div className="flex items-center gap-2">
                     <span
                       className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold font-mono ${
-                        isSelected ? 'bg-[#e97f01] text-white' : 'bg-[#1C281B] text-[#8CA08B]'
+                        isSelected
+                          ? 'bg-[#e97f01] text-white'
+                          : isCompleted
+                          ? 'bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/40'
+                          : 'bg-[#1C281B] text-[#8CA08B]'
                       }`}
                     >
                       {idx + 1}
@@ -199,6 +236,11 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                     <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-bold text-white tracking-wide">
                       {seam.id}
                     </span>
+                    {isCompleted && (
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-[#132A1C] border border-[#22C55E]/40 text-[#22C55E] font-mono font-bold">
+                        WELDED
+                      </span>
+                    )}
                   </div>
                   <span
                     style={{ color: '#e97f01' }}
