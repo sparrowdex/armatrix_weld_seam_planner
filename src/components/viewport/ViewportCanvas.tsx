@@ -8,30 +8,28 @@ import { useWeldStore } from '@/store/useWeldStore';
 import { Vector3D } from '@/types/weld';
 
 export const ViewportCanvas: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Separate mount ref for Three.js WebGL canvas to avoid React reconciliation conflicts
+  const canvasMountRef = useRef<HTMLDivElement>(null);
 
-  // Store bindings
-  const {
-    mode,
-    showWireframe,
-    showNormals,
-    showBoundingBox,
-    showWaypoints,
-    viewPreset,
-    setViewPreset,
-    activeModelName,
-    manualStartPoint,
-    setManualStartPoint,
-    setManualCandidatePoint,
-    addSeam,
-    seams,
-    selectedSeamId,
-    selectSeam,
-    isSimulating,
-    playbackSpeed,
-    setPart,
-    setPartLoading,
-  } = useWeldStore();
+  // Selective Zustand selectors to prevent canvas unmounts / loop thrashing
+  const mode = useWeldStore((s) => s.mode);
+  const showWireframe = useWeldStore((s) => s.showWireframe);
+  const showNormals = useWeldStore((s) => s.showNormals);
+  const showBoundingBox = useWeldStore((s) => s.showBoundingBox);
+  const showWaypoints = useWeldStore((s) => s.showWaypoints);
+  const viewPreset = useWeldStore((s) => s.viewPreset);
+  const setViewPreset = useWeldStore((s) => s.setViewPreset);
+  const activeModelName = useWeldStore((s) => s.activeModelName);
+  const manualStartPoint = useWeldStore((s) => s.manualStartPoint);
+  const setManualStartPoint = useWeldStore((s) => s.setManualStartPoint);
+  const setManualCandidatePoint = useWeldStore((s) => s.setManualCandidatePoint);
+  const addSeam = useWeldStore((s) => s.addSeam);
+  const seams = useWeldStore((s) => s.seams);
+  const selectedSeamId = useWeldStore((s) => s.selectedSeamId);
+  const isSimulating = useWeldStore((s) => s.isSimulating);
+  const playbackSpeed = useWeldStore((s) => s.playbackSpeed);
+  const setPart = useWeldStore((s) => s.setPart);
+  const setPartLoading = useWeldStore((s) => s.setPartLoading);
 
   // Internal Three.js refs
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -44,6 +42,7 @@ export const ViewportCanvas: React.FC = () => {
   const boundingBoxRef = useRef<THREE.BoxHelper | null>(null);
   const seamsGroupRef = useRef<THREE.Group>(new THREE.Group());
   const previewSeamRef = useRef<THREE.Group>(new THREE.Group());
+  const reticleRef = useRef<THREE.Group>(new THREE.Group());
   const torchRef = useRef<THREE.Group | null>(null);
   const arcLightRef = useRef<THREE.PointLight | null>(null);
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
@@ -51,20 +50,21 @@ export const ViewportCanvas: React.FC = () => {
 
   // Cursor coordinates display
   const [cursorPos, setCursorPos] = useState<Vector3D | null>(null);
+  const [measuredDist, setMeasuredDist] = useState<number | null>(null);
 
-  // Setup Three.js scene
+  // Setup Three.js scene once
   useEffect(() => {
-    if (!containerRef.current) return;
-    const container = containerRef.current;
+    if (!canvasMountRef.current) return;
+    const container = canvasMountRef.current;
     const width = container.clientWidth;
     const height = container.clientHeight;
 
     // 1. Scene
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#0D120D'); // Sleek industrial dark green-gray
+    scene.background = new THREE.Color('#0D120D');
     sceneRef.current = scene;
 
-    // High precision CAD Grid Floor
+    // CAD Grid Floor
     const grid = new THREE.GridHelper(360, 36, '#283B25', '#162215');
     grid.position.y = 0;
     scene.add(grid);
@@ -82,6 +82,8 @@ export const ViewportCanvas: React.FC = () => {
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.35;
+    
+    // Safely mount canvas element
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
@@ -95,32 +97,26 @@ export const ViewportCanvas: React.FC = () => {
     controls.target.set(0, 35, 0);
     controlsRef.current = controls;
 
-    // 5. OMNI-DIRECTIONAL CAD STUDIO LIGHTING (Eliminates all dark/black faces!)
-    // Hemisphere light: bright sky illumination + soft ground bounce
+    // 5. Omni-Directional CAD Studio Lighting
     const hemiLight = new THREE.HemisphereLight('#FFFFFF', '#4A5D4A', 2.0);
     scene.add(hemiLight);
 
-    // Global ambient
     const ambientLight = new THREE.AmbientLight('#FFFFFF', 1.4);
     scene.add(ambientLight);
 
-    // Key Light Front-Right
     const keyLight = new THREE.DirectionalLight('#FFFFFF', 2.2);
     keyLight.position.set(150, 250, 180);
     keyLight.castShadow = true;
     scene.add(keyLight);
 
-    // Fill Light Front-Left
     const fillLight1 = new THREE.DirectionalLight('#E2E8F0', 1.8);
     fillLight1.position.set(-160, 180, 140);
     scene.add(fillLight1);
 
-    // Fill Light Back-Right
     const fillLight2 = new THREE.DirectionalLight('#CBD5E1', 1.6);
     fillLight2.position.set(140, 160, -160);
     scene.add(fillLight2);
 
-    // Rim Light Back-Left (Armatrix amber accent)
     const rimLight = new THREE.DirectionalLight('#e97f01', 1.4);
     rimLight.position.set(-150, 140, -180);
     scene.add(rimLight);
@@ -129,23 +125,34 @@ export const ViewportCanvas: React.FC = () => {
     scene.add(seamsGroupRef.current);
     scene.add(previewSeamRef.current);
 
-    // 6. Build Welding Torch 3D Model
+    // 6. Interactive Snap Reticle
+    const reticleGroup = new THREE.Group();
+    const ringGeom = new THREE.RingGeometry(2.0, 3.2, 32);
+    ringGeom.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({ color: '#e97f01', side: THREE.DoubleSide });
+    const ringMesh = new THREE.Mesh(ringGeom, ringMat);
+    reticleGroup.add(ringMesh);
+
+    const reticleNormalArrow = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 12, 0x38bdf8, 3, 2);
+    reticleGroup.add(reticleNormalArrow);
+    reticleGroup.visible = false;
+    scene.add(reticleGroup);
+    reticleRef.current = reticleGroup;
+
+    // 7. Robotic Welding Torch 3D Model
     const torchGroup = new THREE.Group();
-    // Body (dark graphite)
     const torchBodyGeom = new THREE.CylinderGeometry(4.2, 4.2, 36, 20);
     const torchBodyMat = new THREE.MeshStandardMaterial({ color: '#1B1E1B', metalness: 0.85, roughness: 0.25 });
     const torchBody = new THREE.Mesh(torchBodyGeom, torchBodyMat);
     torchBody.position.y = 26;
     torchGroup.add(torchBody);
 
-    // Collar (Armatrix orange accent ring)
     const collarGeom = new THREE.CylinderGeometry(4.8, 4.8, 8, 20);
     const collarMat = new THREE.MeshStandardMaterial({ color: '#e97f01', metalness: 0.7, roughness: 0.2 });
     const collar = new THREE.Mesh(collarGeom, collarMat);
     collar.position.y = 13;
     torchGroup.add(collar);
 
-    // Precision Copper Nozzle
     const nozzleGeom = new THREE.ConeGeometry(3.6, 12, 20);
     const nozzleMat = new THREE.MeshStandardMaterial({ color: '#C87D40', metalness: 0.95, roughness: 0.15 });
     const nozzle = new THREE.Mesh(nozzleGeom, nozzleMat);
@@ -153,7 +160,6 @@ export const ViewportCanvas: React.FC = () => {
     nozzle.position.y = 2;
     torchGroup.add(nozzle);
 
-    // Arc flash light at weld tip
     const arcLight = new THREE.PointLight('#38BDF8', 0, 75);
     arcLight.position.set(0, 0, 0);
     torchGroup.add(arcLight);
@@ -163,7 +169,7 @@ export const ViewportCanvas: React.FC = () => {
     scene.add(torchGroup);
     torchRef.current = torchGroup;
 
-    // Animation Loop
+    // 60 FPS Render Loop
     let animId: number;
     const animate = () => {
       animId = requestAnimationFrame(animate);
@@ -172,11 +178,10 @@ export const ViewportCanvas: React.FC = () => {
     };
     animate();
 
-    // Resize Handler
     const handleResize = () => {
-      if (!containerRef.current || !renderer || !camera) return;
-      const w = containerRef.current.clientWidth;
-      const h = containerRef.current.clientHeight;
+      if (!container || !renderer || !camera) return;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
@@ -188,6 +193,9 @@ export const ViewportCanvas: React.FC = () => {
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
       controls.dispose();
+      if (container.contains(renderer.domElement)) {
+        container.removeChild(renderer.domElement);
+      }
     };
   }, []);
 
@@ -264,12 +272,11 @@ export const ViewportCanvas: React.FC = () => {
         const height = parseFloat((finalBox.max.y - finalBox.min.y).toFixed(1));
         const depth = parseFloat((finalBox.max.z - finalBox.min.z).toFixed(1));
 
-        // CRISP BRIGHT CAD ALLOY STEEL MATERIAL (Fully illuminated on every face!)
         const material = new THREE.MeshStandardMaterial({
-          color: '#B2C2B5', // Bright, crisp satin aluminum alloy
-          metalness: 0.18,  // Low metalness ensures clear diffuse shading without black reflections!
-          roughness: 0.45,  // Smooth satin finish
-          side: THREE.DoubleSide, // Guarantees both sides of any face are always illuminated
+          color: '#B2C2B5',
+          metalness: 0.18,
+          roughness: 0.45,
+          side: THREE.DoubleSide,
           polygonOffset: true,
           polygonOffsetFactor: 1,
           polygonOffsetUnits: 1,
@@ -281,14 +288,12 @@ export const ViewportCanvas: React.FC = () => {
         scene.add(mesh);
         meshRef.current = mesh;
 
-        // Sharp CAD Edge Contours (makes every feature, fillet, and hole pop)
         const edgeGeometry = new THREE.EdgesGeometry(geometry, 25);
         const edgeMaterial = new THREE.LineBasicMaterial({ color: '#182417', linewidth: 1.5 });
         const edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
         scene.add(edgeLines);
         edgesRef.current = edgeLines;
 
-        // Wireframe toggle overlay
         const wireframeGeom = new THREE.WireframeGeometry(geometry);
         const wireframeMat = new THREE.LineBasicMaterial({ color: '#3A5239', opacity: 0.4, transparent: true });
         const wireframe = new THREE.LineSegments(wireframeGeom, wireframeMat);
@@ -296,13 +301,11 @@ export const ViewportCanvas: React.FC = () => {
         scene.add(wireframe);
         wireframeRef.current = wireframe;
 
-        // Bounding Box
         const boxHelper = new THREE.BoxHelper(mesh, new THREE.Color('#e97f01'));
         boxHelper.visible = showBoundingBox;
         scene.add(boxHelper);
         boundingBoxRef.current = boxHelper;
 
-        // Update Store
         setPart({
           name: activeModelName,
           triangleCount: geometry.attributes.position.count / 3,
@@ -337,7 +340,7 @@ export const ViewportCanvas: React.FC = () => {
     if (boundingBoxRef.current) boundingBoxRef.current.visible = showBoundingBox;
   }, [showBoundingBox]);
 
-  // Render Weld Seams in 3D
+  // Render Planned Weld Seams
   useEffect(() => {
     const group = seamsGroupRef.current;
     group.clear();
@@ -353,7 +356,6 @@ export const ViewportCanvas: React.FC = () => {
 
       const seamContainer = new THREE.Group();
 
-      // 1. Weld Bead Solid Geometry
       const beadRadius = isSelected ? 2.5 : 1.7;
       const cylinderGeom = new THREE.CylinderGeometry(beadRadius, beadRadius, length, 16);
       cylinderGeom.translate(0, length / 2, 0);
@@ -373,7 +375,6 @@ export const ViewportCanvas: React.FC = () => {
       beadMesh.lookAt(p2);
       seamContainer.add(beadMesh);
 
-      // 2. Start & End Waypoint Spheres
       const startSphere = new THREE.Mesh(
         new THREE.SphereGeometry(isSelected ? 3.0 : 2.2, 16, 16),
         new THREE.MeshStandardMaterial({ color: '#38BDF8', emissive: '#0284C7', emissiveIntensity: 0.6 })
@@ -388,13 +389,11 @@ export const ViewportCanvas: React.FC = () => {
       endSphere.position.copy(p2);
       seamContainer.add(endSphere);
 
-      // 3. Direction Arrow
       const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
       const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
       const arrowHelper = new THREE.ArrowHelper(dir, mid, Math.min(18, length * 0.45), isSelected ? 0xffffff : 0xe97f01, 4, 3);
       seamContainer.add(arrowHelper);
 
-      // 4. Torch Normal Approach Vectors
       if (showNormals) {
         const normalHelper = new THREE.ArrowHelper(normal, mid, 20, 0x38bdf8, 4, 2.5);
         seamContainer.add(normalHelper);
@@ -458,7 +457,18 @@ export const ViewportCanvas: React.FC = () => {
     }
   }, [mode, manualStartPoint, cursorPos]);
 
-  // Simulation Animation Runner
+  // Interactive Snapping Reticle visibility
+  useEffect(() => {
+    if (!reticleRef.current) return;
+    if (mode === 'add_seam' && cursorPos) {
+      reticleRef.current.visible = true;
+      reticleRef.current.position.set(cursorPos.x, cursorPos.y, cursorPos.z);
+    } else {
+      reticleRef.current.visible = false;
+    }
+  }, [mode, cursorPos]);
+
+  // Robust Simulation Animation Runner (Non-blocking, zero re-render feedback)
   useEffect(() => {
     if (!isSimulating || seams.length === 0 || !torchRef.current) {
       if (torchRef.current) torchRef.current.visible = false;
@@ -475,9 +485,20 @@ export const ViewportCanvas: React.FC = () => {
     let phase: 'approach' | 'welding' | 'retract' | 'traverse' = 'approach';
     let progress = 0;
     let lastTime = performance.now();
+    let currentReportedPhase = '';
+
+    const updatePhase = (newPhase: 'approach' | 'welding' | 'retract' | 'rapid_traverse') => {
+      if (currentReportedPhase !== newPhase) {
+        currentReportedPhase = newPhase;
+        useWeldStore.getState().setSimPhase(newPhase);
+      }
+    };
+
+    updatePhase('approach');
+    useWeldStore.getState().setSimCurrentSeamIndex(0);
 
     const loop = (now: number) => {
-      const dt = (now - lastTime) / 1000;
+      const dt = Math.min(0.1, (now - lastTime) / 1000);
       lastTime = now;
 
       const seam = seams[currentSeamIdx];
@@ -488,22 +509,35 @@ export const ViewportCanvas: React.FC = () => {
 
       const pStart = new THREE.Vector3(seam.startPoint.x, seam.startPoint.y, seam.startPoint.z);
       const pEnd = new THREE.Vector3(seam.endPoint.x, seam.endPoint.y, seam.endPoint.z);
-      const normal = new THREE.Vector3(seam.normal.x, seam.normal.y, seam.normal.z).normalize();
-      const pApproach = new THREE.Vector3().copy(pStart).addScaledVector(normal, seam.parameters.approachDistance);
-      const pRetract = new THREE.Vector3().copy(pEnd).addScaledVector(normal, seam.parameters.retractDistance);
+      const normal = new THREE.Vector3(seam.normal.x, seam.normal.y, seam.normal.z);
+      if (normal.lengthSq() < 0.001) normal.set(0, 1, 0);
+      normal.normalize();
 
-      const weldDuration = Math.max(0.5, seam.length / seam.parameters.travelSpeed) / playbackSpeed;
-      const approachDuration = 0.8 / playbackSpeed;
-      const retractDuration = 0.8 / playbackSpeed;
-      const traverseDuration = 1.0 / playbackSpeed;
+      const pApproach = new THREE.Vector3().copy(pStart).addScaledVector(normal, Math.max(10, seam.parameters.approachDistance));
+      const pRetract = new THREE.Vector3().copy(pEnd).addScaledVector(normal, Math.max(10, seam.parameters.retractDistance));
+
+      const spd = Math.max(0.2, playbackSpeed);
+      const weldDuration = Math.max(0.6, seam.length / Math.max(1, seam.parameters.travelSpeed)) / spd;
+      const approachDuration = 0.8 / spd;
+      const retractDuration = 0.8 / spd;
+      const traverseDuration = 1.0 / spd;
+
+      // Safe orientation calculation
+      const safeQuaternion = (targetNormal: THREE.Vector3) => {
+        const up = new THREE.Vector3(0, 1, 0);
+        if (Math.abs(up.dot(targetNormal)) > 0.99) {
+          up.set(0, 0, 1);
+        }
+        torch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), targetNormal);
+      };
 
       if (phase === 'approach') {
         progress += dt / approachDuration;
         const currentPos = new THREE.Vector3().lerpVectors(pApproach, pStart, Math.min(1, progress));
         torch.position.copy(currentPos);
-        torch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+        safeQuaternion(normal);
         if (arcLight) arcLight.intensity = 0;
-        useWeldStore.getState().setSimPhase('approach');
+        updatePhase('approach');
 
         if (progress >= 1) {
           progress = 0;
@@ -513,12 +547,12 @@ export const ViewportCanvas: React.FC = () => {
         progress += dt / weldDuration;
         const currentPos = new THREE.Vector3().lerpVectors(pStart, pEnd, Math.min(1, progress));
         torch.position.copy(currentPos);
-        torch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+        safeQuaternion(normal);
         if (arcLight) {
-          arcLight.intensity = 20 + Math.random() * 20;
+          arcLight.intensity = 25 + Math.random() * 25;
           arcLight.color.set(Math.random() > 0.3 ? '#38BDF8' : '#FFFFFF');
         }
-        useWeldStore.getState().setSimPhase('welding');
+        updatePhase('welding');
 
         if (progress >= 1) {
           progress = 0;
@@ -528,9 +562,9 @@ export const ViewportCanvas: React.FC = () => {
         progress += dt / retractDuration;
         const currentPos = new THREE.Vector3().lerpVectors(pEnd, pRetract, Math.min(1, progress));
         torch.position.copy(currentPos);
-        torch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+        safeQuaternion(normal);
         if (arcLight) arcLight.intensity = 0;
-        useWeldStore.getState().setSimPhase('retract');
+        updatePhase('retract');
 
         if (progress >= 1) {
           progress = 0;
@@ -544,13 +578,15 @@ export const ViewportCanvas: React.FC = () => {
       } else if (phase === 'traverse') {
         progress += dt / traverseDuration;
         const nextSeam = seams[currentSeamIdx + 1];
+        const nextNorm = new THREE.Vector3(nextSeam.normal.x, nextSeam.normal.y, nextSeam.normal.z).normalize();
         const nextApproach = new THREE.Vector3(nextSeam.startPoint.x, nextSeam.startPoint.y, nextSeam.startPoint.z).addScaledVector(
-          new THREE.Vector3(nextSeam.normal.x, nextSeam.normal.y, nextSeam.normal.z).normalize(),
-          nextSeam.parameters.approachDistance
+          nextNorm,
+          Math.max(10, nextSeam.parameters.approachDistance)
         );
         const currentPos = new THREE.Vector3().lerpVectors(pRetract, nextApproach, Math.min(1, progress));
         torch.position.copy(currentPos);
-        useWeldStore.getState().setSimPhase('rapid_traverse');
+        safeQuaternion(nextNorm);
+        updatePhase('rapid_traverse');
 
         if (progress >= 1) {
           progress = 0;
@@ -567,10 +603,10 @@ export const ViewportCanvas: React.FC = () => {
     return () => cancelAnimationFrame(animId);
   }, [isSimulating, seams, playbackSpeed]);
 
-  // Pointer Handling
+  // Pointer Movement & Raycast Snapping
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!containerRef.current || !cameraRef.current || !meshRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
+    if (!canvasMountRef.current || !cameraRef.current || !meshRef.current) return;
+    const rect = canvasMountRef.current.getBoundingClientRect();
     mouseRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     mouseRef.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
@@ -589,11 +625,21 @@ export const ViewportCanvas: React.FC = () => {
       };
       setCursorPos(hitCoord);
 
+      if (manualStartPoint) {
+        const dx = hitCoord.x - manualStartPoint.x;
+        const dy = hitCoord.y - manualStartPoint.y;
+        const dz = hitCoord.z - manualStartPoint.z;
+        setMeasuredDist(parseFloat(Math.sqrt(dx * dx + dy * dy + dz * dz).toFixed(1)));
+      } else {
+        setMeasuredDist(null);
+      }
+
       if (mode === 'add_seam') {
         setManualCandidatePoint(hitCoord, { x: n.x, y: n.y, z: n.z });
       }
     } else {
       setCursorPos(null);
+      setMeasuredDist(null);
     }
   };
 
@@ -626,13 +672,16 @@ export const ViewportCanvas: React.FC = () => {
   };
 
   return (
-    <div
-      ref={containerRef}
-      onPointerMove={handlePointerMove}
-      onPointerDown={handlePointerDown}
-      className="relative w-full h-full cursor-crosshair select-none overflow-hidden bg-[#0D120D]"
-    >
-      {/* 3D Telemetry HUD Overlay */}
+    <div className="relative w-full h-full select-none overflow-hidden bg-[#0D120D]">
+      {/* Isolated Three.js Canvas Container: React reconciliation never touches its DOM children */}
+      <div
+        ref={canvasMountRef}
+        onPointerMove={handlePointerMove}
+        onPointerDown={handlePointerDown}
+        className="w-full h-full cursor-crosshair"
+      />
+
+      {/* 3D Telemetry HUD Overlay (Sibling to canvas, safe from removeChild) */}
       <div className="absolute top-4 left-4 z-10 pointer-events-none flex flex-col gap-1.5 font-mono text-xs">
         <div className="flex items-center gap-2 bg-[#121A12]/90 backdrop-blur-md px-3 py-1.5 border border-[#233321] rounded text-[#E2E8F0] shadow-md">
           <span className="w-2 h-2 rounded-full bg-[#e97f01] animate-pulse" />
@@ -644,14 +693,24 @@ export const ViewportCanvas: React.FC = () => {
             <span>X: <strong className="text-white">{cursorPos.x}</strong></span>
             <span>Y: <strong className="text-white">{cursorPos.y}</strong></span>
             <span>Z: <strong className="text-white">{cursorPos.z}</strong></span>
+            {measuredDist !== null && (
+              <span className="text-[#e97f01]">LENGTH: <strong className="text-white">{measuredDist} mm</strong></span>
+            )}
           </div>
         )}
       </div>
 
-      {/* Mode Instruction Banner */}
+      {/* Smooth Mode Instruction & Reticle Banner */}
       {mode === 'add_seam' && (
-        <div className="absolute top-4 right-4 z-10 bg-[#e97f01] text-white font-mono text-xs px-4 py-2 rounded shadow-lg backdrop-blur flex items-center gap-2 tracking-wide font-semibold">
-          <span>{manualStartPoint ? 'SELECT END POINT TO COMPLETE SEAM' : 'CLICK SURFACE TO SET WELD START'}</span>
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2 transition-all duration-300 ease-out">
+          <div className="bg-[#e97f01] text-white font-mono text-xs px-4 py-2 rounded-lg shadow-xl backdrop-blur flex items-center gap-2.5 font-bold tracking-wide animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+            <span>
+              {manualStartPoint
+                ? `ANCHORED: CLICK 2ND POINT TO FINALIZE SEAM (${measuredDist || 0} mm)`
+                : 'SURFACE TARGETING: CLICK MESH TO ANCHOR START POINT'}
+            </span>
+          </div>
         </div>
       )}
     </div>
