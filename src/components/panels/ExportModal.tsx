@@ -7,8 +7,7 @@ import {
   Copy,
   Check,
   Download,
-  Code,
-  BookOpen,
+  ExternalLink,
   FileJson,
 } from 'lucide-react';
 
@@ -20,7 +19,6 @@ interface ExportModalProps {
 export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
   const { exportJobJSON } = useWeldStore();
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'json' | 'schema'>('json');
 
   if (!isOpen) return null;
 
@@ -45,138 +43,86 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 select-none">
-      <div className="bg-[#0C120C] border border-[#233121] rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div className="bg-[#0C120C] border border-[#233121] rounded-2xl w-full max-w-4xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="p-4 border-b border-[#1E291C] flex items-center justify-between bg-[#101710]">
-          <div className="flex items-center gap-2.5">
-            <FileJson className="w-5 h-5 text-[#e97f01]" />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#182517] border border-[#283C26] flex items-center justify-center">
+              <FileJson className="w-5 h-5 text-[#e97f01]" />
+            </div>
             <div>
-              <h2 style={{ fontFamily: 'Onest, sans-serif' }} className="text-sm font-bold text-white tracking-wide">
-                EXPORT ROBOTIC WELD JOB JSON
-              </h2>
-              <p className="text-[11px] text-[#7E8F7D]">
-                Deterministic schema consumed by Armatrix Snake-Arm Kinematics Controller
+              <div className="flex items-center gap-2">
+                <h2 style={{ fontFamily: 'Onest, sans-serif' }} className="text-sm font-bold text-white tracking-wide">
+                  EXPORT ROBOTIC WELD JOB JSON
+                </h2>
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-[#172616] text-[#22C55E] border border-[#233D22]">
+                  v1.2.0 Schema
+                </span>
+              </div>
+              <p className="text-[11px] text-[#7E8F7D] mt-0.5">
+                Standardized trajectory payload consumed by Armatrix snake-arm kinematics solvers
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Tab switch */}
-            <div className="flex items-center bg-[#151D14] p-1 rounded border border-[#223121]">
-              <button
-                onClick={() => setActiveTab('json')}
-                style={activeTab === 'json' ? { backgroundColor: '#e97f01', fontFamily: 'Onest, sans-serif' } : {}}
-                className={`px-3 py-1 text-xs rounded transition flex items-center gap-1.5 ${
-                  activeTab === 'json' ? 'text-white font-bold' : 'text-[#7E8F7D] hover:text-white'
-                }`}
-              >
-                <Code className="w-3.5 h-3.5" />
-                <span>JSON Payload</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('schema')}
-                style={activeTab === 'schema' ? { backgroundColor: '#e97f01', fontFamily: 'Onest, sans-serif' } : {}}
-                className={`px-3 py-1 text-xs rounded transition flex items-center gap-1.5 ${
-                  activeTab === 'schema' ? 'text-white font-bold' : 'text-[#7E8F7D] hover:text-white'
-                }`}
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                <span>Schema Docs</span>
-              </button>
-            </div>
+          <div className="flex items-center gap-2.5">
+            <a
+              href="/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono rounded bg-[#141E14] hover:bg-[#1D2C1C] text-[#8EA28D] hover:text-white border border-[#223321] transition"
+              title="Open full schema specification in new tab"
+            >
+              <span>Schema Documentation</span>
+              <ExternalLink className="w-3.5 h-3.5 text-[#e97f01]" />
+            </a>
 
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-[#1C271B] rounded text-[#7E8F7D] hover:text-white transition"
+              className="p-1.5 hover:bg-[#1C271B] rounded-lg text-[#7E8F7D] hover:text-white transition"
+              title="Close modal"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Content Body */}
+        {/* Content Body: Pure Clean JSON Code Viewer */}
         <div className="flex-1 overflow-y-auto p-4 bg-[#070A07]">
-          {activeTab === 'json' ? (
-            <pre className="text-xs text-[#9DE09D] font-mono leading-relaxed overflow-x-auto p-3.5 bg-[#050705] rounded-lg border border-[#182317]">
-              {jsonString}
-            </pre>
-          ) : (
-            <div className="space-y-4 text-xs text-[#CAD7C9]">
-              <div className="p-3 bg-[#0F160F] rounded-lg border border-[#1E2C1D]">
-                <h3 style={{ fontFamily: 'Onest, sans-serif', color: '#e97f01' }} className="font-bold text-sm mb-1">
-                  Armatrix Autonomous Weld Job Schema (v1.2.0)
-                </h3>
-                <p className="text-[#7E8F7D] text-[11px]">
-                  Engineered specifically for hyper-redundant snake manipulators reaching inside confined structural geometries (double bottoms, heat exchangers, chemical pipelines).
-                </p>
-              </div>
-
-              <div className="space-y-3 font-mono">
-                <div className="border border-[#1C281B] rounded p-2.5 bg-[#0E140E]">
-                  <span style={{ color: '#e97f01' }} className="font-bold block mb-1">metadata & part</span>
-                  <p className="text-[#7E8F7D] text-[11px]">
-                    Identifies job session ID, timestamp, part filename, and 3D bounding dimensions in millimeters.
-                  </p>
-                </div>
-
-                <div className="border border-[#1C281B] rounded p-2.5 bg-[#0E140E]">
-                  <span className="text-[#38BDF8] font-bold block mb-1">robot_controller_profile</span>
-                  <p className="text-[#7E8F7D] text-[11px]">
-                    Specifies kinematics limits (3500mm snake arm reach), maximum safe rapid traverse speed (120 mm/s), and clearance height above part surface to avoid internal collisions.
-                  </p>
-                </div>
-
-                <div className="border border-[#1C281B] rounded p-2.5 bg-[#0E140E]">
-                  <span className="text-[#22C55E] font-bold block mb-1">approach_point & retract_point</span>
-                  <p className="text-[#7E8F7D] text-[11px]">
-                    Critical for confined spaces: the snake arm approaches normal to the surface at a standoff distance, touches off the start point, travels along the seam, and retracts outward before traversing to the next seam.
-                  </p>
-                </div>
-
-                <div className="border border-[#1C281B] rounded p-2.5 bg-[#0E140E]">
-                  <span className="text-[#EAB308] font-bold block mb-1">torch_orientation (lead & tilt angles)</span>
-                  <p className="text-[#7E8F7D] text-[11px]">
-                    Controls torch angle relative to the seam surface normal for proper weld penetration profile and gas shielding.
-                  </p>
-                </div>
-
-                <div className="border border-[#1C281B] rounded p-2.5 bg-[#0E140E]">
-                  <span className="text-[#F43F5E] font-bold block mb-1">weld_parameters & interpass_delay_sec</span>
-                  <p className="text-[#7E8F7D] text-[11px]">
-                    Process parameters (travel speed, amperage, voltage, wire feed, gas flow) plus interpass cooling delays to prevent thermal distortion.
-                  </p>
-                </div>
-
-                <div className="border border-[#1C281B] rounded p-2.5 bg-[#0E140E]">
-                  <span className="text-[#A855F7] font-bold block mb-1">waypoints</span>
-                  <p className="text-[#7E8F7D] text-[11px]">
-                    High-density discretized 3D spline trajectory coordinates (5mm pitch) fed directly into the inverse kinematics (IK) solver.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          <pre className="text-xs text-[#A3E635] font-mono leading-relaxed overflow-x-auto p-4 bg-[#050705] rounded-xl border border-[#182317] selection:bg-[#e97f01]/30">
+            {jsonString}
+          </pre>
         </div>
 
         {/* Footer Actions */}
         <div className="p-3.5 border-t border-[#1E291C] flex items-center justify-between bg-[#101710]">
-          <span className="text-xs font-mono text-[#7E8F7D]">
-            {jobData.job_summary.total_seams} Seams | {jobData.job_summary.total_weld_length_mm} mm Total Weld Length
-          </span>
+          <div className="flex items-center gap-3 text-xs font-mono text-[#7E8F7D]">
+            <span>
+              Seams: <strong className="text-white">{jobData.job_summary.total_seams}</strong>
+            </span>
+            <span>•</span>
+            <span>
+              Total Weld: <strong className="text-[#22C55E]">{jobData.job_summary.total_weld_length_mm} mm</strong>
+            </span>
+            <span>•</span>
+            <span>
+              Est. Cycle: <strong className="text-[#e97f01]">{jobData.job_summary.total_cycle_time_sec}s</strong>
+            </span>
+          </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#172216] hover:bg-[#202D1E] text-white text-xs border border-[#273825] transition active:scale-95 font-mono"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#172216] hover:bg-[#202D1E] text-white text-xs border border-[#273825] transition active:scale-95 font-mono"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-[#22C55E]" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'COPIED' : 'COPY JSON'}</span>
+              <span>{copied ? 'COPIED TO CLIPBOARD' : 'COPY JSON'}</span>
             </button>
 
             <button
               onClick={handleDownload}
               style={{ fontFamily: 'Onest, sans-serif', backgroundColor: '#e97f01' }}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded hover:brightness-110 text-white text-xs font-bold shadow-md transition active:scale-95"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg hover:brightness-110 text-white text-xs font-bold shadow-md transition active:scale-95"
             >
               <Download className="w-3.5 h-3.5" />
               <span>DOWNLOAD JSON FILE</span>
