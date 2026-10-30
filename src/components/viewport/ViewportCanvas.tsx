@@ -174,9 +174,13 @@ export const ViewportCanvas: React.FC = () => {
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
 
-  // Cursor coordinates display
+  // Cursor coordinates display & smooth fade-in/fade-out
   const [cursorPos, setCursorPos] = useState<Vector3D | null>(null);
   const [measuredDist, setMeasuredDist] = useState<number | null>(null);
+  const [displayCoords, setDisplayCoords] = useState<Vector3D | null>(null);
+  const [displayDist, setDisplayDist] = useState<number | null>(null);
+  const [isCoordsVisible, setIsCoordsVisible] = useState(false);
+  const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Setup Three.js scene once
   useEffect(() => {
@@ -845,22 +849,41 @@ export const ViewportCanvas: React.FC = () => {
         z: parseFloat(p.z.toFixed(2)),
       };
       setCursorPos(hitCoord);
+      setDisplayCoords(hitCoord);
 
       if (manualStartPoint) {
         const dx = hitCoord.x - manualStartPoint.x;
         const dy = hitCoord.y - manualStartPoint.y;
         const dz = hitCoord.z - manualStartPoint.z;
-        setMeasuredDist(parseFloat(Math.sqrt(dx * dx + dy * dy + dz * dz).toFixed(1)));
+        const dist = parseFloat(Math.sqrt(dx * dx + dy * dy + dz * dz).toFixed(1));
+        setMeasuredDist(dist);
+        setDisplayDist(dist);
       } else {
         setMeasuredDist(null);
+        setDisplayDist(null);
       }
 
       if (mode === 'add_seam') {
         setManualCandidatePoint(hitCoord, { x: n.x, y: n.y, z: n.z });
       }
+
+      // Smooth Fade-In when actively hovering or measuring points
+      if (fadeTimeoutRef.current) {
+        clearTimeout(fadeTimeoutRef.current);
+        fadeTimeoutRef.current = null;
+      }
+      setIsCoordsVisible(true);
     } else {
       setCursorPos(null);
       setMeasuredDist(null);
+
+      // Smooth slow Fade-Out when cursor leaves or stops measuring
+      if (!fadeTimeoutRef.current) {
+        fadeTimeoutRef.current = setTimeout(() => {
+          setIsCoordsVisible(false);
+          fadeTimeoutRef.current = null;
+        }, 800);
+      }
     }
   };
 
@@ -902,23 +925,36 @@ export const ViewportCanvas: React.FC = () => {
         className="w-full h-full cursor-crosshair"
       />
 
-      {/* 3D Telemetry HUD Overlay (Sibling to canvas, safe from removeChild) */}
-      <div className="absolute top-4 left-4 z-10 pointer-events-none flex flex-col gap-1.5 font-mono text-xs">
-        <div className="flex items-center gap-2 bg-[#121A12]/90 backdrop-blur-md px-3 py-1.5 border border-[#233321] rounded text-[#E2E8F0] shadow-md">
-          <span className="w-2 h-2 rounded-full bg-[#e97f01] animate-pulse" />
-          <span className="text-[#8EA28D]">PART:</span>
-          <span className="font-semibold text-white tracking-wide">{activeModelName}</span>
+      {/* 3D Telemetry HUD Overlay (Seamless, transparent, white typography with no boxes) */}
+      <div className="absolute top-4 left-4 z-10 pointer-events-none flex flex-col gap-1 font-mono text-xs select-none">
+        {/* Model Name: Completely transparent, seamless, white */}
+        <div className="flex items-center gap-2 py-0.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]">
+          <span className="w-2 h-2 rounded-full bg-[#e97f01] shadow-[0_0_8px_#e97f01]" />
+          <span className="text-[#A4B3A3] text-[11px] tracking-wider uppercase font-medium">PART:</span>
+          <span className="font-semibold text-white tracking-wide text-[13px]">{activeModelName}</span>
         </div>
-        {cursorPos && (
-          <div className="bg-[#121A12]/90 backdrop-blur-md px-3 py-1.5 border border-[#233321] rounded text-[#8EA28D] flex gap-3 shadow-md">
-            <span>X: <strong className="text-white">{cursorPos.x}</strong></span>
-            <span>Y: <strong className="text-white">{cursorPos.y}</strong></span>
-            <span>Z: <strong className="text-white">{cursorPos.z}</strong></span>
-            {measuredDist !== null && (
-              <span className="text-[#e97f01]">LENGTH: <strong className="text-white">{measuredDist} mm</strong></span>
-            )}
-          </div>
-        )}
+
+        {/* Dynamic X Y Z Coordinates: smooth fade in, slow fade out, seamless transparent in white */}
+        <div
+          className={`flex items-center gap-3 py-0.5 text-xs drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition-all duration-700 ease-out ${
+            isCoordsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-0.5'
+          }`}
+        >
+          <span className="text-[#A4B3A3]">
+            X: <strong className="text-white font-semibold">{displayCoords ? displayCoords.x.toFixed(2) : '0.00'}</strong>
+          </span>
+          <span className="text-[#A4B3A3]">
+            Y: <strong className="text-white font-semibold">{displayCoords ? displayCoords.y.toFixed(2) : '0.00'}</strong>
+          </span>
+          <span className="text-[#A4B3A3]">
+            Z: <strong className="text-white font-semibold">{displayCoords ? displayCoords.z.toFixed(2) : '0.00'}</strong>
+          </span>
+          {displayDist !== null && (
+            <span className="text-[#e97f01] font-medium ml-1">
+              LENGTH: <strong className="text-white font-semibold">{displayDist} mm</strong>
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Smooth Mode Instruction & Reticle Banner */}
