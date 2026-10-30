@@ -4,12 +4,10 @@ import React, { useRef } from 'react';
 import { useWeldStore } from '@/store/useWeldStore';
 import {
   Upload,
-  Box,
-  Compass,
   Download,
   Play,
   Pause,
-  Layers,
+  ChevronDown,
 } from 'lucide-react';
 import { STLLoader } from 'three-stdlib';
 import { ArmatrixLogo } from '@/components/ui/ArmatrixLogo';
@@ -88,24 +86,29 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
   };
 
   return (
-    <header className="h-12 bg-transparent px-4 flex items-center justify-between z-20 select-none pointer-events-auto">
-      {/* Brand: Pure standalone Armatrix logo mark */}
-      <div className="flex items-center">
-        <ArmatrixLogo className="w-7 h-7" color="#e97f01" />
+    <header className="h-12 bg-transparent pl-7 pr-6 flex items-center justify-between z-20 select-none pointer-events-auto">
+      {/* Brand: Standalone Armatrix logo + refined logotype with comfortable left margin */}
+      <div className="flex items-center gap-2.5 ml-2 shrink-0">
+        <ArmatrixLogo className="w-6 h-6" color="#e97f01" />
+        <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-extrabold tracking-wider text-xs text-white">
+          ARMATRIX
+        </span>
       </div>
 
-      {/* Center Controls: Model Selector, Camera Presets & Written Feature Toggles */}
+      {/* Center Controls: Seamless Dropdowns & Feature Toggles */}
       <div className="flex items-center gap-2">
-        <div className="relative">
+        {/* CAD Part Selector: Seamless Dropdown */}
+        <div className="relative flex items-center">
           <select
             value={activeModelName}
             onChange={(e) => setActiveModelName(e.target.value)}
-            className="bg-[#121912] hover:bg-[#1A231A] text-xs font-mono text-[#DCE6DB] px-3 py-1.5 rounded border border-[#283626] focus:outline-none focus:border-[#e97f01] transition cursor-pointer"
+            className="bg-[#121912] hover:bg-[#1A231A] text-xs font-mono text-[#DCE6DB] pl-3 pr-7 py-1.5 rounded border border-[#283626] focus:outline-none focus:border-[#e97f01] transition cursor-pointer appearance-none"
           >
             <option value="Structural L-Bracket">Structural L-Bracket</option>
             <option value="Pipe T-Joint">Pipe T-Joint</option>
             <option value="Box Flange">Confined Box Flange</option>
           </select>
+          <ChevronDown className="w-3.5 h-3.5 text-[#e97f01] absolute right-2 pointer-events-none" />
         </div>
 
         {/* Upload Custom STL Button */}
@@ -125,36 +128,24 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
           <span>Upload .STL</span>
         </button>
 
-        {/* View Camera Presets */}
+        {/* Unified Camera View Dropdown: Compiles ISO, TOP, FRONT, SIDE into one seamless control */}
         <div className="h-5 w-px bg-[#202B1E] mx-1" />
-        <div className="flex items-center bg-[#101710] border border-[#202B1E] rounded p-0.5">
-          <button
-            onClick={() => setViewPreset('iso')}
-            className="px-2 py-1 text-[11px] font-mono text-[#8C9E8B] hover:text-white hover:bg-[#1D281C] rounded transition"
+        <div className="relative flex items-center">
+          <select
+            onChange={(e) => setViewPreset(e.target.value as any)}
+            defaultValue="iso"
+            className="bg-[#121912] hover:bg-[#1A231A] text-xs font-mono text-[#DCE6DB] pl-2.5 pr-6 py-1.5 rounded border border-[#283626] focus:outline-none focus:border-[#e97f01] transition cursor-pointer appearance-none"
+            title="Camera Perspective Presets"
           >
-            ISO
-          </button>
-          <button
-            onClick={() => setViewPreset('top')}
-            className="px-2 py-1 text-[11px] font-mono text-[#8C9E8B] hover:text-white hover:bg-[#1D281C] rounded transition"
-          >
-            TOP
-          </button>
-          <button
-            onClick={() => setViewPreset('front')}
-            className="px-2 py-1 text-[11px] font-mono text-[#8C9E8B] hover:text-white hover:bg-[#1D281C] rounded transition"
-          >
-            FRONT
-          </button>
-          <button
-            onClick={() => setViewPreset('right')}
-            className="px-2 py-1 text-[11px] font-mono text-[#8C9E8B] hover:text-white hover:bg-[#1D281C] rounded transition"
-          >
-            SIDE
-          </button>
+            <option value="iso">VIEW: ISO</option>
+            <option value="top">VIEW: TOP</option>
+            <option value="front">VIEW: FRONT</option>
+            <option value="right">VIEW: SIDE</option>
+          </select>
+          <ChevronDown className="w-3.5 h-3.5 text-[#e97f01] absolute right-2 pointer-events-none" />
         </div>
 
-        {/* Clear Written Labels for Viewport Toggles (No ambiguous symbols) */}
+        {/* Clear Written Labels for Viewport Toggles (Single clean horizontal bar) */}
         <div className="flex items-center bg-[#101710] border border-[#202B1E] rounded p-0.5 text-[11px] font-mono">
           <button
             onClick={toggleWireframe}
