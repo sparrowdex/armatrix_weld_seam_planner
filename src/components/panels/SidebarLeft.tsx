@@ -43,6 +43,11 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse, isCo
       addSeam({ x: -40, y: 14, z: -33 }, { x: -40, y: 14, z: 22 }, { x: -0.707, y: 0.707, z: 0 }, 'detected');
       addSeam({ x: 30, y: 14, z: -33 }, { x: 30, y: 14, z: 22 }, { x: 0.707, y: 0.707, z: 0 }, 'detected');
       addSeam({ x: -40, y: 14, z: -33 }, { x: -40, y: 79, z: -33 }, { x: -0.707, y: 0, z: 0.707 }, 'detected');
+    } else if (activeModelName === 'Armatrix Emblem') {
+      // 3 signature weld seams following the Armatrix snake-arm joints
+      addSeam({ x: -27.5, y: 16, z: -25 }, { x: -27.5, y: 16, z: 15 }, { x: 0, y: 1, z: 0 }, 'detected');
+      addSeam({ x: 0, y: 16, z: -25 }, { x: 0, y: 16, z: 20 }, { x: 0, y: 1, z: 0 }, 'detected');
+      addSeam({ x: 27.5, y: 16, z: -25 }, { x: 27.5, y: 16, z: 15 }, { x: 0, y: 1, z: 0 }, 'detected');
     } else if (activeModelName === 'Pipe T-Joint') {
       addSeam({ x: -18, y: 25, z: 0 }, { x: 0, y: 25, z: 18 }, { x: -0.5, y: 0.707, z: 0.5 }, 'detected');
       addSeam({ x: 0, y: 25, z: 18 }, { x: 18, y: 25, z: 0 }, { x: 0.5, y: 0.707, z: 0.5 }, 'detected');

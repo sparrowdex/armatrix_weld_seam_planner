@@ -10,7 +10,6 @@ if (!fs.existsSync(outDir)) {
 }
 
 function exportMesh(object3d, filename) {
-  // Exporting as ASCII STL guarantees clean, uncorrupted vertex data
   const result = exporter.parse(object3d, { binary: false });
   fs.writeFileSync(path.join(outDir, filename), result, 'utf8');
   console.log(`Exported solid ${filename}`);
@@ -87,22 +86,18 @@ function createPipeJoint() {
 function createBoxFlange() {
   const group = new THREE.Group();
 
-  // Bottom Base Plate
   const baseGeom = new THREE.BoxGeometry(130, 12, 90);
   baseGeom.translate(0, 6, 0);
   group.add(new THREE.Mesh(baseGeom));
 
-  // Center Welded Box
   const chamberGeom = new THREE.BoxGeometry(80, 50, 60);
   chamberGeom.translate(0, 12 + 25, 0);
   group.add(new THREE.Mesh(chamberGeom));
 
-  // Top Collar Flange
   const topGeom = new THREE.BoxGeometry(100, 10, 80);
   topGeom.translate(0, 12 + 50 + 5, 0);
   group.add(new THREE.Mesh(topGeom));
 
-  // Gusset Ribs
   const rib1 = new THREE.BoxGeometry(8, 45, 16);
   rib1.translate(-44, 12 + 22.5, 0);
   group.add(new THREE.Mesh(rib1));
@@ -114,8 +109,67 @@ function createBoxFlange() {
   return group;
 }
 
+// 4. Armatrix Emblem Brand Plate (Machined mounting plaque with 3 welded snake-joint fingers)
+function createArmatrixEmblem() {
+  const group = new THREE.Group();
+
+  // Base Machined Plaque (140 x 10 x 95)
+  const plaqueGeom = new THREE.BoxGeometry(140, 10, 95);
+  plaqueGeom.translate(0, 5, 0);
+  group.add(new THREE.Mesh(plaqueGeom));
+
+  // Outer border rim
+  const rimFront = new THREE.BoxGeometry(140, 6, 6);
+  rimFront.translate(0, 10 + 3, 44.5);
+  group.add(new THREE.Mesh(rimFront));
+
+  const rimBack = rimFront.clone();
+  rimBack.translate(0, 0, -89);
+  group.add(new THREE.Mesh(rimBack));
+
+  // Three Curved Snake-Arm Links of the Armatrix Emblem
+  // Link 1 (Left snake link)
+  const link1Shape = new THREE.Shape();
+  link1Shape.moveTo(-35, -25);
+  link1Shape.lineTo(-20, -25);
+  link1Shape.lineTo(-20, 15);
+  link1Shape.absarc(-27.5, 15, 7.5, 0, Math.PI, false);
+  link1Shape.lineTo(-35, -25);
+  const link1Geom = new THREE.ExtrudeGeometry(link1Shape, { depth: 12, bevelEnabled: false });
+  link1Geom.rotateX(Math.PI / 2);
+  link1Geom.translate(0, 10 + 6, 0);
+  group.add(new THREE.Mesh(link1Geom));
+
+  // Link 2 (Center snake link)
+  const link2Shape = new THREE.Shape();
+  link2Shape.moveTo(-7.5, -25);
+  link2Shape.lineTo(7.5, -25);
+  link2Shape.lineTo(7.5, 20);
+  link2Shape.absarc(0, 20, 7.5, 0, Math.PI, false);
+  link2Shape.lineTo(-7.5, -25);
+  const link2Geom = new THREE.ExtrudeGeometry(link2Shape, { depth: 12, bevelEnabled: false });
+  link2Geom.rotateX(Math.PI / 2);
+  link2Geom.translate(0, 10 + 6, 0);
+  group.add(new THREE.Mesh(link2Geom));
+
+  // Link 3 (Right snake link)
+  const link3Shape = new THREE.Shape();
+  link3Shape.moveTo(20, -25);
+  link3Shape.lineTo(35, -25);
+  link3Shape.lineTo(35, 15);
+  link3Shape.absarc(27.5, 15, 7.5, 0, Math.PI, false);
+  link3Shape.lineTo(20, -25);
+  const link3Geom = new THREE.ExtrudeGeometry(link3Shape, { depth: 12, bevelEnabled: false });
+  link3Geom.rotateX(Math.PI / 2);
+  link3Geom.translate(0, 10 + 6, 0);
+  group.add(new THREE.Mesh(link3Geom));
+
+  return group;
+}
+
 exportMesh(createLBracket(), 'bracket.stl');
 exportMesh(createPipeJoint(), 'pipe_joint.stl');
 exportMesh(createBoxFlange(), 'box_flange.stl');
+exportMesh(createArmatrixEmblem(), 'armatrix_emblem.stl');
 
-console.log('All 3 solid CAD models exported cleanly!');
+console.log('All 4 solid CAD models exported cleanly!');

@@ -12,6 +12,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { STLLoader } from 'three-stdlib';
+import { ArmatrixLogo } from '@/components/ui/ArmatrixLogo';
 
 interface HeaderProps {
   onOpenExport: () => void;
@@ -90,11 +91,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
     <header className="h-14 bg-[#0A0D0A] border-b border-[#1E291C] px-4 flex items-center justify-between z-20 select-none">
       {/* Brand & Title */}
       <div className="flex items-center gap-3">
-        {/* Armatrix Logo mark */}
-        <div className="flex items-center gap-1 px-2 py-1 bg-[#121912] border border-[#253323] rounded">
-          <div className="w-2 h-5 bg-[#e97f01] rounded-sm" />
-          <div className="w-2 h-3.5 bg-[#e97f01]/80 rounded-sm" />
-          <div className="w-2 h-4.5 bg-[#e97f01]/60 rounded-sm" />
+        {/* Exact Armatrix Logo Symbol */}
+        <div className="p-1 bg-[#121912] border border-[#253323] rounded flex items-center justify-center shadow-sm">
+          <ArmatrixLogo className="w-6 h-6" color="#e97f01" />
         </div>
         <div>
           <div className="flex items-center gap-2">
@@ -121,6 +120,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
             className="bg-[#121912] hover:bg-[#1A231A] text-xs font-mono text-[#DCE6DB] px-3 py-1.5 rounded border border-[#283626] focus:outline-none focus:border-[#e97f01] transition cursor-pointer"
           >
             <option value="Structural L-Bracket">Benchmark: Structural L-Bracket</option>
+            <option value="Armatrix Emblem">Benchmark: Armatrix Emblem Plaque</option>
             <option value="Pipe T-Joint">Benchmark: Pipe T-Joint</option>
             <option value="Box Flange">Benchmark: Hazardous Box Flange</option>
           </select>
