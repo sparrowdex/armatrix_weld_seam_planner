@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { PartMetadata, Vector3D, WeldParameters, WeldSeam, ViewportMode, WeldJobExport, WeldSeamExport } from '@/types/weld';
+import { PartMetadata, Vector3D, WeldParameters, WeldSeam, ViewportMode, WeldJobExport, WeldSeamExport, TorchNozzleType } from '@/types/weld';
 
 export interface WeldState {
   // Part state
@@ -30,6 +30,7 @@ export interface WeldState {
   approachClearance: number; // mm
   retractClearance: number; // mm
   safePlaneZClearance: number; // mm
+  nozzleType: TorchNozzleType;
 
   // Default parameters for new seams
   defaultParameters: WeldParameters;
@@ -51,6 +52,7 @@ export interface WeldState {
   toggleBoundingBox: () => void;
   toggleWaypoints: () => void;
   setViewPreset: (preset: 'iso' | 'top' | 'front' | 'right' | null) => void;
+  setNozzleType: (nozzle: TorchNozzleType) => void;
 
   setManualStartPoint: (point: Vector3D | null, normal: Vector3D | null) => void;
   setManualCandidatePoint: (point: Vector3D | null, normal: Vector3D | null) => void;
@@ -92,6 +94,7 @@ const defaultWeldParams: WeldParameters = {
   approachDistance: 25, // mm
   retractDistance: 30, // mm
   interpassDelay: 5, // 5s cooling
+  nozzleType: 'narrow',
 };
 
 export const useWeldStore = create<WeldState>((set, get) => ({
@@ -118,6 +121,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   approachClearance: 25,
   retractClearance: 30,
   safePlaneZClearance: 40,
+  nozzleType: 'narrow', // Default to deep-access confined space nozzle
 
   defaultParameters: defaultWeldParams,
 
@@ -129,13 +133,15 @@ export const useWeldStore = create<WeldState>((set, get) => ({
 
   setPart: (part) => set({ part }),
   setPartLoading: (loading) => set({ partLoading: loading }),
-  setActiveModelName: (name) => set({ activeModelName: name }),
+  // When switching models, atomically clear old seams so they never stack up or float in space!
+  setActiveModelName: (name) => set({ activeModelName: name, seams: [], selectedSeamId: null }),
   setMode: (mode) => set({ mode, manualStartPoint: null, manualCandidatePoint: null }),
   toggleWireframe: () => set((s) => ({ showWireframe: !s.showWireframe })),
   toggleNormals: () => set((s) => ({ showNormals: !s.showNormals })),
   toggleBoundingBox: () => set((s) => ({ showBoundingBox: !s.showBoundingBox })),
   toggleWaypoints: () => set((s) => ({ showWaypoints: !s.showWaypoints })),
   setViewPreset: (preset) => set({ viewPreset: preset }),
+  setNozzleType: (nozzle) => set({ nozzleType: nozzle }),
 
   setManualStartPoint: (point, normal) => set({ manualStartPoint: point, manualStartNormal: normal }),
   setManualCandidatePoint: (point, normal) => set({ manualCandidatePoint: point, manualCandidateNormal: normal }),
@@ -158,7 +164,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       endPoint: end,
       normal,
       length,
-      parameters: { ...get().defaultParameters },
+      parameters: { ...get().defaultParameters, nozzleType: get().nozzleType },
       createdVia,
     };
 
@@ -175,7 +181,6 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   removeSeam: (id) =>
     set((state) => {
       const filtered = state.seams.filter((s) => s.id !== id);
-      // Re-index sequence order
       const reindexed = filtered.map((s, idx) => ({
         ...s,
         sequenceOrder: idx + 1,
@@ -253,7 +258,6 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       totalWeldTime += activeTime;
       totalCooling += seam.parameters.interpassDelay;
 
-      // Discretize waypoints every 5mm along the seam for robot controller IK interpolation
       const steps = Math.max(2, Math.ceil(seam.length / 5));
       const waypoints: Array<[number, number, number]> = [];
       for (let i = 0; i <= steps; i++) {
@@ -264,7 +268,6 @@ export const useWeldStore = create<WeldState>((set, get) => ({
         waypoints.push([parseFloat(px.toFixed(3)), parseFloat(py.toFixed(3)), parseFloat(pz.toFixed(3))]);
       }
 
-      // Approach point: startPoint + normal * approachDistance
       const appDist = seam.parameters.approachDistance;
       const retDist = seam.parameters.retractDistance;
       const approachPoint: [number, number, number] = [
@@ -272,7 +275,6 @@ export const useWeldStore = create<WeldState>((set, get) => ({
         parseFloat((seam.startPoint.y + seam.normal.y * appDist).toFixed(3)),
         parseFloat((seam.startPoint.z + seam.normal.z * appDist).toFixed(3)),
       ];
-      // Retract point: endPoint + normal * retractDistance
       const retractPoint: [number, number, number] = [
         parseFloat((seam.endPoint.x + seam.normal.x * retDist).toFixed(3)),
         parseFloat((seam.endPoint.y + seam.normal.y * retDist).toFixed(3)),
@@ -294,6 +296,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
         torch_orientation: {
           lead_angle_deg: seam.parameters.torchLeadAngle,
           tilt_angle_deg: seam.parameters.torchTiltAngle,
+          nozzle_type: seam.parameters.nozzleType || s.nozzleType,
         },
         weld_parameters: {
           travel_speed_mm_s: seam.parameters.travelSpeed,
@@ -307,7 +310,6 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       };
     });
 
-    // Estimate rapid traverse time between consecutive retract and next approach
     let totalTraverseDist = 0;
     for (let i = 0; i < exportedSeams.length - 1; i++) {
       const p1 = exportedSeams[i].retract_point;
@@ -334,9 +336,13 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       },
       robot_controller_profile: {
         kinematics: 'Armatrix-Continuum-Snake-Arm',
-        reach_envelope_max_mm: 3500, // 3.5 meter reach
+        reach_envelope_max_mm: 3500,
         rapid_traverse_speed_mm_s: s.rapidTraverseSpeed,
         safe_plane_z_clearance_mm: s.safePlaneZClearance,
+        tool_effector: {
+          model: 'Armatrix-Modular-Torch-MK3',
+          nozzle_configuration: s.nozzleType === 'narrow' ? 'Narrow-Bottleneck-Deep-Access' : s.nozzleType === 'laser' ? 'Laser-Optic-Coaxial' : 'Standard-Conical-MIG',
+        },
       },
       job_summary: {
         total_seams: seams.length,
@@ -352,4 +358,3 @@ export const useWeldStore = create<WeldState>((set, get) => ({
     return jobExport;
   },
 }));
-

@@ -8,6 +8,8 @@ export type WeldProcess = 'MIG' | 'TIG' | 'LASER';
 
 export type WeldJointType = 'FILLET' | 'BUTT' | 'LAP' | 'CORNER' | 'EDGE';
 
+export type TorchNozzleType = 'conical' | 'narrow' | 'laser';
+
 export interface WeldParameters {
   process: WeldProcess;
   jointType: WeldJointType;
@@ -21,6 +23,7 @@ export interface WeldParameters {
   approachDistance: number; // mm (safe approach height)
   retractDistance: number; // mm (safe retract height)
   interpassDelay: number; // seconds (cooling delay before next seam)
+  nozzleType?: TorchNozzleType;
 }
 
 export interface WeldSeam {
@@ -65,6 +68,7 @@ export interface WeldSeamExport {
   torch_orientation: {
     lead_angle_deg: number;
     tilt_angle_deg: number;
+    nozzle_type: string;
   };
   weld_parameters: {
     travel_speed_mm_s: number;
@@ -96,6 +100,10 @@ export interface WeldJobExport {
     reach_envelope_max_mm: number;
     rapid_traverse_speed_mm_s: number;
     safe_plane_z_clearance_mm: number;
+    tool_effector: {
+      model: 'Armatrix-Modular-Torch-MK3';
+      nozzle_configuration: string;
+    };
   };
   job_summary: {
     total_seams: number;
@@ -109,4 +117,3 @@ export interface WeldJobExport {
 }
 
 export type ViewportMode = 'orbit' | 'add_seam' | 'inspect' | 'simulate';
-

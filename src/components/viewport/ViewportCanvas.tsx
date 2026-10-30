@@ -5,7 +5,129 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { STLLoader } from 'three-stdlib';
 import { useWeldStore } from '@/store/useWeldStore';
-import { Vector3D } from '@/types/weld';
+import { Vector3D, TorchNozzleType } from '@/types/weld';
+
+// Industrial Swan-Neck Robotic Torch Builder matching Armatrix's hyper-redundant arms
+function buildRoboticTorch(nozzle: TorchNozzleType): THREE.Group {
+  const group = new THREE.Group();
+
+  // 1. Robot Wrist Mounting Flange (ISO standard circular flange, gunmetal grey)
+  const flangeGeom = new THREE.CylinderGeometry(7.0, 7.0, 4.0, 24);
+  const flangeMat = new THREE.MeshStandardMaterial({ color: '#1B211B', metalness: 0.85, roughness: 0.3 });
+  const flange = new THREE.Mesh(flangeGeom, flangeMat);
+  flange.position.y = 52;
+  group.add(flange);
+
+  // 2. Armatrix Actuation Collar (Armatrix Safety Orange #e97f01)
+  const collarGeom = new THREE.CylinderGeometry(6.2, 6.2, 6.0, 24);
+  const collarMat = new THREE.MeshStandardMaterial({ color: '#e97f01', metalness: 0.6, roughness: 0.25 });
+  const collar = new THREE.Mesh(collarGeom, collarMat);
+  collar.position.y = 47;
+  group.add(collar);
+
+  // 3. Swan-Neck Curved Gooseneck (Bent at 35 degrees toward the weld puddle)
+  const upperTubeGeom = new THREE.CylinderGeometry(3.6, 3.6, 16, 20);
+  const neckMat = new THREE.MeshStandardMaterial({ color: '#C8A051', metalness: 0.85, roughness: 0.25 }); // Polished bronze/brass
+  const upperTube = new THREE.Mesh(upperTubeGeom, neckMat);
+  upperTube.position.set(0, 36, 0);
+  group.add(upperTube);
+
+  const elbowGeom = new THREE.SphereGeometry(4.2, 16, 16);
+  const elbow = new THREE.Mesh(elbowGeom, flangeMat);
+  elbow.position.set(0, 27, 0);
+  group.add(elbow);
+
+  const lowerNeckGeom = new THREE.CylinderGeometry(3.2, 3.2, 18, 20);
+  const lowerNeck = new THREE.Mesh(lowerNeckGeom, neckMat);
+  lowerNeck.position.set(3.5, 17, 0);
+  lowerNeck.rotation.z = -0.38;
+  group.add(lowerNeck);
+
+  // 4. Gas Diffuser / Torch Housing
+  const diffuserGeom = new THREE.CylinderGeometry(4.5, 4.0, 10, 20);
+  const diffuserMat = new THREE.MeshStandardMaterial({ color: '#2C352B', metalness: 0.9, roughness: 0.2 });
+  const diffuser = new THREE.Mesh(diffuserGeom, diffuserMat);
+  diffuser.position.set(6.8, 8, 0);
+  diffuser.rotation.z = -0.38;
+  group.add(diffuser);
+
+  // 5. Interchangeable Industrial Nozzle Heads
+  if (nozzle === 'conical') {
+    // Heavy-duty GMAW/MIG Conical Bell Nozzle
+    const nozzGeom = new THREE.CylinderGeometry(3.0, 5.2, 12, 20);
+    const nozzMat = new THREE.MeshStandardMaterial({ color: '#C87D40', metalness: 0.92, roughness: 0.15 });
+    const nozz = new THREE.Mesh(nozzGeom, nozzMat);
+    nozz.position.set(9.0, -1.5, 0);
+    nozz.rotation.z = -0.38;
+    group.add(nozz);
+
+    // Copper Contact Tip & Solid Wire Stick-out
+    const tipGeom = new THREE.CylinderGeometry(1.0, 1.0, 5, 12);
+    const tipMat = new THREE.MeshStandardMaterial({ color: '#E07A5F', metalness: 0.95, roughness: 0.1 });
+    const tip = new THREE.Mesh(tipGeom, tipMat);
+    tip.position.set(10.2, -5.5, 0);
+    tip.rotation.z = -0.38;
+    group.add(tip);
+
+    const wireGeom = new THREE.CylinderGeometry(0.4, 0.4, 6, 8);
+    const wireMat = new THREE.MeshStandardMaterial({ color: '#C5C6C7', metalness: 0.9, roughness: 0.1 });
+    const wire = new THREE.Mesh(wireGeom, wireMat);
+    wire.position.set(11.2, -9.0, 0);
+    wire.rotation.z = -0.38;
+    group.add(wire);
+  } else if (nozzle === 'narrow') {
+    // Bottleneck Slim Needle Nozzle for Deep Confined Spaces (Armatrix Snake-Arm specialty)
+    const bottleGeom = new THREE.CylinderGeometry(2.0, 4.2, 10, 20);
+    const nozzMat = new THREE.MeshStandardMaterial({ color: '#D97706', metalness: 0.9, roughness: 0.2 });
+    const bottle = new THREE.Mesh(bottleGeom, nozzMat);
+    bottle.position.set(8.5, 0.5, 0);
+    bottle.rotation.z = -0.38;
+    group.add(bottle);
+
+    // Slim needle extension
+    const needleGeom = new THREE.CylinderGeometry(1.6, 1.8, 14, 20);
+    const needleMat = new THREE.MeshStandardMaterial({ color: '#E5E7EB', metalness: 0.95, roughness: 0.15 });
+    const needle = new THREE.Mesh(needleGeom, needleMat);
+    needle.position.set(11.2, -8.5, 0);
+    needle.rotation.z = -0.38;
+    group.add(needle);
+
+    // Wire stick-out
+    const wireGeom = new THREE.CylinderGeometry(0.35, 0.35, 5, 8);
+    const wireMat = new THREE.MeshStandardMaterial({ color: '#C5C6C7', metalness: 0.9, roughness: 0.1 });
+    const wire = new THREE.Mesh(wireGeom, wireMat);
+    wire.position.set(12.8, -14.5, 0);
+    wire.rotation.z = -0.38;
+    group.add(wire);
+  } else {
+    // Coaxial Laser Optic Head with focus cone
+    const laserHeadGeom = new THREE.CylinderGeometry(4.2, 4.2, 16, 24);
+    const laserMat = new THREE.MeshStandardMaterial({ color: '#1F2937', metalness: 0.85, roughness: 0.25 });
+    const laserHead = new THREE.Mesh(laserHeadGeom, laserMat);
+    laserHead.position.set(8.8, -1.0, 0);
+    laserHead.rotation.z = -0.38;
+    group.add(laserHead);
+
+    const opticRingGeom = new THREE.TorusGeometry(3.2, 0.8, 12, 24);
+    const opticRingMat = new THREE.MeshStandardMaterial({ color: '#0284C7', emissive: '#38BDF8', emissiveIntensity: 0.8 });
+    const opticRing = new THREE.Mesh(opticRingGeom, opticRingMat);
+    opticRing.position.set(10.5, -6.5, 0);
+    opticRing.rotation.x = Math.PI / 2;
+    opticRing.rotation.y = -0.38;
+    group.add(opticRing);
+
+    const coneGeom = new THREE.ConeGeometry(2.8, 8, 20);
+    const coneMat = new THREE.MeshStandardMaterial({ color: '#374151', metalness: 0.9, roughness: 0.2 });
+    const cone = new THREE.Mesh(coneGeom, coneMat);
+    cone.position.set(11.8, -9.5, 0);
+    cone.rotation.z = -0.38;
+    group.add(cone);
+  }
+
+  // Adjust tip offset so the active contact point aligns with the seam
+  group.position.set(-11, 10, 0);
+  return group;
+}
 
 export const ViewportCanvas: React.FC = () => {
   // Separate mount ref for Three.js WebGL canvas to avoid React reconciliation conflicts
@@ -28,6 +150,7 @@ export const ViewportCanvas: React.FC = () => {
   const selectedSeamId = useWeldStore((s) => s.selectedSeamId);
   const isSimulating = useWeldStore((s) => s.isSimulating);
   const playbackSpeed = useWeldStore((s) => s.playbackSpeed);
+  const nozzleType = useWeldStore((s) => s.nozzleType);
   const setPart = useWeldStore((s) => s.setPart);
   const setPartLoading = useWeldStore((s) => s.setPartLoading);
 
@@ -36,15 +159,18 @@ export const ViewportCanvas: React.FC = () => {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
+  const modelGroupRef = useRef<THREE.Group>(new THREE.Group());
   const meshRef = useRef<THREE.Mesh | null>(null);
   const edgesRef = useRef<THREE.LineSegments | null>(null);
   const wireframeRef = useRef<THREE.LineSegments | null>(null);
   const boundingBoxRef = useRef<THREE.BoxHelper | null>(null);
   const seamsGroupRef = useRef<THREE.Group>(new THREE.Group());
+  const dynamicBeadGroupRef = useRef<THREE.Group>(new THREE.Group());
   const previewSeamRef = useRef<THREE.Group>(new THREE.Group());
   const reticleRef = useRef<THREE.Group>(new THREE.Group());
   const torchRef = useRef<THREE.Group | null>(null);
   const arcLightRef = useRef<THREE.PointLight | null>(null);
+  const arcSparksRef = useRef<THREE.Points | null>(null);
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
 
@@ -97,31 +223,36 @@ export const ViewportCanvas: React.FC = () => {
     controls.target.set(0, 35, 0);
     controlsRef.current = controls;
 
-    // 5. Omni-Directional CAD Studio Lighting
-    const hemiLight = new THREE.HemisphereLight('#FFFFFF', '#4A5D4A', 2.0);
+    // 5. High-Fidelity Omni-Directional CAD Studio Lighting (Zero Shadow Acne)
+    const hemiLight = new THREE.HemisphereLight('#FFFFFF', '#384838', 2.2);
     scene.add(hemiLight);
 
-    const ambientLight = new THREE.AmbientLight('#FFFFFF', 1.4);
+    const ambientLight = new THREE.AmbientLight('#FFFFFF', 1.6);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight('#FFFFFF', 2.2);
-    keyLight.position.set(150, 250, 180);
-    keyLight.castShadow = true;
+    const keyLight = new THREE.DirectionalLight('#FFFFFF', 2.4);
+    keyLight.position.set(180, 260, 200);
     scene.add(keyLight);
 
-    const fillLight1 = new THREE.DirectionalLight('#E2E8F0', 1.8);
-    fillLight1.position.set(-160, 180, 140);
+    const fillLight1 = new THREE.DirectionalLight('#E2E8F0', 2.0);
+    fillLight1.position.set(-180, 200, 160);
     scene.add(fillLight1);
 
-    const fillLight2 = new THREE.DirectionalLight('#CBD5E1', 1.6);
-    fillLight2.position.set(140, 160, -160);
+    const fillLight2 = new THREE.DirectionalLight('#CBD5E1', 1.8);
+    fillLight2.position.set(160, 180, -180);
     scene.add(fillLight2);
 
-    const rimLight = new THREE.DirectionalLight('#e97f01', 1.4);
-    rimLight.position.set(-150, 140, -180);
+    const rimLight = new THREE.DirectionalLight('#e97f01', 1.5);
+    rimLight.position.set(-160, 160, -180);
     scene.add(rimLight);
 
-    // Groups
+    const bottomBounce = new THREE.DirectionalLight('#607060', 1.0);
+    bottomBounce.position.set(0, -160, 0);
+    scene.add(bottomBounce);
+
+    // Hierarchical Scene Groups
+    scene.add(modelGroupRef.current);
+    scene.add(dynamicBeadGroupRef.current);
     scene.add(seamsGroupRef.current);
     scene.add(previewSeamRef.current);
 
@@ -139,35 +270,32 @@ export const ViewportCanvas: React.FC = () => {
     scene.add(reticleGroup);
     reticleRef.current = reticleGroup;
 
-    // 7. Robotic Welding Torch 3D Model
-    const torchGroup = new THREE.Group();
-    const torchBodyGeom = new THREE.CylinderGeometry(4.2, 4.2, 36, 20);
-    const torchBodyMat = new THREE.MeshStandardMaterial({ color: '#1B1E1B', metalness: 0.85, roughness: 0.25 });
-    const torchBody = new THREE.Mesh(torchBodyGeom, torchBodyMat);
-    torchBody.position.y = 26;
-    torchGroup.add(torchBody);
+    // 7. Industrial Robotic Swan-Neck Welding Torch & Arc Lighting
+    const torchContainer = new THREE.Group();
+    const torchMesh = buildRoboticTorch(nozzleType);
+    torchContainer.add(torchMesh);
 
-    const collarGeom = new THREE.CylinderGeometry(4.8, 4.8, 8, 20);
-    const collarMat = new THREE.MeshStandardMaterial({ color: '#e97f01', metalness: 0.7, roughness: 0.2 });
-    const collar = new THREE.Mesh(collarGeom, collarMat);
-    collar.position.y = 13;
-    torchGroup.add(collar);
-
-    const nozzleGeom = new THREE.ConeGeometry(3.6, 12, 20);
-    const nozzleMat = new THREE.MeshStandardMaterial({ color: '#C87D40', metalness: 0.95, roughness: 0.15 });
-    const nozzle = new THREE.Mesh(nozzleGeom, nozzleMat);
-    nozzle.rotation.x = Math.PI;
-    nozzle.position.y = 2;
-    torchGroup.add(nozzle);
-
-    const arcLight = new THREE.PointLight('#38BDF8', 0, 75);
+    const arcLight = new THREE.PointLight('#38BDF8', 0, 90);
     arcLight.position.set(0, 0, 0);
-    torchGroup.add(arcLight);
+    torchContainer.add(arcLight);
     arcLightRef.current = arcLight;
 
-    torchGroup.visible = false;
-    scene.add(torchGroup);
-    torchRef.current = torchGroup;
+    // Arc Sparks Particles
+    const sparkCount = 35;
+    const sparkGeom = new THREE.BufferGeometry();
+    const sparkPositions = new Float32Array(sparkCount * 3);
+    for (let i = 0; i < sparkCount * 3; i++) {
+      sparkPositions[i] = (Math.random() - 0.5) * 6;
+    }
+    sparkGeom.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
+    const sparkMat = new THREE.PointsMaterial({ color: '#FFE066', size: 2.2, transparent: true, opacity: 0 });
+    const sparkPoints = new THREE.Points(sparkGeom, sparkMat);
+    torchContainer.add(sparkPoints);
+    arcSparksRef.current = sparkPoints;
+
+    torchContainer.visible = false;
+    scene.add(torchContainer);
+    torchRef.current = torchContainer;
 
     // 60 FPS Render Loop
     let animId: number;
@@ -198,6 +326,20 @@ export const ViewportCanvas: React.FC = () => {
       }
     };
   }, []);
+
+  // Dynamically update Robotic Torch when nozzle type changes
+  useEffect(() => {
+    if (!torchRef.current) return;
+    const torchContainer = torchRef.current;
+    for (let i = torchContainer.children.length - 1; i >= 0; i--) {
+      const child = torchContainer.children[i];
+      if (child.type === 'Group') {
+        torchContainer.remove(child);
+      }
+    }
+    const newTorchMesh = buildRoboticTorch(nozzleType);
+    torchContainer.add(newTorchMesh);
+  }, [nozzleType]);
 
   // Handle Preset Views
   useEffect(() => {
@@ -234,6 +376,22 @@ export const ViewportCanvas: React.FC = () => {
 
     setPartLoading(true);
 
+    // Atomically purge previous 3D geometry and beads so parts never stack
+    const modelGroup = modelGroupRef.current;
+    while (modelGroup.children.length > 0) {
+      const child = modelGroup.children[0];
+      modelGroup.remove(child);
+      if ((child as any).geometry) (child as any).geometry.dispose();
+      if ((child as any).material) {
+        if (Array.isArray((child as any).material)) {
+          (child as any).material.forEach((m: any) => m.dispose());
+        } else {
+          (child as any).material.dispose();
+        }
+      }
+    }
+    dynamicBeadGroupRef.current.clear();
+
     let modelUrl = `/models/bracket.stl`;
     if (activeModelName === 'Pipe T-Joint') modelUrl = `/models/pipe_joint.stl`;
     if (activeModelName === 'Box Flange') modelUrl = `/models/box_flange.stl`;
@@ -243,20 +401,11 @@ export const ViewportCanvas: React.FC = () => {
     loader.load(
       modelUrl,
       (geometry) => {
-        if (meshRef.current) {
-          scene.remove(meshRef.current);
-          meshRef.current.geometry.dispose();
-        }
-        if (edgesRef.current) {
-          scene.remove(edgesRef.current);
-          edgesRef.current.geometry.dispose();
-        }
-        if (wireframeRef.current) {
-          scene.remove(wireframeRef.current);
-          wireframeRef.current.geometry.dispose();
-        }
-        if (boundingBoxRef.current) {
-          scene.remove(boundingBoxRef.current);
+        // Double check modelGroup is cleared for this arrival
+        while (modelGroup.children.length > 0) {
+          const child = modelGroup.children[0];
+          modelGroup.remove(child);
+          if ((child as any).geometry) (child as any).geometry.dispose();
         }
 
         geometry.computeVertexNormals();
@@ -272,10 +421,11 @@ export const ViewportCanvas: React.FC = () => {
         const height = parseFloat((finalBox.max.y - finalBox.min.y).toFixed(1));
         const depth = parseFloat((finalBox.max.z - finalBox.min.z).toFixed(1));
 
+        // High-clarity satin alloy material with crisp omni-directional lighting
         const material = new THREE.MeshStandardMaterial({
-          color: '#B2C2B5',
-          metalness: 0.18,
-          roughness: 0.45,
+          color: '#C6D2C5',
+          metalness: 0.15,
+          roughness: 0.35,
           side: THREE.DoubleSide,
           polygonOffset: true,
           polygonOffsetFactor: 1,
@@ -283,27 +433,28 @@ export const ViewportCanvas: React.FC = () => {
         });
 
         const mesh = new THREE.Mesh(geometry, material);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        scene.add(mesh);
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
+        modelGroup.add(mesh);
         meshRef.current = mesh;
 
-        const edgeGeometry = new THREE.EdgesGeometry(geometry, 25);
-        const edgeMaterial = new THREE.LineBasicMaterial({ color: '#182417', linewidth: 1.5 });
+        // Clean CAD feature edges (threshold 35° avoids dense black triangle grids on curved cylinders)
+        const edgeGeometry = new THREE.EdgesGeometry(geometry, 35);
+        const edgeMaterial = new THREE.LineBasicMaterial({ color: '#243523', linewidth: 1.2 });
         const edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
-        scene.add(edgeLines);
+        modelGroup.add(edgeLines);
         edgesRef.current = edgeLines;
 
         const wireframeGeom = new THREE.WireframeGeometry(geometry);
-        const wireframeMat = new THREE.LineBasicMaterial({ color: '#3A5239', opacity: 0.4, transparent: true });
+        const wireframeMat = new THREE.LineBasicMaterial({ color: '#3A5239', opacity: 0.35, transparent: true });
         const wireframe = new THREE.LineSegments(wireframeGeom, wireframeMat);
         wireframe.visible = showWireframe;
-        scene.add(wireframe);
+        modelGroup.add(wireframe);
         wireframeRef.current = wireframe;
 
         const boxHelper = new THREE.BoxHelper(mesh, new THREE.Color('#e97f01'));
         boxHelper.visible = showBoundingBox;
-        scene.add(boxHelper);
+        modelGroup.add(boxHelper);
         boundingBoxRef.current = boxHelper;
 
         setPart({
@@ -478,7 +629,33 @@ export const ViewportCanvas: React.FC = () => {
 
     const torch = torchRef.current;
     const arcLight = arcLightRef.current;
+    const dynamicGroup = dynamicBeadGroupRef.current;
+    dynamicGroup.clear();
     torch.visible = true;
+
+    // Active Deposited Bead Segment (Solidifying Metallic Alloy)
+    const activeBeadGeom = new THREE.CylinderGeometry(2.3, 2.3, 1, 16);
+    activeBeadGeom.translate(0, 0.5, 0);
+    activeBeadGeom.rotateX(Math.PI / 2);
+    const activeBeadMat = new THREE.MeshStandardMaterial({
+      color: '#B5C4B5',
+      metalness: 0.88,
+      roughness: 0.28,
+    });
+    const activeBeadMesh = new THREE.Mesh(activeBeadGeom, activeBeadMat);
+    activeBeadMesh.visible = false;
+    dynamicGroup.add(activeBeadMesh);
+
+    // Glowing Molten Weld Puddle right at torch tip
+    const moltenPuddleGeom = new THREE.SphereGeometry(2.8, 14, 14);
+    const moltenPuddleMat = new THREE.MeshStandardMaterial({
+      color: '#FF4500',
+      emissive: '#FF8800',
+      emissiveIntensity: 3.2,
+    });
+    const moltenPuddleMesh = new THREE.Mesh(moltenPuddleGeom, moltenPuddleMat);
+    moltenPuddleMesh.visible = false;
+    dynamicGroup.add(moltenPuddleMesh);
 
     let animId: number;
     let currentSeamIdx = 0;
@@ -537,6 +714,9 @@ export const ViewportCanvas: React.FC = () => {
         torch.position.copy(currentPos);
         safeQuaternion(normal);
         if (arcLight) arcLight.intensity = 0;
+        if (arcSparksRef.current) (arcSparksRef.current.material as THREE.PointsMaterial).opacity = 0;
+        activeBeadMesh.visible = false;
+        moltenPuddleMesh.visible = false;
         updatePhase('approach');
 
         if (progress >= 1) {
@@ -548,13 +728,47 @@ export const ViewportCanvas: React.FC = () => {
         const currentPos = new THREE.Vector3().lerpVectors(pStart, pEnd, Math.min(1, progress));
         torch.position.copy(currentPos);
         safeQuaternion(normal);
+
+        // Progressive Metallic Weld Bead Deposition behind torch tip
+        const beadLen = pStart.distanceTo(currentPos);
+        if (beadLen > 0.4) {
+          activeBeadMesh.visible = true;
+          activeBeadMesh.position.copy(pStart);
+          activeBeadMesh.scale.set(1, 1, beadLen);
+          activeBeadMesh.lookAt(currentPos);
+        }
+
+        // Active glowing molten puddle at contact point
+        moltenPuddleMesh.visible = true;
+        moltenPuddleMesh.position.copy(currentPos);
+
         if (arcLight) {
-          arcLight.intensity = 25 + Math.random() * 25;
+          arcLight.intensity = 35 + Math.random() * 30;
           arcLight.color.set(Math.random() > 0.3 ? '#38BDF8' : '#FFFFFF');
+        }
+        if (arcSparksRef.current) {
+          (arcSparksRef.current.material as THREE.PointsMaterial).opacity = 0.75 + Math.random() * 0.25;
+          arcSparksRef.current.rotation.y += 0.35;
         }
         updatePhase('welding');
 
         if (progress >= 1) {
+          // Permanently solidify finished metallic weld bead for this completed seam
+          const finishedGeom = new THREE.CylinderGeometry(2.3, 2.3, seam.length, 16);
+          finishedGeom.translate(0, seam.length / 2, 0);
+          finishedGeom.rotateX(Math.PI / 2);
+          const finishedMat = new THREE.MeshStandardMaterial({
+            color: '#B5C4B5',
+            metalness: 0.88,
+            roughness: 0.28,
+          });
+          const finishedMesh = new THREE.Mesh(finishedGeom, finishedMat);
+          finishedMesh.position.copy(pStart);
+          finishedMesh.lookAt(pEnd);
+          dynamicGroup.add(finishedMesh);
+
+          activeBeadMesh.visible = false;
+          moltenPuddleMesh.visible = false;
           progress = 0;
           phase = 'retract';
         }
@@ -564,6 +778,9 @@ export const ViewportCanvas: React.FC = () => {
         torch.position.copy(currentPos);
         safeQuaternion(normal);
         if (arcLight) arcLight.intensity = 0;
+        if (arcSparksRef.current) (arcSparksRef.current.material as THREE.PointsMaterial).opacity = 0;
+        activeBeadMesh.visible = false;
+        moltenPuddleMesh.visible = false;
         updatePhase('retract');
 
         if (progress >= 1) {
@@ -586,6 +803,10 @@ export const ViewportCanvas: React.FC = () => {
         const currentPos = new THREE.Vector3().lerpVectors(pRetract, nextApproach, Math.min(1, progress));
         torch.position.copy(currentPos);
         safeQuaternion(nextNorm);
+        if (arcLight) arcLight.intensity = 0;
+        if (arcSparksRef.current) (arcSparksRef.current.material as THREE.PointsMaterial).opacity = 0;
+        activeBeadMesh.visible = false;
+        moltenPuddleMesh.visible = false;
         updatePhase('rapid_traverse');
 
         if (progress >= 1) {
