@@ -16,7 +16,7 @@ interface SidebarRightProps {
   isCollapsed?: boolean;
 }
 
-export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse, isCollapsed }) => {
+export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) => {
   const {
     seams,
     selectedSeamId,
@@ -30,31 +30,34 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse, is
 
   return (
     <aside className="w-80 h-full bg-[#0A0D0A] border-l border-[#1E291C] flex flex-col z-10 select-none overflow-y-auto text-xs relative">
-      {/* Header */}
+      {/* Header with prominent Collapse button */}
       <div className="p-3.5 border-b border-[#1E291C] bg-[#0E140E] flex items-center justify-between">
+        <span style={{ fontFamily: 'Onest, sans-serif' }} className="flex items-center gap-1.5 font-bold text-white tracking-wide">
+          <Sliders className="w-3.5 h-3.5 text-[#e97f01]" />
+          WELD PARAMETERS
+        </span>
+
         <div className="flex items-center gap-2">
+          {selectedSeam && (
+            <span
+              style={{ color: '#e97f01' }}
+              className="bg-[#172216] px-2 py-0.5 rounded border border-[#273825] text-[10px] font-mono font-bold"
+            >
+              {selectedSeam.id}
+            </span>
+          )}
+
           {onToggleCollapse && (
             <button
               onClick={onToggleCollapse}
-              className="p-1 hover:bg-[#1A2519] rounded text-[#7E8F7D] hover:text-white transition"
+              className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono bg-[#162016] hover:bg-[#202E1F] border border-[#233122] rounded text-[#8EA28D] hover:text-white transition active:scale-95"
               title="Collapse Parameters Panel"
             >
-              <ChevronRight className="w-4 h-4" />
+              <span>COLLAPSE</span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#e97f01]" />
             </button>
           )}
-          <span style={{ fontFamily: 'Onest, sans-serif' }} className="flex items-center gap-1.5 font-bold text-white tracking-wide">
-            <Sliders className="w-3.5 h-3.5 text-[#e97f01]" />
-            WELD PARAMETERS
-          </span>
         </div>
-        {selectedSeam && (
-          <span
-            style={{ color: '#e97f01' }}
-            className="bg-[#172216] px-2 py-0.5 rounded border border-[#273825] text-[10px] font-mono font-bold"
-          >
-            {selectedSeam.id}
-          </span>
-        )}
       </div>
 
       {selectedSeam ? (

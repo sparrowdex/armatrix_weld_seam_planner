@@ -24,3 +24,4 @@ export const ArmatrixLogo: React.FC<ArmatrixLogoProps> = ({
     </svg>
   );
 };
+

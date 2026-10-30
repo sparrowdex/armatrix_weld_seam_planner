@@ -22,3 +22,4 @@ const symbolSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="235 145 352 
 const outDir = path.join(__dirname, '..', 'public', 'images', 'logo');
 fs.writeFileSync(path.join(outDir, 'armatrix-symbol.svg'), symbolSvg, 'utf8');
 console.log('Successfully created public/images/logo/armatrix-symbol.svg');
+

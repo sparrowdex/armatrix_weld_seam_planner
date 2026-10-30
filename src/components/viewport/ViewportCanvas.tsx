@@ -61,17 +61,17 @@ export const ViewportCanvas: React.FC = () => {
 
     // 1. Scene
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#0A0D0A'); // Deep tactical graphite
+    scene.background = new THREE.Color('#0D120D'); // Sleek industrial dark green-gray
     sceneRef.current = scene;
 
-    // Grid floor & axes
-    const grid = new THREE.GridHelper(320, 32, '#233020', '#121A11');
+    // High precision CAD Grid Floor
+    const grid = new THREE.GridHelper(360, 36, '#283B25', '#162215');
     grid.position.y = 0;
     scene.add(grid);
 
     // 2. Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 1, 3000);
-    camera.position.set(160, 140, 180);
+    camera.position.set(170, 150, 190);
     cameraRef.current = camera;
 
     // 3. Renderer
@@ -81,73 +81,80 @@ export const ViewportCanvas: React.FC = () => {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
+    renderer.toneMappingExposure = 1.35;
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // 4. Controls
+    // 4. OrbitControls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.maxDistance = 1200;
+    controls.maxDistance = 1400;
     controls.minDistance = 20;
-    controls.target.set(0, 30, 0);
+    controls.target.set(0, 35, 0);
     controlsRef.current = controls;
 
-    // 5. Crisp Studio Lighting
-    const ambientLight = new THREE.AmbientLight('#FFFFFF', 1.2);
+    // 5. OMNI-DIRECTIONAL CAD STUDIO LIGHTING (Eliminates all dark/black faces!)
+    // Hemisphere light: bright sky illumination + soft ground bounce
+    const hemiLight = new THREE.HemisphereLight('#FFFFFF', '#4A5D4A', 2.0);
+    scene.add(hemiLight);
+
+    // Global ambient
+    const ambientLight = new THREE.AmbientLight('#FFFFFF', 1.4);
     scene.add(ambientLight);
 
+    // Key Light Front-Right
     const keyLight = new THREE.DirectionalLight('#FFFFFF', 2.2);
-    keyLight.position.set(120, 220, 160);
+    keyLight.position.set(150, 250, 180);
     keyLight.castShadow = true;
-    keyLight.shadow.mapSize.width = 2048;
-    keyLight.shadow.mapSize.height = 2048;
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight('#E2E8F0', 1.4);
-    fillLight.position.set(-140, 90, 120);
-    scene.add(fillLight);
+    // Fill Light Front-Left
+    const fillLight1 = new THREE.DirectionalLight('#E2E8F0', 1.8);
+    fillLight1.position.set(-160, 180, 140);
+    scene.add(fillLight1);
 
-    const rimLight = new THREE.DirectionalLight('#e97f01', 1.0); // Armatrix orange rim accent
-    rimLight.position.set(0, 160, -160);
+    // Fill Light Back-Right
+    const fillLight2 = new THREE.DirectionalLight('#CBD5E1', 1.6);
+    fillLight2.position.set(140, 160, -160);
+    scene.add(fillLight2);
+
+    // Rim Light Back-Left (Armatrix amber accent)
+    const rimLight = new THREE.DirectionalLight('#e97f01', 1.4);
+    rimLight.position.set(-150, 140, -180);
     scene.add(rimLight);
-
-    const groundBounce = new THREE.DirectionalLight('#334155', 0.6);
-    groundBounce.position.set(0, -100, 0);
-    scene.add(groundBounce);
 
     // Groups
     scene.add(seamsGroupRef.current);
     scene.add(previewSeamRef.current);
 
-    // 6. Build Sleek Robotic Welding Torch 3D Model
+    // 6. Build Welding Torch 3D Model
     const torchGroup = new THREE.Group();
-    // Body (dark carbon graphite)
-    const torchBodyGeom = new THREE.CylinderGeometry(4, 4, 35, 20);
-    const torchBodyMat = new THREE.MeshStandardMaterial({ color: '#1B1E1B', metalness: 0.9, roughness: 0.25 });
+    // Body (dark graphite)
+    const torchBodyGeom = new THREE.CylinderGeometry(4.2, 4.2, 36, 20);
+    const torchBodyMat = new THREE.MeshStandardMaterial({ color: '#1B1E1B', metalness: 0.85, roughness: 0.25 });
     const torchBody = new THREE.Mesh(torchBodyGeom, torchBodyMat);
-    torchBody.position.y = 25;
+    torchBody.position.y = 26;
     torchGroup.add(torchBody);
 
-    // Collar (Armatrix signature red-orange tool ring)
-    const collarGeom = new THREE.CylinderGeometry(4.6, 4.6, 7, 20);
+    // Collar (Armatrix orange accent ring)
+    const collarGeom = new THREE.CylinderGeometry(4.8, 4.8, 8, 20);
     const collarMat = new THREE.MeshStandardMaterial({ color: '#e97f01', metalness: 0.7, roughness: 0.2 });
     const collar = new THREE.Mesh(collarGeom, collarMat);
-    collar.position.y = 12;
+    collar.position.y = 13;
     torchGroup.add(collar);
 
     // Precision Copper Nozzle
-    const nozzleGeom = new THREE.ConeGeometry(3.5, 12, 20);
+    const nozzleGeom = new THREE.ConeGeometry(3.6, 12, 20);
     const nozzleMat = new THREE.MeshStandardMaterial({ color: '#C87D40', metalness: 0.95, roughness: 0.15 });
     const nozzle = new THREE.Mesh(nozzleGeom, nozzleMat);
     nozzle.rotation.x = Math.PI;
     nozzle.position.y = 2;
     torchGroup.add(nozzle);
 
-    // Arc flash point light at weld tip
-    const arcLight = new THREE.PointLight('#38BDF8', 0, 70);
+    // Arc flash light at weld tip
+    const arcLight = new THREE.PointLight('#38BDF8', 0, 75);
     arcLight.position.set(0, 0, 0);
     torchGroup.add(arcLight);
     arcLightRef.current = arcLight;
@@ -192,19 +199,19 @@ export const ViewportCanvas: React.FC = () => {
 
     switch (viewPreset) {
       case 'iso':
-        camera.position.set(160, 140, 180);
-        controls.target.set(0, 30, 0);
+        camera.position.set(170, 150, 190);
+        controls.target.set(0, 35, 0);
         break;
       case 'top':
-        camera.position.set(0, 270, 0);
+        camera.position.set(0, 290, 0);
         controls.target.set(0, 0, 0);
         break;
       case 'front':
-        camera.position.set(0, 35, 260);
+        camera.position.set(0, 35, 270);
         controls.target.set(0, 35, 0);
         break;
       case 'right':
-        camera.position.set(260, 35, 0);
+        camera.position.set(270, 35, 0);
         controls.target.set(0, 35, 0);
         break;
     }
@@ -228,7 +235,6 @@ export const ViewportCanvas: React.FC = () => {
     loader.load(
       modelUrl,
       (geometry) => {
-        // Remove existing meshes
         if (meshRef.current) {
           scene.remove(meshRef.current);
           meshRef.current.geometry.dispose();
@@ -245,7 +251,6 @@ export const ViewportCanvas: React.FC = () => {
           scene.remove(boundingBoxRef.current);
         }
 
-        // Align and center on ground plane
         geometry.computeVertexNormals();
         geometry.center();
         geometry.computeBoundingBox();
@@ -259,11 +264,12 @@ export const ViewportCanvas: React.FC = () => {
         const height = parseFloat((finalBox.max.y - finalBox.min.y).toFixed(1));
         const depth = parseFloat((finalBox.max.z - finalBox.min.z).toFixed(1));
 
-        // Machined Steel / Titanium PBR Material (High clarity CAD surface)
+        // CRISP BRIGHT CAD ALLOY STEEL MATERIAL (Fully illuminated on every face!)
         const material = new THREE.MeshStandardMaterial({
-          color: '#6F7F72', // Technical alloy steel
-          metalness: 0.7,
-          roughness: 0.35,
+          color: '#B2C2B5', // Bright, crisp satin aluminum alloy
+          metalness: 0.18,  // Low metalness ensures clear diffuse shading without black reflections!
+          roughness: 0.45,  // Smooth satin finish
+          side: THREE.DoubleSide, // Guarantees both sides of any face are always illuminated
           polygonOffset: true,
           polygonOffsetFactor: 1,
           polygonOffsetUnits: 1,
@@ -275,16 +281,16 @@ export const ViewportCanvas: React.FC = () => {
         scene.add(mesh);
         meshRef.current = mesh;
 
-        // Clean CAD edge outlines (makes structural faces crystal clear)
-        const edgeGeometry = new THREE.EdgesGeometry(geometry, 28);
-        const edgeMaterial = new THREE.LineBasicMaterial({ color: '#1B241C', linewidth: 1.5 });
+        // Sharp CAD Edge Contours (makes every feature, fillet, and hole pop)
+        const edgeGeometry = new THREE.EdgesGeometry(geometry, 25);
+        const edgeMaterial = new THREE.LineBasicMaterial({ color: '#182417', linewidth: 1.5 });
         const edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
         scene.add(edgeLines);
         edgesRef.current = edgeLines;
 
         // Wireframe toggle overlay
         const wireframeGeom = new THREE.WireframeGeometry(geometry);
-        const wireframeMat = new THREE.LineBasicMaterial({ color: '#4D614D', opacity: 0.3, transparent: true });
+        const wireframeMat = new THREE.LineBasicMaterial({ color: '#3A5239', opacity: 0.4, transparent: true });
         const wireframe = new THREE.LineSegments(wireframeGeom, wireframeMat);
         wireframe.visible = showWireframe;
         scene.add(wireframe);
@@ -309,7 +315,6 @@ export const ViewportCanvas: React.FC = () => {
         });
         setPartLoading(false);
 
-        // Adjust camera target
         if (controlsRef.current) {
           controlsRef.current.target.set(0, height / 2, 0);
           controlsRef.current.update();
@@ -349,7 +354,7 @@ export const ViewportCanvas: React.FC = () => {
       const seamContainer = new THREE.Group();
 
       // 1. Weld Bead Solid Geometry
-      const beadRadius = isSelected ? 2.4 : 1.6;
+      const beadRadius = isSelected ? 2.5 : 1.7;
       const cylinderGeom = new THREE.CylinderGeometry(beadRadius, beadRadius, length, 16);
       cylinderGeom.translate(0, length / 2, 0);
       cylinderGeom.rotateX(Math.PI / 2);
@@ -358,7 +363,7 @@ export const ViewportCanvas: React.FC = () => {
       const cylinderMat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(color),
         emissive: new THREE.Color(isSelected ? '#e97f01' : '#15803D'),
-        emissiveIntensity: isSelected ? 0.8 : 0.35,
+        emissiveIntensity: isSelected ? 0.85 : 0.4,
         roughness: 0.2,
         metalness: 0.85,
       });
@@ -368,7 +373,7 @@ export const ViewportCanvas: React.FC = () => {
       beadMesh.lookAt(p2);
       seamContainer.add(beadMesh);
 
-      // 2. Start (Cyan) & End (Red) Waypoint Spheres
+      // 2. Start & End Waypoint Spheres
       const startSphere = new THREE.Mesh(
         new THREE.SphereGeometry(isSelected ? 3.0 : 2.2, 16, 16),
         new THREE.MeshStandardMaterial({ color: '#38BDF8', emissive: '#0284C7', emissiveIntensity: 0.6 })
@@ -509,7 +514,6 @@ export const ViewportCanvas: React.FC = () => {
         const currentPos = new THREE.Vector3().lerpVectors(pStart, pEnd, Math.min(1, progress));
         torch.position.copy(currentPos);
         torch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
-        // Welding arc flicker
         if (arcLight) {
           arcLight.intensity = 20 + Math.random() * 20;
           arcLight.color.set(Math.random() > 0.3 ? '#38BDF8' : '#FFFFFF');
@@ -626,17 +630,17 @@ export const ViewportCanvas: React.FC = () => {
       ref={containerRef}
       onPointerMove={handlePointerMove}
       onPointerDown={handlePointerDown}
-      className="relative w-full h-full cursor-crosshair select-none overflow-hidden bg-[#0A0D0A]"
+      className="relative w-full h-full cursor-crosshair select-none overflow-hidden bg-[#0D120D]"
     >
       {/* 3D Telemetry HUD Overlay */}
       <div className="absolute top-4 left-4 z-10 pointer-events-none flex flex-col gap-1.5 font-mono text-xs">
-        <div className="flex items-center gap-2 bg-[#101710]/85 backdrop-blur-md px-3 py-1.5 border border-[#233120] rounded text-[#E2E8F0]">
+        <div className="flex items-center gap-2 bg-[#121A12]/90 backdrop-blur-md px-3 py-1.5 border border-[#233321] rounded text-[#E2E8F0] shadow-md">
           <span className="w-2 h-2 rounded-full bg-[#e97f01] animate-pulse" />
-          <span className="text-[#8FA18E]">PART:</span>
+          <span className="text-[#8EA28D]">PART:</span>
           <span className="font-semibold text-white tracking-wide">{activeModelName}</span>
         </div>
         {cursorPos && (
-          <div className="bg-[#101710]/85 backdrop-blur-md px-3 py-1.5 border border-[#233120] rounded text-[#8FA18E] flex gap-3">
+          <div className="bg-[#121A12]/90 backdrop-blur-md px-3 py-1.5 border border-[#233321] rounded text-[#8EA28D] flex gap-3 shadow-md">
             <span>X: <strong className="text-white">{cursorPos.x}</strong></span>
             <span>Y: <strong className="text-white">{cursorPos.y}</strong></span>
             <span>Z: <strong className="text-white">{cursorPos.z}</strong></span>

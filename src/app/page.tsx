@@ -32,14 +32,16 @@ export default function Home() {
           <SidebarLeft onToggleCollapse={() => setIsLeftCollapsed(true)} isCollapsed={isLeftCollapsed} />
         </div>
 
-        {/* Collapsed Left Restore Tab */}
+        {/* Collapsed Left Floating Show Tab */}
         {isLeftCollapsed && (
           <button
             onClick={() => setIsLeftCollapsed(false)}
-            className="absolute top-16 left-0 z-40 bg-[#121912] hover:bg-[#1C271B] border-r border-y border-[#263724] px-1.5 py-3 rounded-r-lg text-[#8FA18E] hover:text-white transition shadow-lg flex items-center group"
+            style={{ fontFamily: 'Onest, sans-serif' }}
+            className="absolute top-5 left-0 z-40 bg-[#121A12] hover:bg-[#1C271B] border-r-2 border-y border-[#e97f01] pl-3 pr-3.5 py-2 rounded-r-lg text-white font-bold text-xs transition shadow-2xl flex items-center gap-2 group active:scale-95"
             title="Expand Seams Panel"
           >
             <ChevronRight className="w-4 h-4 text-[#e97f01] group-hover:translate-x-0.5 transition-transform" />
+            <span>SEAMS PANEL</span>
           </button>
         )}
 
@@ -49,13 +51,15 @@ export default function Home() {
           <SimulationHUD />
         </div>
 
-        {/* Collapsed Right Restore Tab */}
+        {/* Collapsed Right Floating Show Tab */}
         {isRightCollapsed && (
           <button
             onClick={() => setIsRightCollapsed(false)}
-            className="absolute top-16 right-0 z-40 bg-[#121912] hover:bg-[#1C271B] border-l border-y border-[#263724] px-1.5 py-3 rounded-l-lg text-[#8FA18E] hover:text-white transition shadow-lg flex items-center group"
+            style={{ fontFamily: 'Onest, sans-serif' }}
+            className="absolute top-5 right-0 z-40 bg-[#121A12] hover:bg-[#1C271B] border-l-2 border-y border-[#e97f01] pr-3 pl-3.5 py-2 rounded-l-lg text-white font-bold text-xs transition shadow-2xl flex items-center gap-2 group active:scale-95"
             title="Expand Parameters Panel"
           >
+            <span>WELD PARAMS</span>
             <ChevronLeft className="w-4 h-4 text-[#e97f01] group-hover:-translate-x-0.5 transition-transform" />
           </button>
         )}
@@ -72,7 +76,7 @@ export default function Home() {
         </div>
 
         {/* Tablet / Mobile Floating Bar */}
-        <div className="md:hidden absolute bottom-3 right-4 z-40 flex items-center gap-2 bg-[#101710]/90 backdrop-blur border border-[#233121] p-1 rounded-lg">
+        <div className="md:hidden absolute bottom-3 right-4 z-40 flex items-center gap-2 bg-[#101710]/95 backdrop-blur border border-[#233121] p-1.5 rounded-lg shadow-xl">
           <button
             onClick={() => {
               setIsLeftCollapsed(!isLeftCollapsed);

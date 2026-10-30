@@ -18,7 +18,7 @@ interface SidebarLeftProps {
   isCollapsed?: boolean;
 }
 
-export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse, isCollapsed }) => {
+export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) => {
   const {
     part,
     partLoading,
@@ -44,7 +44,6 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse, isCo
       addSeam({ x: 30, y: 14, z: -33 }, { x: 30, y: 14, z: 22 }, { x: 0.707, y: 0.707, z: 0 }, 'detected');
       addSeam({ x: -40, y: 14, z: -33 }, { x: -40, y: 79, z: -33 }, { x: -0.707, y: 0, z: 0.707 }, 'detected');
     } else if (activeModelName === 'Armatrix Emblem') {
-      // 3 signature weld seams following the Armatrix snake-arm joints
       addSeam({ x: -27.5, y: 16, z: -25 }, { x: -27.5, y: 16, z: 15 }, { x: 0, y: 1, z: 0 }, 'detected');
       addSeam({ x: 0, y: 16, z: -25 }, { x: 0, y: 16, z: 20 }, { x: 0, y: 1, z: 0 }, 'detected');
       addSeam({ x: 27.5, y: 16, z: -25 }, { x: 27.5, y: 16, z: 15 }, { x: 0, y: 1, z: 0 }, 'detected');
@@ -81,29 +80,27 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse, isCo
 
   return (
     <aside className="w-80 h-full bg-[#0A0D0A] border-r border-[#1E291C] flex flex-col z-10 select-none overflow-hidden relative">
-      {/* CAD Telemetry Card */}
-      <div className="p-3.5 border-b border-[#1E291C] bg-[#0E140E]">
-        <div className="flex items-center justify-between text-xs mb-2">
-          <span style={{ fontFamily: 'Onest, sans-serif' }} className="flex items-center gap-1.5 font-bold text-white tracking-wide">
-            <Box className="w-3.5 h-3.5 text-[#e97f01]" />
-            PART TELEMETRY
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono bg-[#162016] text-[#8EA28D] px-2 py-0.5 rounded border border-[#233122]">
-              {partLoading ? 'PROCESSING' : 'STL LOADED'}
-            </span>
-            {onToggleCollapse && (
-              <button
-                onClick={onToggleCollapse}
-                className="p-1 hover:bg-[#1A2519] rounded text-[#7E8F7D] hover:text-white transition"
-                title="Collapse Seams Panel"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
+      {/* Header with prominent Collapse button */}
+      <div className="p-3.5 border-b border-[#1E291C] bg-[#0E140E] flex items-center justify-between">
+        <span style={{ fontFamily: 'Onest, sans-serif' }} className="flex items-center gap-1.5 font-bold text-white tracking-wide">
+          <Box className="w-3.5 h-3.5 text-[#e97f01]" />
+          PART & SEAMS
+        </span>
 
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono bg-[#162016] hover:bg-[#202E1F] border border-[#233122] rounded text-[#8EA28D] hover:text-white transition active:scale-95"
+            title="Collapse Seams Panel"
+          >
+            <ChevronLeft className="w-3.5 h-3.5 text-[#e97f01]" />
+            <span>COLLAPSE</span>
+          </button>
+        )}
+      </div>
+
+      {/* CAD Telemetry Card */}
+      <div className="p-3 border-b border-[#1E291C] bg-[#0C120C]">
         {part ? (
           <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
             <div className="bg-[#131B13] p-2 rounded border border-[#202D1E]">
@@ -118,12 +115,12 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse, isCo
             </div>
           </div>
         ) : (
-          <div className="text-xs font-mono text-[#7A8E79] py-2">Ingesting CAD geometry...</div>
+          <div className="text-xs font-mono text-[#7A8E79] py-1">Processing CAD geometry...</div>
         )}
       </div>
 
       {/* Action Buttons */}
-      <div className="p-3 border-b border-[#1E291C] flex flex-col gap-2 bg-[#0C120C]">
+      <div className="p-3 border-b border-[#1E291C] flex flex-col gap-2 bg-[#0E140E]">
         <button
           onClick={handleAutoDetect}
           style={{ fontFamily: 'Onest, sans-serif' }}
