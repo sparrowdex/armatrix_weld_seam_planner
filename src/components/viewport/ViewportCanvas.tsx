@@ -50,7 +50,11 @@ function buildRoboticTorch(): THREE.Group {
   return group;
 }
 
-export const ViewportCanvas: React.FC = () => {
+interface ViewportCanvasProps {
+  isRightCollapsed?: boolean;
+}
+
+export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed = false }) => {
   // Separate mount ref for Three.js WebGL canvas to avoid React reconciliation conflicts
   const canvasMountRef = useRef<HTMLDivElement>(null);
 
@@ -71,9 +75,12 @@ export const ViewportCanvas: React.FC = () => {
   const selectedSeamId = useWeldStore((s) => s.selectedSeamId);
   const isSimulating = useWeldStore((s) => s.isSimulating);
   const playbackSpeed = useWeldStore((s) => s.playbackSpeed);
-  const nozzleType = useWeldStore((s) => s.nozzleType);
+  const rapidTraverseSpeed = useWeldStore((s) => s.rapidTraverseSpeed);
+  const exportJobJSON = useWeldStore((s) => s.exportJobJSON);
   const setPart = useWeldStore((s) => s.setPart);
   const setPartLoading = useWeldStore((s) => s.setPartLoading);
+
+  const jobSummary = exportJobJSON().job_summary;
 
   // Internal Three.js refs
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -132,7 +139,7 @@ export const ViewportCanvas: React.FC = () => {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.35;
+    renderer.toneMappingExposure = 1.05;
     
     // Safely mount canvas element
     container.innerHTML = '';
@@ -148,30 +155,30 @@ export const ViewportCanvas: React.FC = () => {
     controls.target.set(0, 35, 0);
     controlsRef.current = controls;
 
-    // 5. High-Fidelity Omni-Directional CAD Studio Lighting (Zero Shadow Acne)
-    const hemiLight = new THREE.HemisphereLight('#FFFFFF', '#384838', 2.2);
+    // 5. Balanced CAD Studio Lighting (Natural metallic depth, no harsh white wash)
+    const hemiLight = new THREE.HemisphereLight('#FFFFFF', '#243024', 1.4);
     scene.add(hemiLight);
 
-    const ambientLight = new THREE.AmbientLight('#FFFFFF', 1.6);
+    const ambientLight = new THREE.AmbientLight('#FFFFFF', 0.9);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight('#FFFFFF', 2.4);
+    const keyLight = new THREE.DirectionalLight('#FFFFFF', 1.7);
     keyLight.position.set(180, 260, 200);
     scene.add(keyLight);
 
-    const fillLight1 = new THREE.DirectionalLight('#E2E8F0', 2.0);
+    const fillLight1 = new THREE.DirectionalLight('#E2E8F0', 1.3);
     fillLight1.position.set(-180, 200, 160);
     scene.add(fillLight1);
 
-    const fillLight2 = new THREE.DirectionalLight('#CBD5E1', 1.8);
+    const fillLight2 = new THREE.DirectionalLight('#CBD5E1', 1.1);
     fillLight2.position.set(160, 180, -180);
     scene.add(fillLight2);
 
-    const rimLight = new THREE.DirectionalLight('#e97f01', 1.5);
+    const rimLight = new THREE.DirectionalLight('#e97f01', 0.9);
     rimLight.position.set(-160, 160, -180);
     scene.add(rimLight);
 
-    const bottomBounce = new THREE.DirectionalLight('#607060', 1.0);
+    const bottomBounce = new THREE.DirectionalLight('#506050', 0.6);
     bottomBounce.position.set(0, -160, 0);
     scene.add(bottomBounce);
 
@@ -332,11 +339,11 @@ export const ViewportCanvas: React.FC = () => {
         const height = parseFloat((finalBox.max.y - finalBox.min.y).toFixed(1));
         const depth = parseFloat((finalBox.max.z - finalBox.min.z).toFixed(1));
 
-        // High-clarity satin alloy material with crisp omni-directional lighting
+        // Refined industrial machine alloy material (natural metal contrast, no harsh white wash)
         const material = new THREE.MeshStandardMaterial({
-          color: '#C6D2C5',
-          metalness: 0.15,
-          roughness: 0.35,
+          color: '#5C6D60',
+          metalness: 0.28,
+          roughness: 0.48,
           side: THREE.DoubleSide,
           polygonOffset: true,
           polygonOffsetFactor: 1,
@@ -832,8 +839,8 @@ export const ViewportCanvas: React.FC = () => {
         className="w-full h-full cursor-crosshair"
       />
 
-      {/* 3D Telemetry HUD Overlay (Seamless, transparent, white typography with no boxes) */}
-      <div className="absolute top-4 left-4 z-10 pointer-events-none flex flex-col gap-1 font-mono text-xs select-none">
+      {/* 3D Telemetry HUD Overlay (Seamless, transparent, white typography at bottom-left - never overlaps tabs) */}
+      <div className="absolute bottom-5 left-5 z-10 pointer-events-none flex flex-col gap-1 font-mono text-xs select-none">
         {/* Model Name: Completely transparent, seamless, white */}
         <div className="flex items-center gap-2 py-0.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]">
           <span className="w-2 h-2 rounded-full bg-[#e97f01] shadow-[0_0_8px_#e97f01]" />
@@ -861,6 +868,34 @@ export const ViewportCanvas: React.FC = () => {
               LENGTH: <strong className="text-white font-semibold">{displayDist} mm</strong>
             </span>
           )}
+        </div>
+      </div>
+
+      {/* Floating Kinematics Telemetry when Right Sidebar is Collapsed (Seamless, transparent, white at bottom-right) */}
+      <div
+        className={`absolute bottom-5 right-5 z-10 pointer-events-none flex flex-col gap-1 font-mono text-xs select-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition-all duration-700 ease-out ${
+          isRightCollapsed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+        }`}
+      >
+        <div className="flex items-center justify-end gap-2 text-right">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#e97f01] shadow-[0_0_8px_#e97f01]" />
+          <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-bold text-white tracking-wide text-xs">
+            ARMATRIX KINEMATICS
+          </span>
+        </div>
+        <div className="flex flex-col gap-0.5 text-[11px] text-right">
+          <div className="text-[#A4B3A3]">
+            Reach: <strong className="text-white font-semibold">3500 mm (Snake-Arm)</strong>
+          </div>
+          <div className="text-[#A4B3A3]">
+            Traverse: <strong className="text-white font-semibold">{rapidTraverseSpeed} mm/s</strong>
+          </div>
+          <div className="text-[#A4B3A3]">
+            Total Seams: <strong className="text-[#22C55E] font-semibold">{jobSummary.total_weld_length_mm} mm</strong>
+          </div>
+          <div className="text-[#A4B3A3] pt-0.5">
+            Total Cycle: <strong className="text-[#e97f01] font-bold">{jobSummary.total_cycle_time_sec}s</strong>
+          </div>
         </div>
       </div>
 

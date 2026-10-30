@@ -88,30 +88,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
   };
 
   return (
-    <header className="h-14 bg-[#0A0D0A] border-b border-[#1E291C] px-4 flex items-center justify-between z-20 select-none">
-      {/* Brand & Title */}
-      <div className="flex items-center gap-3">
-        {/* Exact Armatrix Logo Symbol */}
-        <div className="p-1 bg-[#121912] border border-[#253323] rounded flex items-center justify-center shadow-sm">
-          <ArmatrixLogo className="w-6 h-6" color="#e97f01" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-bold tracking-wider text-sm text-white">
-              ARMATRIX
-            </span>
-            <span
-              style={{ fontFamily: 'Onest, sans-serif', color: '#e97f01' }}
-              className="text-[11px] px-1.5 py-0.5 rounded bg-[#e97f01]/15 border border-[#e97f01]/35 font-bold tracking-wide"
-            >
-              WELD SEAM PLANNER
-            </span>
-          </div>
-          <p className="text-[10px] text-[#7E8F7D] tracking-wide">Autonomous Robotic Welding System</p>
-        </div>
+    <header className="h-12 bg-transparent px-4 flex items-center justify-between z-20 select-none pointer-events-auto">
+      {/* Brand: Pure standalone Armatrix logo mark */}
+      <div className="flex items-center">
+        <ArmatrixLogo className="w-7 h-7" color="#e97f01" />
       </div>
 
-      {/* Center Controls: Model Selector & View Presets */}
+      {/* Center Controls: Model Selector, Camera Presets & Written Feature Toggles */}
       <div className="flex items-center gap-2">
         <div className="relative">
           <select
@@ -172,28 +155,34 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
           </button>
         </div>
 
-        {/* Viewport Visualization Toggles */}
-        <div className="flex items-center bg-[#101710] border border-[#202B1E] rounded p-0.5">
+        {/* Clear Written Labels for Viewport Toggles (No ambiguous symbols) */}
+        <div className="flex items-center bg-[#101710] border border-[#202B1E] rounded p-0.5 text-[11px] font-mono">
           <button
             onClick={toggleWireframe}
-            className={`p-1.5 rounded transition ${showWireframe ? 'bg-[#e97f01] text-white' : 'text-[#7D8F7C] hover:text-white'}`}
-            title="Wireframe View"
+            className={`px-2.5 py-1 rounded transition ${
+              showWireframe ? 'bg-[#e97f01] text-white font-semibold' : 'text-[#7D8F7C] hover:text-white'
+            }`}
+            title="Toggle Wireframe Mesh"
           >
-            <Layers className="w-3.5 h-3.5" />
+            WIREFRAME
           </button>
           <button
             onClick={toggleNormals}
-            className={`p-1.5 rounded transition ${showNormals ? 'bg-[#38BDF8] text-black font-bold' : 'text-[#7D8F7C] hover:text-white'}`}
-            title="Torch Normals & Approach Clearance Vectors"
+            className={`px-2.5 py-1 rounded transition ${
+              showNormals ? 'bg-[#38BDF8] text-black font-semibold' : 'text-[#7D8F7C] hover:text-white'
+            }`}
+            title="Toggle Approach Clearance Vectors"
           >
-            <Compass className="w-3.5 h-3.5" />
+            APPROACH VECTORS
           </button>
           <button
             onClick={toggleBoundingBox}
-            className={`p-1.5 rounded transition ${showBoundingBox ? 'bg-[#e97f01] text-black font-bold' : 'text-[#7D8F7C] hover:text-white'}`}
-            title="Bounding Dimensions Envelope"
+            className={`px-2.5 py-1 rounded transition ${
+              showBoundingBox ? 'bg-[#e97f01] text-black font-semibold' : 'text-[#7D8F7C] hover:text-white'
+            }`}
+            title="Toggle Part Bounding Dimensions Box"
           >
-            <Box className="w-3.5 h-3.5" />
+            BOUNDS
           </button>
         </div>
       </div>

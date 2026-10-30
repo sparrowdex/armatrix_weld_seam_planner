@@ -82,8 +82,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     <aside className="w-80 h-full bg-[#0A0D0A] border-r border-[#1E291C] flex flex-col z-10 select-none overflow-hidden relative">
       {/* Header with prominent Collapse button */}
       <div className="p-3.5 border-b border-[#1E291C] bg-[#0E140E] flex items-center justify-between">
-        <span style={{ fontFamily: 'Onest, sans-serif' }} className="flex items-center gap-1.5 font-bold text-white tracking-wide">
-          <Box className="w-3.5 h-3.5 text-[#e97f01]" />
+        <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-bold text-white tracking-wide text-xs">
           PART & SEAMS
         </span>
 

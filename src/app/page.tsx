@@ -23,13 +23,13 @@ export default function Home() {
       <div className="flex-1 flex relative overflow-hidden">
         {/* Left Sidebar (Seams & Ingestion) */}
         <div
-          className={`h-full transition-all duration-300 ease-in-out z-30 md:relative absolute inset-y-0 left-0 ${
-            isLeftCollapsed
-              ? '-translate-x-full md:translate-x-0 md:w-0 md:opacity-0 pointer-events-none'
-              : 'translate-x-0 w-80 opacity-100'
+          className={`h-full transition-all duration-300 ease-in-out z-30 overflow-hidden shrink-0 ${
+            isLeftCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-80 opacity-100'
           }`}
         >
-          <SidebarLeft onToggleCollapse={() => setIsLeftCollapsed(true)} isCollapsed={isLeftCollapsed} />
+          <div className="w-80 h-full">
+            <SidebarLeft onToggleCollapse={() => setIsLeftCollapsed(true)} isCollapsed={isLeftCollapsed} />
+          </div>
         </div>
 
         {/* Collapsed Left Floating Show Tab */}
@@ -37,17 +37,17 @@ export default function Home() {
           <button
             onClick={() => setIsLeftCollapsed(false)}
             style={{ fontFamily: 'Onest, sans-serif' }}
-            className="absolute top-5 left-0 z-40 bg-[#121A12] hover:bg-[#1C271B] border-r-2 border-y border-[#e97f01] pl-3 pr-3.5 py-2 rounded-r-lg text-white font-bold text-xs transition shadow-2xl flex items-center gap-2 group active:scale-95"
+            className="absolute top-4 left-0 z-40 bg-[#121A12]/90 hover:bg-[#1C271B] border-r-2 border-y border-[#e97f01] pl-2.5 pr-3 py-1.5 rounded-r-md text-white font-bold text-[11px] transition shadow-2xl flex items-center gap-1.5 group active:scale-95"
             title="Expand Seams Panel"
           >
-            <ChevronRight className="w-4 h-4 text-[#e97f01] group-hover:translate-x-0.5 transition-transform" />
-            <span>SEAMS PANEL</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#e97f01] group-hover:translate-x-0.5 transition-transform" />
+            <span>SEAMS</span>
           </button>
         )}
 
-        {/* 3D Interactive Viewport */}
-        <div className="flex-1 h-full relative overflow-hidden">
-          <ViewportCanvas />
+        {/* 3D Interactive Viewport - Automatically fills 100% of remaining width */}
+        <div className="flex-1 h-full min-w-0 relative overflow-hidden">
+          <ViewportCanvas isRightCollapsed={isRightCollapsed} />
           <SimulationHUD />
         </div>
 
@@ -56,23 +56,23 @@ export default function Home() {
           <button
             onClick={() => setIsRightCollapsed(false)}
             style={{ fontFamily: 'Onest, sans-serif' }}
-            className="absolute top-5 right-0 z-40 bg-[#121A12] hover:bg-[#1C271B] border-l-2 border-y border-[#e97f01] pr-3 pl-3.5 py-2 rounded-l-lg text-white font-bold text-xs transition shadow-2xl flex items-center gap-2 group active:scale-95"
+            className="absolute top-4 right-0 z-40 bg-[#121A12]/90 hover:bg-[#1C271B] border-l-2 border-y border-[#e97f01] pr-2.5 pl-3 py-1.5 rounded-l-md text-white font-bold text-[11px] transition shadow-2xl flex items-center gap-1.5 group active:scale-95"
             title="Expand Parameters Panel"
           >
-            <span>WELD PARAMS</span>
-            <ChevronLeft className="w-4 h-4 text-[#e97f01] group-hover:-translate-x-0.5 transition-transform" />
+            <span>PARAMS</span>
+            <ChevronLeft className="w-3.5 h-3.5 text-[#e97f01] group-hover:-translate-x-0.5 transition-transform" />
           </button>
         )}
 
         {/* Right Sidebar (Parameters & Kinematics) */}
         <div
-          className={`h-full transition-all duration-300 ease-in-out z-30 md:relative absolute inset-y-0 right-0 ${
-            isRightCollapsed
-              ? 'translate-x-full md:translate-x-0 md:w-0 md:opacity-0 pointer-events-none'
-              : 'translate-x-0 w-80 opacity-100'
+          className={`h-full transition-all duration-300 ease-in-out z-30 overflow-hidden shrink-0 ${
+            isRightCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-80 opacity-100'
           }`}
         >
-          <SidebarRight onToggleCollapse={() => setIsRightCollapsed(true)} isCollapsed={isRightCollapsed} />
+          <div className="w-80 h-full">
+            <SidebarRight onToggleCollapse={() => setIsRightCollapsed(true)} isCollapsed={isRightCollapsed} />
+          </div>
         </div>
 
         {/* Tablet / Mobile Floating Bar */}

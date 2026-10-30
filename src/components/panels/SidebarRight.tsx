@@ -34,8 +34,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
     <aside className="w-80 h-full bg-[#0A0D0A] border-l border-[#1E291C] flex flex-col z-10 select-none overflow-y-auto text-xs relative">
       {/* Header with prominent Collapse button */}
       <div className="p-3.5 border-b border-[#1E291C] bg-[#0E140E] flex items-center justify-between">
-        <span style={{ fontFamily: 'Onest, sans-serif' }} className="flex items-center gap-1.5 font-bold text-white tracking-wide">
-          <Sliders className="w-3.5 h-3.5 text-[#e97f01]" />
+        <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-bold text-white tracking-wide text-xs">
           WELD PARAMETERS
         </span>
 
@@ -99,8 +98,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
 
           {/* Electrical & Travel Parameters */}
           <div className="border border-[#1E2B1D] rounded-lg p-2.5 bg-[#0D130D] flex flex-col gap-2.5">
-            <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[11px] font-bold text-[#8EA08D] flex items-center gap-1.5 tracking-wide">
-              <Zap className="w-3 h-3 text-[#e97f01]" />
+            <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[11px] font-bold text-[#8EA08D] tracking-wide">
               ELECTRICAL & MOTION
             </span>
 
@@ -187,8 +185,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
 
           {/* Torch Orientation & Clearances */}
           <div className="border border-[#1E2B1D] rounded-lg p-2.5 bg-[#0D130D] flex flex-col gap-2.5">
-            <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[11px] font-bold text-[#8EA08D] flex items-center gap-1.5 tracking-wide">
-              <Shield className="w-3 h-3 text-[#38BDF8]" />
+            <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[11px] font-bold text-[#8EA08D] tracking-wide">
               TORCH ANGLES & CLEARANCE
             </span>
 
@@ -284,8 +281,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
 
       {/* Armatrix Snake-Arm Kinematics Profile */}
       <div className="mt-auto p-3.5 border-t border-[#1E291C] bg-[#0E140E]">
-        <div style={{ fontFamily: 'Onest, sans-serif' }} className="flex items-center gap-1.5 text-xs font-bold text-white mb-2 tracking-wide">
-          <Cpu className="w-3.5 h-3.5 text-[#e97f01]" />
+        <div style={{ fontFamily: 'Onest, sans-serif' }} className="text-xs font-bold text-white mb-2 tracking-wide">
           ARMATRIX SNAKE-ARM KINEMATICS
         </div>
 
