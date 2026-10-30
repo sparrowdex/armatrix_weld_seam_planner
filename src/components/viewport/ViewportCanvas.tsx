@@ -66,9 +66,10 @@ function positionCylinderBetweenPoints(mesh: THREE.Mesh, p1: THREE.Vector3, p2: 
 
 interface ViewportCanvasProps {
   isRightCollapsed?: boolean;
+  isLeftCollapsed?: boolean;
 }
 
-export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed = false }) => {
+export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed = false, isLeftCollapsed = false }) => {
   // Separate mount ref for Three.js WebGL canvas to avoid React reconciliation conflicts
   const canvasMountRef = useRef<HTMLDivElement>(null);
 
@@ -256,15 +257,24 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
       if (!container || !renderer || !camera) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      if (w === 0 || h === 0) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
+
     window.addEventListener('resize', handleResize);
+
+    // ResizeObserver tracks container width changes in real time as sidebars collapse/expand
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    resizeObserver.observe(container);
 
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       renderer.dispose();
       controls.dispose();
       if (container.contains(renderer.domElement)) {
@@ -272,6 +282,30 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
       }
     };
   }, []);
+
+  // Smoothly resize WebGL Canvas during and after sidebar collapse transitions
+  useEffect(() => {
+    const updateSize = () => {
+      if (!canvasMountRef.current || !rendererRef.current || !cameraRef.current) return;
+      const w = canvasMountRef.current.clientWidth;
+      const h = canvasMountRef.current.clientHeight;
+      if (w === 0 || h === 0) return;
+      cameraRef.current.aspect = w / h;
+      cameraRef.current.updateProjectionMatrix();
+      rendererRef.current.setSize(w, h);
+    };
+
+    updateSize();
+    const t1 = setTimeout(updateSize, 60);
+    const t2 = setTimeout(updateSize, 160);
+    const t3 = setTimeout(updateSize, 320);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [isRightCollapsed, isLeftCollapsed]);
 
   // Handle Preset Views
   useEffect(() => {
