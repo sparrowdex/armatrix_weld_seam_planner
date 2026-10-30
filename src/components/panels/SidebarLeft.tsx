@@ -53,26 +53,28 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     clearSeams();
 
     if (activeModelName === 'Structural L-Bracket') {
-      // 1. Main 90° Root Corner Fillet (Between horizontal base plate & vertical upright wall)
-      addSeam({ x: -55, y: 14, z: -31 }, { x: 55, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected');
-      // 2. Left Stiffener Rib - Horizontal Fillet (Joint on base plate)
-      addSeam({ x: -30, y: 14, z: -31 }, { x: -30, y: 14, z: 24 }, { x: 0.707, y: 0.707, z: 0 }, 'detected');
-      // 3. Right Stiffener Rib - Horizontal Fillet (Joint on base plate)
-      addSeam({ x: 30, y: 14, z: -31 }, { x: 30, y: 14, z: 24 }, { x: -0.707, y: 0.707, z: 0 }, 'detected');
-      // 4. Left Stiffener Rib - Vertical Fillet (Joint on upright wall)
-      addSeam({ x: -30, y: 14, z: -31 }, { x: -30, y: 74, z: -31 }, { x: 0.707, y: 0, z: 0.707 }, 'detected');
-      // 5. Right Stiffener Rib - Vertical Fillet (Joint on upright wall)
-      addSeam({ x: 30, y: 14, z: -31 }, { x: 30, y: 74, z: -31 }, { x: -0.707, y: 0, z: 0.707 }, 'detected');
+      // 1. Main 90° Internal Root Corner Fillet (Base plate to upright vertical wall)
+      addSeam({ x: -55, y: 14, z: -26 }, { x: 55, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected');
+      // 2. Left Stiffener Rib - Horizontal Internal Fillet (Base plate junction)
+      addSeam({ x: -30, y: 14, z: -26 }, { x: -30, y: 14, z: 29 }, { x: 0.707, y: 0.707, z: 0 }, 'detected');
+      // 3. Right Stiffener Rib - Horizontal Internal Fillet (Base plate junction)
+      addSeam({ x: 30, y: 14, z: -26 }, { x: 30, y: 14, z: 29 }, { x: -0.707, y: 0.707, z: 0 }, 'detected');
+      // 4. Left Stiffener Rib - Vertical Internal Fillet (Upright wall junction)
+      addSeam({ x: -30, y: 14, z: -26 }, { x: -30, y: 74, z: -26 }, { x: 0.707, y: 0, z: 0.707 }, 'detected');
+      // 5. Right Stiffener Rib - Vertical Internal Fillet (Upright wall junction)
+      addSeam({ x: 30, y: 14, z: -26 }, { x: 30, y: 74, z: -26 }, { x: -0.707, y: 0, z: 0.707 }, 'detected');
     } else if (activeModelName === 'Pipe T-Joint') {
+      // 4 Quadrants of the 3D intersecting saddle weld seam
       addSeam({ x: -18, y: 25, z: 0 }, { x: 0, y: 25, z: 18 }, { x: -0.5, y: 0.707, z: 0.5 }, 'detected');
       addSeam({ x: 0, y: 25, z: 18 }, { x: 18, y: 25, z: 0 }, { x: 0.5, y: 0.707, z: 0.5 }, 'detected');
       addSeam({ x: 18, y: 25, z: 0 }, { x: 0, y: 25, z: -18 }, { x: 0.5, y: 0.707, z: -0.5 }, 'detected');
       addSeam({ x: 0, y: 25, z: -18 }, { x: -18, y: 25, z: 0 }, { x: -0.5, y: 0.707, z: -0.5 }, 'detected');
-    } else if (activeModelName === 'Box Flange') {
-      addSeam({ x: -40, y: 12, z: 30 }, { x: 40, y: 12, z: 30 }, { x: 0, y: 0.707, z: 0.707 }, 'detected');
-      addSeam({ x: 40, y: 12, z: 30 }, { x: 40, y: 12, z: -30 }, { x: 0.707, y: 0.707, z: 0 }, 'detected');
-      addSeam({ x: 40, y: 12, z: -30 }, { x: -40, y: 12, z: -30 }, { x: 0, y: 0.707, z: -0.707 }, 'detected');
-      addSeam({ x: -40, y: 12, z: -30 }, { x: -40, y: 12, z: 30 }, { x: -0.707, y: 0.707, z: 0 }, 'detected');
+    } else if (activeModelName === 'Confined Box Flange' || activeModelName === 'Box Flange' || activeModelName.includes('Box')) {
+      // 4 Internal Floor Fillet Seams inside the deep confined ship cell / compartment
+      addSeam({ x: -46, y: 14, z: -37 }, { x: 46, y: 14, z: -37 }, { x: 0, y: 0.707, z: 0.707 }, 'detected');
+      addSeam({ x: 46, y: 14, z: -37 }, { x: 46, y: 14, z: 37 }, { x: -0.707, y: 0.707, z: 0 }, 'detected');
+      addSeam({ x: 46, y: 14, z: 37 }, { x: -46, y: 14, z: 37 }, { x: 0, y: 0.707, z: -0.707 }, 'detected');
+      addSeam({ x: -46, y: 14, z: 37 }, { x: -46, y: 14, z: -37 }, { x: 0.707, y: 0.707, z: 0 }, 'detected');
     } else if (part) {
       // Dynamic boundary crease detection for any arbitrary uploaded custom STL!
       const hw = parseFloat(((part.dimensions.width / 2) * 0.75).toFixed(1));

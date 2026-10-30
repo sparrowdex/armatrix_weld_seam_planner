@@ -82,29 +82,49 @@ function createPipeJoint() {
   return group;
 }
 
-// 3. Welded Box Frame / Chamber
+// 3. Confined Tank Cell / Double-Bottom Compartment (Quintessential confined space for snake-arms)
 function createBoxFlange() {
   const group = new THREE.Group();
 
-  const baseGeom = new THREE.BoxGeometry(130, 12, 90);
-  baseGeom.translate(0, 6, 0);
+  // Base Floor Plate (140 x 14 x 110)
+  const baseGeom = new THREE.BoxGeometry(140, 14, 110);
+  baseGeom.translate(0, 7, 0);
   group.add(new THREE.Mesh(baseGeom));
 
-  const chamberGeom = new THREE.BoxGeometry(80, 50, 60);
-  chamberGeom.translate(0, 12 + 25, 0);
-  group.add(new THREE.Mesh(chamberGeom));
+  // 4 Vertical Enclosure Walls forming a 60mm deep confined hollow cavity
+  // Cavity dimensions: 92mm width x 74mm depth x 60mm height
+  const wallHeight = 60;
+  const wallThick = 8;
+  const yWall = 14 + wallHeight / 2;
 
-  const topGeom = new THREE.BoxGeometry(100, 10, 80);
-  topGeom.translate(0, 12 + 50 + 5, 0);
-  group.add(new THREE.Mesh(topGeom));
+  // Back Wall
+  const backWall = new THREE.BoxGeometry(108, wallHeight, wallThick);
+  backWall.translate(0, yWall, -41);
+  group.add(new THREE.Mesh(backWall));
 
-  const rib1 = new THREE.BoxGeometry(8, 45, 16);
-  rib1.translate(-44, 12 + 22.5, 0);
-  group.add(new THREE.Mesh(rib1));
+  // Front Wall
+  const frontWall = new THREE.BoxGeometry(108, wallHeight, wallThick);
+  frontWall.translate(0, yWall, 41);
+  group.add(new THREE.Mesh(frontWall));
 
-  const rib2 = rib1.clone();
-  rib2.translate(88, 0, 0);
-  group.add(new THREE.Mesh(rib2));
+  // Left Wall
+  const leftWall = new THREE.BoxGeometry(wallThick, wallHeight, 90);
+  leftWall.translate(-50, yWall, 0);
+  group.add(new THREE.Mesh(leftWall));
+
+  // Right Wall
+  const rightWall = new THREE.BoxGeometry(wallThick, wallHeight, 90);
+  rightWall.translate(50, yWall, 0);
+  group.add(new THREE.Mesh(rightWall));
+
+  // Top Collar / Flange Rim on Left & Right for rigidity
+  const lipLeft = new THREE.BoxGeometry(16, 8, 98);
+  lipLeft.translate(-50, 14 + wallHeight + 4, 0);
+  group.add(new THREE.Mesh(lipLeft));
+
+  const lipRight = new THREE.BoxGeometry(16, 8, 98);
+  lipRight.translate(50, 14 + wallHeight + 4, 0);
+  group.add(new THREE.Mesh(lipRight));
 
   return group;
 }

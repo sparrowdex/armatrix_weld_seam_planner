@@ -110,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
             <optgroup label="Standard CAD Parts" className="bg-[#0E140E] text-[#8EA28D]">
               <option value="Structural L-Bracket" className="text-white">Structural L-Bracket</option>
               <option value="Pipe T-Joint" className="text-white">Pipe T-Joint</option>
-              <option value="Box Flange" className="text-white">Confined Box Flange</option>
+              <option value="Confined Box Flange" className="text-white">Confined Box Flange</option>
             </optgroup>
             {customModels.length > 0 && (
               <optgroup label="Uploaded Custom STLs" className="bg-[#0E140E] text-[#e97f01]">

@@ -553,7 +553,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
     } else {
       let modelUrl = `/models/bracket.stl`;
       if (activeModelName === 'Pipe T-Joint') modelUrl = `/models/pipe_joint.stl`;
-      if (activeModelName === 'Box Flange') modelUrl = `/models/box_flange.stl`;
+      if (activeModelName === 'Confined Box Flange' || activeModelName === 'Box Flange') modelUrl = `/models/box_flange.stl`;
 
       const loader = new STLLoader();
       loader.load(

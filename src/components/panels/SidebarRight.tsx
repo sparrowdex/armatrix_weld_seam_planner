@@ -66,35 +66,73 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
       {selectedSeam ? (
         <div className="p-3.5 flex flex-col gap-3.5">
           {/* Process & Joint Type */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] text-[#7C8E7B] font-mono block mb-1">PROCESS</label>
-              <select
-                value={selectedSeam.parameters.process}
-                onChange={(e) =>
-                  updateSeamParameters(selectedSeam.id, { process: e.target.value as WeldProcess })
-                }
-                className="w-full bg-[#131B13] border border-[#233121] rounded px-2 py-1.5 text-white text-xs focus:border-[#e97f01] outline-none font-mono"
-              >
-                <option value="MIG">MIG (GMAW)</option>
-                <option value="TIG">TIG (GTAW)</option>
-                <option value="LASER">Laser Welding</option>
-              </select>
+          <div className="flex flex-col gap-1.5">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-[#7C8E7B] font-mono block mb-1">PROCESS</label>
+                <select
+                  value={selectedSeam.parameters.process}
+                  onChange={(e) => {
+                    const proc = e.target.value as WeldProcess;
+                    const procDefaults = {
+                      MIG: { current: 180, voltage: 24, travelSpeed: 12, wireFeedSpeed: 6.5 },
+                      TIG: { current: 130, voltage: 16, travelSpeed: 7, wireFeedSpeed: 0 },
+                      LASER: { current: 280, voltage: 32, travelSpeed: 25, wireFeedSpeed: 0 },
+                    }[proc];
+                    updateSeamParameters(selectedSeam.id, { process: proc, ...procDefaults });
+                  }}
+                  className="w-full bg-[#131B13] border border-[#233121] rounded px-2 py-1.5 text-white text-xs focus:border-[#e97f01] outline-none font-mono cursor-pointer"
+                >
+                  <option value="MIG">MIG (GMAW)</option>
+                  <option value="TIG">TIG (GTAW)</option>
+                  <option value="LASER">Laser Welding</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-[#7C8E7B] font-mono block mb-1">JOINT TYPE</label>
+                <select
+                  value={selectedSeam.parameters.jointType}
+                  onChange={(e) => {
+                    const jt = e.target.value as WeldJointType;
+                    const jointConfigs: Record<WeldJointType, { tilt: number; current: number; voltage: number; speed: number }> = {
+                      FILLET: { tilt: 45, current: 180, voltage: 24, speed: 12 },
+                      BUTT: { tilt: 0, current: 195, voltage: 25, speed: 10 },
+                      LAP: { tilt: 30, current: 165, voltage: 23, speed: 14 },
+                      CORNER: { tilt: 20, current: 150, voltage: 22, speed: 15 },
+                      EDGE: { tilt: 15, current: 140, voltage: 21, speed: 16 },
+                    };
+                    const cfg = jointConfigs[jt];
+                    updateSeamParameters(selectedSeam.id, {
+                      jointType: jt,
+                      torchTiltAngle: cfg.tilt,
+                      current: cfg.current,
+                      voltage: cfg.voltage,
+                      travelSpeed: cfg.speed,
+                    });
+                  }}
+                  className="w-full bg-[#131B13] border border-[#233121] rounded px-2 py-1.5 text-white text-xs focus:border-[#e97f01] outline-none font-mono cursor-pointer"
+                >
+                  <option value="FILLET">Fillet Joint (90°)</option>
+                  <option value="BUTT">Butt Joint (Flat)</option>
+                  <option value="LAP">Lap Joint (Overlap)</option>
+                  <option value="CORNER">Corner Joint (Apex)</option>
+                  <option value="EDGE">Edge Joint (Parallel)</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="text-[10px] text-[#7C8E7B] font-mono block mb-1">JOINT TYPE</label>
-              <select
-                value={selectedSeam.parameters.jointType}
-                onChange={(e) =>
-                  updateSeamParameters(selectedSeam.id, { jointType: e.target.value as WeldJointType })
-                }
-                className="w-full bg-[#131B13] border border-[#233121] rounded px-2 py-1.5 text-white text-xs focus:border-[#e97f01] outline-none font-mono"
-              >
-                <option value="FILLET">Fillet Joint</option>
-                <option value="BUTT">Butt Joint</option>
-                <option value="LAP">Lap Joint</option>
-                <option value="CORNER">Corner Joint</option>
-              </select>
+
+            {/* Live Kinematic Calibration Pill */}
+            <div className="px-2.5 py-1.5 bg-[#101710] border border-[#202E1F] rounded text-[10px] font-mono text-[#8EA08D] flex items-center justify-between">
+              <span>
+                {selectedSeam.parameters.jointType === 'FILLET' && '⛛ Fillet: 45° bisecting tilt for 90° junctions'}
+                {selectedSeam.parameters.jointType === 'BUTT' && '⎍ Butt: 0° normal tilt for flat groove'}
+                {selectedSeam.parameters.jointType === 'LAP' && '⎘ Lap: 30° wash tilt for overlapping sheets'}
+                {selectedSeam.parameters.jointType === 'CORNER' && '◺ Corner: 20° apex tilt for outside edges'}
+                {selectedSeam.parameters.jointType === 'EDGE' && '∥ Edge: 15° tilt for parallel edge flanges'}
+              </span>
+              <span className="text-[#e97f01] font-bold shrink-0 ml-2">
+                {selectedSeam.parameters.torchTiltAngle}° TILT
+              </span>
             </div>
           </div>
 
