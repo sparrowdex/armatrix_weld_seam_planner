@@ -109,3 +109,4 @@ export interface WeldJobExport {
 }
 
 export type ViewportMode = 'orbit' | 'add_seam' | 'inspect' | 'simulate';
+

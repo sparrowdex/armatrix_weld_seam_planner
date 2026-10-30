@@ -5,58 +5,70 @@ import { useWeldStore } from '@/store/useWeldStore';
 import {
   Sliders,
   Cpu,
-  Clock,
-  Gauge,
-  Flame,
-  Shield,
   Zap,
-  Wind,
-  Check,
+  Shield,
+  ChevronRight,
 } from 'lucide-react';
 import { WeldJointType, WeldProcess } from '@/types/weld';
 
-export const SidebarRight: React.FC = () => {
+interface SidebarRightProps {
+  onToggleCollapse?: () => void;
+  isCollapsed?: boolean;
+}
+
+export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse, isCollapsed }) => {
   const {
     seams,
     selectedSeamId,
     updateSeamParameters,
     rapidTraverseSpeed,
-    setRobotConfig,
     exportJobJSON,
   } = useWeldStore();
 
   const selectedSeam = seams.find((s) => s.id === selectedSeamId) || seams[0] || null;
-
-  // Compute live cycle estimate
   const jobSummary = exportJobJSON().job_summary;
 
   return (
-    <aside className="w-84 h-full bg-[#111611]/95 border-l border-[#243022] flex flex-col z-10 select-none overflow-y-auto font-mono text-xs">
+    <aside className="w-80 h-full bg-[#0A0D0A] border-l border-[#1E291C] flex flex-col z-10 select-none overflow-y-auto text-xs relative">
       {/* Header */}
-      <div className="p-3.5 border-b border-[#243022] bg-[#141A14] flex items-center justify-between">
-        <span className="flex items-center gap-1.5 font-semibold text-white">
-          <Sliders className="w-3.5 h-3.5 text-[#FF5B00]" />
-          WELD PARAMETERS
-        </span>
+      <div className="p-3.5 border-b border-[#1E291C] bg-[#0E140E] flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className="p-1 hover:bg-[#1A2519] rounded text-[#7E8F7D] hover:text-white transition"
+              title="Collapse Parameters Panel"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
+          <span style={{ fontFamily: 'Onest, sans-serif' }} className="flex items-center gap-1.5 font-bold text-white tracking-wide">
+            <Sliders className="w-3.5 h-3.5 text-[#e97f01]" />
+            WELD PARAMETERS
+          </span>
+        </div>
         {selectedSeam && (
-          <span className="bg-[#202C1E] text-[#FF5B00] px-2 py-0.5 rounded border border-[#2F3E2B] text-[10px] font-bold">
+          <span
+            style={{ color: '#e97f01' }}
+            className="bg-[#172216] px-2 py-0.5 rounded border border-[#273825] text-[10px] font-mono font-bold"
+          >
             {selectedSeam.id}
           </span>
         )}
       </div>
 
       {selectedSeam ? (
-        <div className="p-3.5 flex flex-col gap-4">
+        <div className="p-3.5 flex flex-col gap-3.5">
           {/* Process & Joint Type */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] text-[#889988] block mb-1">PROCESS</label>
+              <label className="text-[10px] text-[#7C8E7B] font-mono block mb-1">PROCESS</label>
               <select
                 value={selectedSeam.parameters.process}
                 onChange={(e) =>
                   updateSeamParameters(selectedSeam.id, { process: e.target.value as WeldProcess })
                 }
-                className="w-full bg-[#192218] border border-[#2D3F2A] rounded px-2 py-1.5 text-white text-xs focus:border-[#FF5B00] outline-none"
+                className="w-full bg-[#131B13] border border-[#233121] rounded px-2 py-1.5 text-white text-xs focus:border-[#e97f01] outline-none font-mono"
               >
                 <option value="MIG">MIG (GMAW)</option>
                 <option value="TIG">TIG (GTAW)</option>
@@ -64,15 +76,15 @@ export const SidebarRight: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="text-[10px] text-[#889988] block mb-1">JOINT TYPE</label>
+              <label className="text-[10px] text-[#7C8E7B] font-mono block mb-1">JOINT TYPE</label>
               <select
                 value={selectedSeam.parameters.jointType}
                 onChange={(e) =>
                   updateSeamParameters(selectedSeam.id, { jointType: e.target.value as WeldJointType })
                 }
-                className="w-full bg-[#192218] border border-[#2D3F2A] rounded px-2 py-1.5 text-white text-xs focus:border-[#FF5B00] outline-none"
+                className="w-full bg-[#131B13] border border-[#233121] rounded px-2 py-1.5 text-white text-xs focus:border-[#e97f01] outline-none font-mono"
               >
-                <option value="FILLET">Fillet Weld</option>
+                <option value="FILLET">Fillet Joint</option>
                 <option value="BUTT">Butt Joint</option>
                 <option value="LAP">Lap Joint</option>
                 <option value="CORNER">Corner Joint</option>
@@ -81,16 +93,16 @@ export const SidebarRight: React.FC = () => {
           </div>
 
           {/* Electrical & Travel Parameters */}
-          <div className="border border-[#263524] rounded-lg p-2.5 bg-[#141B13] flex flex-col gap-2.5">
-            <span className="text-[10px] font-bold text-[#889988] flex items-center gap-1.5">
-              <Zap className="w-3 h-3 text-[#EAB308]" />
+          <div className="border border-[#1E2B1D] rounded-lg p-2.5 bg-[#0D130D] flex flex-col gap-2.5">
+            <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[11px] font-bold text-[#8EA08D] flex items-center gap-1.5 tracking-wide">
+              <Zap className="w-3 h-3 text-[#e97f01]" />
               ELECTRICAL & MOTION
             </span>
 
             {/* Travel Speed */}
             <div>
-              <div className="flex justify-between text-[11px] mb-1">
-                <span className="text-[#A0B0A0]">Travel Speed</span>
+              <div className="flex justify-between text-[11px] mb-1 font-mono">
+                <span className="text-[#8EA08D]">Travel Speed</span>
                 <span className="font-semibold text-white">{selectedSeam.parameters.travelSpeed} mm/s</span>
               </div>
               <input
@@ -102,14 +114,15 @@ export const SidebarRight: React.FC = () => {
                 onChange={(e) =>
                   updateSeamParameters(selectedSeam.id, { travelSpeed: parseFloat(e.target.value) })
                 }
-                className="w-full accent-[#FF5B00] h-1 bg-[#233120] rounded cursor-pointer"
+                style={{ accentColor: '#e97f01' }}
+                className="w-full h-1 bg-[#1A2519] rounded cursor-pointer"
               />
             </div>
 
             {/* Current (A) */}
             <div>
-              <div className="flex justify-between text-[11px] mb-1">
-                <span className="text-[#A0B0A0]">Current</span>
+              <div className="flex justify-between text-[11px] mb-1 font-mono">
+                <span className="text-[#8EA08D]">Current</span>
                 <span className="font-semibold text-white">{selectedSeam.parameters.current} A</span>
               </div>
               <input
@@ -121,14 +134,15 @@ export const SidebarRight: React.FC = () => {
                 onChange={(e) =>
                   updateSeamParameters(selectedSeam.id, { current: parseInt(e.target.value) })
                 }
-                className="w-full accent-[#FF5B00] h-1 bg-[#233120] rounded cursor-pointer"
+                style={{ accentColor: '#e97f01' }}
+                className="w-full h-1 bg-[#1A2519] rounded cursor-pointer"
               />
             </div>
 
             {/* Voltage (V) */}
             <div>
-              <div className="flex justify-between text-[11px] mb-1">
-                <span className="text-[#A0B0A0]">Voltage</span>
+              <div className="flex justify-between text-[11px] mb-1 font-mono">
+                <span className="text-[#8EA08D]">Voltage</span>
                 <span className="font-semibold text-white">{selectedSeam.parameters.voltage} V</span>
               </div>
               <input
@@ -140,14 +154,15 @@ export const SidebarRight: React.FC = () => {
                 onChange={(e) =>
                   updateSeamParameters(selectedSeam.id, { voltage: parseFloat(e.target.value) })
                 }
-                className="w-full accent-[#FF5B00] h-1 bg-[#233120] rounded cursor-pointer"
+                style={{ accentColor: '#e97f01' }}
+                className="w-full h-1 bg-[#1A2519] rounded cursor-pointer"
               />
             </div>
 
             {/* Wire Feed Speed */}
             <div>
-              <div className="flex justify-between text-[11px] mb-1">
-                <span className="text-[#A0B0A0]">Wire Feed Speed</span>
+              <div className="flex justify-between text-[11px] mb-1 font-mono">
+                <span className="text-[#8EA08D]">Wire Feed Speed</span>
                 <span className="font-semibold text-white">{selectedSeam.parameters.wireFeedSpeed} m/min</span>
               </div>
               <input
@@ -159,21 +174,22 @@ export const SidebarRight: React.FC = () => {
                 onChange={(e) =>
                   updateSeamParameters(selectedSeam.id, { wireFeedSpeed: parseFloat(e.target.value) })
                 }
-                className="w-full accent-[#FF5B00] h-1 bg-[#233120] rounded cursor-pointer"
+                style={{ accentColor: '#e97f01' }}
+                className="w-full h-1 bg-[#1A2519] rounded cursor-pointer"
               />
             </div>
           </div>
 
-          {/* Torch Angles & Clearance */}
-          <div className="border border-[#263524] rounded-lg p-2.5 bg-[#141B13] flex flex-col gap-2.5">
-            <span className="text-[10px] font-bold text-[#889988] flex items-center gap-1.5">
+          {/* Torch Orientation & Clearances */}
+          <div className="border border-[#1E2B1D] rounded-lg p-2.5 bg-[#0D130D] flex flex-col gap-2.5">
+            <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[11px] font-bold text-[#8EA08D] flex items-center gap-1.5 tracking-wide">
               <Shield className="w-3 h-3 text-[#38BDF8]" />
-              TORCH ORIENTATION & CLEARANCE
+              TORCH ANGLES & CLEARANCE
             </span>
 
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
               <div>
-                <span className="text-[10px] text-[#889988] block">Lead Angle</span>
+                <span className="text-[10px] text-[#7C8E7B] block">Lead Angle</span>
                 <div className="flex items-center gap-1 mt-0.5">
                   <input
                     type="number"
@@ -181,13 +197,13 @@ export const SidebarRight: React.FC = () => {
                     onChange={(e) =>
                       updateSeamParameters(selectedSeam.id, { torchLeadAngle: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full bg-[#1A2218] border border-[#2B3B28] rounded px-2 py-1 text-white text-xs outline-none focus:border-[#FF5B00]"
+                    className="w-full bg-[#141C14] border border-[#223121] rounded px-2 py-1 text-white text-xs outline-none focus:border-[#e97f01]"
                   />
-                  <span className="text-[#889988]">°</span>
+                  <span className="text-[#7C8E7B]">°</span>
                 </div>
               </div>
               <div>
-                <span className="text-[10px] text-[#889988] block">Tilt Angle</span>
+                <span className="text-[10px] text-[#7C8E7B] block">Tilt Angle</span>
                 <div className="flex items-center gap-1 mt-0.5">
                   <input
                     type="number"
@@ -195,16 +211,16 @@ export const SidebarRight: React.FC = () => {
                     onChange={(e) =>
                       updateSeamParameters(selectedSeam.id, { torchTiltAngle: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full bg-[#1A2218] border border-[#2B3B28] rounded px-2 py-1 text-white text-xs outline-none focus:border-[#FF5B00]"
+                    className="w-full bg-[#141C14] border border-[#223121] rounded px-2 py-1 text-white text-xs outline-none focus:border-[#e97f01]"
                   />
-                  <span className="text-[#889988]">°</span>
+                  <span className="text-[#7C8E7B]">°</span>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
               <div>
-                <span className="text-[10px] text-[#889988] block">Approach Height</span>
+                <span className="text-[10px] text-[#7C8E7B] block">Approach Standoff</span>
                 <div className="flex items-center gap-1 mt-0.5">
                   <input
                     type="number"
@@ -212,13 +228,13 @@ export const SidebarRight: React.FC = () => {
                     onChange={(e) =>
                       updateSeamParameters(selectedSeam.id, { approachDistance: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full bg-[#1A2218] border border-[#2B3B28] rounded px-2 py-1 text-white text-xs outline-none focus:border-[#FF5B00]"
+                    className="w-full bg-[#141C14] border border-[#223121] rounded px-2 py-1 text-white text-xs outline-none focus:border-[#e97f01]"
                   />
-                  <span className="text-[#889988]">mm</span>
+                  <span className="text-[#7C8E7B]">mm</span>
                 </div>
               </div>
               <div>
-                <span className="text-[10px] text-[#889988] block">Retract Height</span>
+                <span className="text-[10px] text-[#7C8E7B] block">Retract Standoff</span>
                 <div className="flex items-center gap-1 mt-0.5">
                   <input
                     type="number"
@@ -226,16 +242,16 @@ export const SidebarRight: React.FC = () => {
                     onChange={(e) =>
                       updateSeamParameters(selectedSeam.id, { retractDistance: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full bg-[#1A2218] border border-[#2B3B28] rounded px-2 py-1 text-white text-xs outline-none focus:border-[#FF5B00]"
+                    className="w-full bg-[#141C14] border border-[#223121] rounded px-2 py-1 text-white text-xs outline-none focus:border-[#e97f01]"
                   />
-                  <span className="text-[#889988]">mm</span>
+                  <span className="text-[#7C8E7B]">mm</span>
                 </div>
               </div>
             </div>
 
             <div>
-              <div className="flex justify-between text-[11px] mb-1">
-                <span className="text-[#A0B0A0]">Interpass Cooling Delay</span>
+              <div className="flex justify-between text-[11px] mb-1 font-mono">
+                <span className="text-[#8EA08D]">Interpass Cooling Delay</span>
                 <span className="font-semibold text-white">{selectedSeam.parameters.interpassDelay} s</span>
               </div>
               <input
@@ -247,52 +263,52 @@ export const SidebarRight: React.FC = () => {
                 onChange={(e) =>
                   updateSeamParameters(selectedSeam.id, { interpassDelay: parseInt(e.target.value) })
                 }
-                className="w-full accent-[#38BDF8] h-1 bg-[#233120] rounded cursor-pointer"
+                className="w-full accent-[#38BDF8] h-1 bg-[#1A2519] rounded cursor-pointer"
               />
-              <span className="text-[9px] text-[#778877] block mt-0.5">
-                Controls thermal heat accumulation to avoid metal warping.
+              <span className="text-[9px] text-[#6A7B69] block mt-0.5 font-mono">
+                Mitigates thermal distortion on thin sections.
               </span>
             </div>
           </div>
         </div>
       ) : (
-        <div className="p-4 text-center text-[#778877] text-xs">
+        <div className="p-4 text-center text-[#6A7B69] text-xs">
           Select or add a seam to adjust parameters.
         </div>
       )}
 
-      {/* Armatrix Snake-Arm Kinematics & Cycle Estimation */}
-      <div className="mt-auto p-3.5 border-t border-[#243022] bg-[#141A14]">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-white mb-2">
-          <Cpu className="w-3.5 h-3.5 text-[#FF5B00]" />
+      {/* Armatrix Snake-Arm Kinematics Profile */}
+      <div className="mt-auto p-3.5 border-t border-[#1E291C] bg-[#0E140E]">
+        <div style={{ fontFamily: 'Onest, sans-serif' }} className="flex items-center gap-1.5 text-xs font-bold text-white mb-2 tracking-wide">
+          <Cpu className="w-3.5 h-3.5 text-[#e97f01]" />
           ARMATRIX SNAKE-ARM KINEMATICS
         </div>
 
-        <div className="space-y-1.5 text-[11px]">
-          <div className="flex justify-between text-[#889988]">
+        <div className="space-y-1.5 text-[11px] font-mono">
+          <div className="flex justify-between text-[#7E8F7D]">
             <span>Arm Reach Envelope:</span>
-            <span className="text-white font-semibold">3500 mm (Hyper-redundant)</span>
+            <span className="text-white font-semibold">3500 mm</span>
           </div>
-          <div className="flex justify-between text-[#889988]">
+          <div className="flex justify-between text-[#7E8F7D]">
             <span>Rapid Traverse Speed:</span>
             <span className="text-white font-semibold">{rapidTraverseSpeed} mm/s</span>
           </div>
-          <div className="flex justify-between text-[#889988]">
+          <div className="flex justify-between text-[#7E8F7D]">
             <span>Total Weld Seam Length:</span>
             <span className="text-[#22C55E] font-semibold">{jobSummary.total_weld_length_mm} mm</span>
           </div>
-          <div className="flex justify-between text-[#889988]">
-            <span>Active Arc Weld Time:</span>
+          <div className="flex justify-between text-[#7E8F7D]">
+            <span>Active Arc Time:</span>
             <span className="text-white font-semibold">{jobSummary.estimated_active_weld_time_sec}s</span>
           </div>
-          <div className="flex justify-between text-[#889988]">
-            <span>Rapid Move & Cooling:</span>
+          <div className="flex justify-between text-[#7E8F7D]">
+            <span>Traverse & Cooling:</span>
             <span className="text-white font-semibold">
               {(jobSummary.estimated_traverse_time_sec + jobSummary.estimated_cooling_delays_sec).toFixed(1)}s
             </span>
           </div>
-          <div className="flex justify-between text-white font-bold pt-1.5 border-t border-[#233020]">
-            <span className="text-[#FF5B00]">ESTIMATED TOTAL CYCLE:</span>
+          <div className="flex justify-between text-white font-bold pt-1.5 border-t border-[#1C271B]">
+            <span style={{ color: '#e97f01', fontFamily: 'Onest, sans-serif' }}>ESTIMATED TOTAL CYCLE:</span>
             <span>{jobSummary.total_cycle_time_sec}s</span>
           </div>
         </div>

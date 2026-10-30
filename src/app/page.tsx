@@ -7,28 +7,41 @@ import { SidebarRight } from '@/components/panels/SidebarRight';
 import { ViewportCanvas } from '@/components/viewport/ViewportCanvas';
 import { SimulationHUD } from '@/components/panels/SimulationHUD';
 import { ExportModal } from '@/components/panels/ExportModal';
-import { Sliders, ListOrdered, Eye } from 'lucide-react';
+import { Sliders, ListOrdered, ChevronRight, ChevronLeft } from 'lucide-react';
 
 export default function Home() {
   const [isExportOpen, setIsExportOpen] = useState(false);
-  const [showLeftMobile, setShowLeftMobile] = useState(true);
-  const [showRightMobile, setShowRightMobile] = useState(false);
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
+  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
 
   return (
-    <main className="flex flex-col h-screen w-screen overflow-hidden bg-[#0D100D] select-none">
-      {/* Top Technical Header */}
+    <main className="flex flex-col h-screen w-screen overflow-hidden bg-[#0A0D0A] select-none text-[#F6F5EE]">
+      {/* Header */}
       <Header onOpenExport={() => setIsExportOpen(true)} />
 
-      {/* Main CAD Workspace Layout */}
+      {/* Main CAD Workspace */}
       <div className="flex-1 flex relative overflow-hidden">
-        {/* Left Sidebar (Seams & CAD Ingestion) */}
+        {/* Left Sidebar (Seams & Ingestion) */}
         <div
-          className={`h-full transition-all duration-300 md:static absolute inset-y-0 left-0 z-30 ${
-            showLeftMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          className={`h-full transition-all duration-300 ease-in-out z-30 md:relative absolute inset-y-0 left-0 ${
+            isLeftCollapsed
+              ? '-translate-x-full md:translate-x-0 md:w-0 md:opacity-0 pointer-events-none'
+              : 'translate-x-0 w-80 opacity-100'
           }`}
         >
-          <SidebarLeft />
+          <SidebarLeft onToggleCollapse={() => setIsLeftCollapsed(true)} isCollapsed={isLeftCollapsed} />
         </div>
+
+        {/* Collapsed Left Restore Tab */}
+        {isLeftCollapsed && (
+          <button
+            onClick={() => setIsLeftCollapsed(false)}
+            className="absolute top-16 left-0 z-40 bg-[#121912] hover:bg-[#1C271B] border-r border-y border-[#263724] px-1.5 py-3 rounded-r-lg text-[#8FA18E] hover:text-white transition shadow-lg flex items-center group"
+            title="Expand Seams Panel"
+          >
+            <ChevronRight className="w-4 h-4 text-[#e97f01] group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        )}
 
         {/* 3D Interactive Viewport */}
         <div className="flex-1 h-full relative overflow-hidden">
@@ -36,24 +49,38 @@ export default function Home() {
           <SimulationHUD />
         </div>
 
-        {/* Right Sidebar (Weld Parameters & Kinematics) */}
+        {/* Collapsed Right Restore Tab */}
+        {isRightCollapsed && (
+          <button
+            onClick={() => setIsRightCollapsed(false)}
+            className="absolute top-16 right-0 z-40 bg-[#121912] hover:bg-[#1C271B] border-l border-y border-[#263724] px-1.5 py-3 rounded-l-lg text-[#8FA18E] hover:text-white transition shadow-lg flex items-center group"
+            title="Expand Parameters Panel"
+          >
+            <ChevronLeft className="w-4 h-4 text-[#e97f01] group-hover:-translate-x-0.5 transition-transform" />
+          </button>
+        )}
+
+        {/* Right Sidebar (Parameters & Kinematics) */}
         <div
-          className={`h-full transition-all duration-300 md:static absolute inset-y-0 right-0 z-30 ${
-            showRightMobile ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
+          className={`h-full transition-all duration-300 ease-in-out z-30 md:relative absolute inset-y-0 right-0 ${
+            isRightCollapsed
+              ? 'translate-x-full md:translate-x-0 md:w-0 md:opacity-0 pointer-events-none'
+              : 'translate-x-0 w-80 opacity-100'
           }`}
         >
-          <SidebarRight />
+          <SidebarRight onToggleCollapse={() => setIsRightCollapsed(true)} isCollapsed={isRightCollapsed} />
         </div>
 
-        {/* Mobile / Tablet Bottom Bar for Toggling Sidebars */}
-        <div className="md:hidden absolute bottom-3 right-4 z-40 flex items-center gap-2 bg-[#141B13]/90 backdrop-blur border border-[#273725] p-1 rounded-lg">
+        {/* Tablet / Mobile Floating Bar */}
+        <div className="md:hidden absolute bottom-3 right-4 z-40 flex items-center gap-2 bg-[#101710]/90 backdrop-blur border border-[#233121] p-1 rounded-lg">
           <button
             onClick={() => {
-              setShowLeftMobile(!showLeftMobile);
-              if (!showLeftMobile) setShowRightMobile(false);
+              setIsLeftCollapsed(!isLeftCollapsed);
+              if (isLeftCollapsed) setIsRightCollapsed(true);
             }}
-            className={`px-3 py-1.5 rounded font-mono text-xs flex items-center gap-1.5 ${
-              showLeftMobile ? 'bg-[#FF5B00] text-white' : 'text-[#889988]'
+            style={{ fontFamily: 'Onest, sans-serif' }}
+            className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 ${
+              !isLeftCollapsed ? 'bg-[#e97f01] text-white' : 'text-[#889988]'
             }`}
           >
             <ListOrdered className="w-3.5 h-3.5" />
@@ -61,11 +88,12 @@ export default function Home() {
           </button>
           <button
             onClick={() => {
-              setShowRightMobile(!showRightMobile);
-              if (!showRightMobile) setShowLeftMobile(false);
+              setIsRightCollapsed(!isRightCollapsed);
+              if (isRightCollapsed) setIsLeftCollapsed(true);
             }}
-            className={`px-3 py-1.5 rounded font-mono text-xs flex items-center gap-1.5 ${
-              showRightMobile ? 'bg-[#FF5B00] text-white' : 'text-[#889988]'
+            style={{ fontFamily: 'Onest, sans-serif' }}
+            className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 ${
+              !isRightCollapsed ? 'bg-[#e97f01] text-white' : 'text-[#889988]'
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />

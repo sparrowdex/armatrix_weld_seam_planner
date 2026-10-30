@@ -244,3 +244,4 @@ pnpm run start
 1. **Confined Space Approach/Retract**: Traditional open-gantry Cartesian robots can approach a part from any arbitrary direction. Inside a pipe or narrow compartment, Armatrix's snake arm cannot do this. Every seam in our planner generates **explicit normal approach and retract vectors** ensuring the robot enters and leaves safely without scraping adjacent walls.
 2. **Thermal Distortion Optimization**: Thin structural plates warp if adjacent welds are performed continuously. Our planner provides instant sequence reordering and configurable interpass cooling delays.
 3. **Deterministic Waypoint Discretization**: Industrial robot controllers often experience kinematic singularities if given only sparse endpoints. We compute interpolated 5mm waypoint splines so the trajectory planner maintains constant travel speed along the seam.
+

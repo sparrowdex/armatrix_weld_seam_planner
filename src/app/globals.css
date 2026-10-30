@@ -1,33 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=42dot+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Onest:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #0d100d;
+  --background: #060906;
   --foreground: #f6f5ee;
+  --font-onest: 'Onest', sans-serif;
+  --font-42dot: '42dot Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --armatrix-orange: #e97f01;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: '42dot Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: 0.22px;
   overflow: hidden;
   user-select: none;
 }
 
-/* Custom scrollbars for technical CAD look */
+h1, h2, h3, .font-heading {
+  font-family: 'Onest', sans-serif;
+  font-weight: 700;
+}
+
+/* Custom scrollbars for precision technical look */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #111611;
+  background: #0a0e0a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #253322;
+  background: #1c2719;
   border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff5b00;
+  background: #e97f01;
 }

@@ -182,3 +182,4 @@ export function detectCandidateSeams(
   // Return sorted by length descending
   return mergedSeams.sort((a, b) => b.length - a.length);
 }
+
