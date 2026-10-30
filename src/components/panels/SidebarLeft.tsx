@@ -39,10 +39,16 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     clearSeams();
 
     if (activeModelName === 'Structural L-Bracket') {
-      addSeam({ x: -50, y: 14, z: -26 }, { x: 50, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected');
-      addSeam({ x: -40, y: 14, z: -33 }, { x: -40, y: 14, z: 22 }, { x: -0.707, y: 0.707, z: 0 }, 'detected');
-      addSeam({ x: 30, y: 14, z: -33 }, { x: 30, y: 14, z: 22 }, { x: 0.707, y: 0.707, z: 0 }, 'detected');
-      addSeam({ x: -40, y: 14, z: -33 }, { x: -40, y: 79, z: -33 }, { x: -0.707, y: 0, z: 0.707 }, 'detected');
+      // 1. Main 90° Root Corner Fillet (Between horizontal base plate & vertical upright wall)
+      addSeam({ x: -55, y: 14, z: -31 }, { x: 55, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected');
+      // 2. Left Stiffener Rib - Horizontal Fillet (Joint on base plate)
+      addSeam({ x: -30, y: 14, z: -31 }, { x: -30, y: 14, z: 24 }, { x: 0.707, y: 0.707, z: 0 }, 'detected');
+      // 3. Right Stiffener Rib - Horizontal Fillet (Joint on base plate)
+      addSeam({ x: 30, y: 14, z: -31 }, { x: 30, y: 14, z: 24 }, { x: -0.707, y: 0.707, z: 0 }, 'detected');
+      // 4. Left Stiffener Rib - Vertical Fillet (Joint on upright wall)
+      addSeam({ x: -30, y: 14, z: -31 }, { x: -30, y: 74, z: -31 }, { x: 0.707, y: 0, z: 0.707 }, 'detected');
+      // 5. Right Stiffener Rib - Vertical Fillet (Joint on upright wall)
+      addSeam({ x: 30, y: 14, z: -31 }, { x: 30, y: 74, z: -31 }, { x: -0.707, y: 0, z: 0.707 }, 'detected');
     } else if (activeModelName === 'Armatrix Emblem') {
       addSeam({ x: -27.5, y: 16, z: -25 }, { x: -27.5, y: 16, z: 15 }, { x: 0, y: 1, z: 0 }, 'detected');
       addSeam({ x: 0, y: 16, z: -25 }, { x: 0, y: 16, z: 20 }, { x: 0, y: 1, z: 0 }, 'detected');

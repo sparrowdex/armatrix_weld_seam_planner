@@ -1,14 +1,14 @@
 solid exported
 	facet normal 1 0 0
 		outer loop
-			vertex 60 14 40
-			vertex 60 0 40
+			vertex 60 14 50
+			vertex 60 0 50
 			vertex 60 14 -40
 		endloop
 	endfacet
 	facet normal 1 0 0
 		outer loop
-			vertex 60 0 40
+			vertex 60 0 50
 			vertex 60 0 -40
 			vertex 60 14 -40
 		endloop
@@ -17,56 +17,56 @@ solid exported
 		outer loop
 			vertex -60 14 -40
 			vertex -60 0 -40
-			vertex -60 14 40
+			vertex -60 14 50
 		endloop
 	endfacet
 	facet normal -1 0 0
 		outer loop
 			vertex -60 0 -40
-			vertex -60 0 40
-			vertex -60 14 40
+			vertex -60 0 50
+			vertex -60 14 50
 		endloop
 	endfacet
 	facet normal 0 1 0
 		outer loop
 			vertex -60 14 -40
-			vertex -60 14 40
+			vertex -60 14 50
 			vertex 60 14 -40
 		endloop
 	endfacet
 	facet normal 0 1 0
 		outer loop
-			vertex -60 14 40
-			vertex 60 14 40
+			vertex -60 14 50
+			vertex 60 14 50
 			vertex 60 14 -40
 		endloop
 	endfacet
 	facet normal 0 -1 0
 		outer loop
-			vertex -60 0 40
+			vertex -60 0 50
 			vertex -60 0 -40
-			vertex 60 0 40
+			vertex 60 0 50
 		endloop
 	endfacet
 	facet normal 0 -1 0
 		outer loop
 			vertex -60 0 -40
 			vertex 60 0 -40
-			vertex 60 0 40
+			vertex 60 0 50
 		endloop
 	endfacet
 	facet normal 0 0 1
 		outer loop
-			vertex -60 14 40
-			vertex -60 0 40
-			vertex 60 14 40
+			vertex -60 14 50
+			vertex -60 0 50
+			vertex 60 14 50
 		endloop
 	endfacet
 	facet normal 0 0 1
 		outer loop
-			vertex -60 0 40
-			vertex 60 0 40
-			vertex 60 14 40
+			vertex -60 0 50
+			vertex 60 0 50
+			vertex 60 14 50
 		endloop
 	endfacet
 	facet normal 0 0 -1
@@ -167,116 +167,116 @@ solid exported
 			vertex -60 99 -40
 		endloop
 	endfacet
-	facet normal -1 0 0
-		outer loop
-			vertex -40 14 -33
-			vertex -40 79 -33
-			vertex -40 14 -88
-		endloop
-	endfacet
 	facet normal 1 0 0
 		outer loop
-			vertex -30 14 -88
-			vertex -30 79 -33
-			vertex -30 14 -33
-		endloop
-	endfacet
-	facet normal 0 -1 0
-		outer loop
-			vertex -40 14 -33
-			vertex -40 14 -88
-			vertex -30 14 -33
-		endloop
-	endfacet
-	facet normal 0 -1 0
-		outer loop
-			vertex -40 14 -88
-			vertex -30 14 -88
-			vertex -30 14 -33
-		endloop
-	endfacet
-	facet normal 0 0.6459422414661738 -0.7633862853691145
-		outer loop
-			vertex -40 14 -88
-			vertex -40 79 -33
-			vertex -30 14 -88
-		endloop
-	endfacet
-	facet normal 0 0.6459422414661738 -0.7633862853691145
-		outer loop
-			vertex -40 79 -33
-			vertex -30 79 -33
-			vertex -30 14 -88
-		endloop
-	endfacet
-	facet normal 0 0 1
-		outer loop
-			vertex -40 79 -33
-			vertex -40 14 -33
-			vertex -30 79 -33
-		endloop
-	endfacet
-	facet normal 0 0 1
-		outer loop
-			vertex -40 14 -33
-			vertex -30 14 -33
-			vertex -30 79 -33
+			vertex -30 14 -26
+			vertex -30 74 -26
+			vertex -30 14 29
 		endloop
 	endfacet
 	facet normal -1 0 0
 		outer loop
-			vertex 30 14 -33
-			vertex 30 79 -33
-			vertex 30 14 -88
+			vertex -40 14 29
+			vertex -40 74 -26
+			vertex -40 14 -26
+		endloop
+	endfacet
+	facet normal 0 -1 0
+		outer loop
+			vertex -30 14 -26
+			vertex -30 14 29
+			vertex -40 14 -26
+		endloop
+	endfacet
+	facet normal 0 -1 0
+		outer loop
+			vertex -30 14 29
+			vertex -40 14 29
+			vertex -40 14 -26
+		endloop
+	endfacet
+	facet normal 0 0.6757246285173463 0.7371541402007414
+		outer loop
+			vertex -30 14 29
+			vertex -30 74 -26
+			vertex -40 14 29
+		endloop
+	endfacet
+	facet normal 0 0.6757246285173463 0.7371541402007414
+		outer loop
+			vertex -30 74 -26
+			vertex -40 74 -26
+			vertex -40 14 29
+		endloop
+	endfacet
+	facet normal 0 0 -1
+		outer loop
+			vertex -30 74 -26
+			vertex -30 14 -26
+			vertex -40 74 -26
+		endloop
+	endfacet
+	facet normal 0 0 -1
+		outer loop
+			vertex -30 14 -26
+			vertex -40 14 -26
+			vertex -40 74 -26
 		endloop
 	endfacet
 	facet normal 1 0 0
 		outer loop
-			vertex 40 14 -88
-			vertex 40 79 -33
-			vertex 40 14 -33
+			vertex 40 14 -26
+			vertex 40 74 -26
+			vertex 40 14 29
+		endloop
+	endfacet
+	facet normal -1 0 0
+		outer loop
+			vertex 30 14 29
+			vertex 30 74 -26
+			vertex 30 14 -26
 		endloop
 	endfacet
 	facet normal 0 -1 0
 		outer loop
-			vertex 30 14 -33
-			vertex 30 14 -88
-			vertex 40 14 -33
+			vertex 40 14 -26
+			vertex 40 14 29
+			vertex 30 14 -26
 		endloop
 	endfacet
 	facet normal 0 -1 0
 		outer loop
-			vertex 30 14 -88
-			vertex 40 14 -88
-			vertex 40 14 -33
+			vertex 40 14 29
+			vertex 30 14 29
+			vertex 30 14 -26
 		endloop
 	endfacet
-	facet normal 0 0.6459422414661738 -0.7633862853691145
+	facet normal 0 0.6757246285173463 0.7371541402007414
 		outer loop
-			vertex 30 14 -88
-			vertex 30 79 -33
-			vertex 40 14 -88
+			vertex 40 14 29
+			vertex 40 74 -26
+			vertex 30 14 29
 		endloop
 	endfacet
-	facet normal 0 0.6459422414661738 -0.7633862853691145
+	facet normal 0 0.6757246285173463 0.7371541402007414
 		outer loop
-			vertex 30 79 -33
-			vertex 40 79 -33
-			vertex 40 14 -88
+			vertex 40 74 -26
+			vertex 30 74 -26
+			vertex 30 14 29
 		endloop
 	endfacet
-	facet normal 0 0 1
+	facet normal 0 0 -1
 		outer loop
-			vertex 30 79 -33
-			vertex 30 14 -33
-			vertex 40 79 -33
+			vertex 40 74 -26
+			vertex 40 14 -26
+			vertex 30 74 -26
 		endloop
 	endfacet
-	facet normal 0 0 1
+	facet normal 0 0 -1
 		outer loop
-			vertex 30 14 -33
-			vertex 40 14 -33
-			vertex 40 79 -33
+			vertex 40 14 -26
+			vertex 30 14 -26
+			vertex 30 74 -26
 		endloop
 	endfacet
 endsolid exported

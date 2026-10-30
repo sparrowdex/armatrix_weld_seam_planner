@@ -15,34 +15,34 @@ function exportMesh(object3d, filename) {
   console.log(`Exported solid ${filename}`);
 }
 
-// 1. Solid Structural L-Bracket with Gussets & Base
+// 1. Solid Structural L-Bracket with Stiffener Ribs & Base
 function createLBracket() {
   const group = new THREE.Group();
 
-  // Base Plate (120 x 14 x 80)
-  const baseGeom = new THREE.BoxGeometry(120, 14, 80);
-  baseGeom.translate(0, 7, 0);
+  // Base Plate (120 x 14 x 90)
+  const baseGeom = new THREE.BoxGeometry(120, 14, 90);
+  baseGeom.translate(0, 7, 5); // Z from -40 to +50
   group.add(new THREE.Mesh(baseGeom));
 
-  // Upright Plate (120 x 85 x 14)
+  // Upright Vertical Plate (120 x 85 x 14)
   const uprightGeom = new THREE.BoxGeometry(120, 85, 14);
-  uprightGeom.translate(0, 14 + 85 / 2, -40 + 7);
+  uprightGeom.translate(0, 14 + 85 / 2, -33); // Z from -40 to -26, front face at Z = -26
   group.add(new THREE.Mesh(uprightGeom));
 
-  // Gusset 1 (Left triangle)
+  // Gusset 1 (Left stiffener triangle sitting inside the 90° corner)
   const s1 = new THREE.Shape();
   s1.moveTo(0, 0);
-  s1.lineTo(0, 65);
-  s1.lineTo(55, 0);
+  s1.lineTo(0, 60); // 60mm up vertical plate
+  s1.lineTo(55, 0); // 55mm forward along base plate
   s1.closePath();
   const g1Geom = new THREE.ExtrudeGeometry(s1, { depth: 10, bevelEnabled: false });
-  g1Geom.rotateY(Math.PI / 2);
-  g1Geom.translate(-40, 14, -33);
+  g1Geom.rotateY(-Math.PI / 2); // Rotate so hypotenuse faces forward onto base plate
+  g1Geom.translate(-30, 14, -26); // X from -40 to -30, Z from -26 to +29
   group.add(new THREE.Mesh(g1Geom));
 
-  // Gusset 2 (Right triangle)
+  // Gusset 2 (Right stiffener triangle)
   const g2Geom = g1Geom.clone();
-  g2Geom.translate(70, 0, 0);
+  g2Geom.translate(70, 0, 0); // X from +30 to +40
   group.add(new THREE.Mesh(g2Geom));
 
   return group;
