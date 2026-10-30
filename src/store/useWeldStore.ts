@@ -23,6 +23,7 @@ export interface WeldState {
 
   // Seams
   seams: WeldSeam[];
+  seamHistory: WeldSeam[][];
   selectedSeamId: string | null;
   completedSeamIds: string[];
   torchStyle: 'robotic_gooseneck' | 'sleek_pencil';
@@ -69,6 +70,7 @@ export interface WeldState {
   optimizeSeamSequence: () => void;
   reorderSeams: (newOrder: WeldSeam[]) => void;
   reverseSeamDirection: (id: string) => void;
+  undo: () => void;
   clearSeams: () => void;
 
   setRobotConfig: (config: { rapidTraverseSpeed?: number; approachClearance?: number; retractClearance?: number; safePlaneZClearance?: number }) => void;
@@ -121,6 +123,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   manualCandidateNormal: null,
 
   seams: [],
+  seamHistory: [],
   selectedSeamId: null,
   completedSeamIds: [],
   torchStyle: 'robotic_gooseneck',
@@ -142,7 +145,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   setPart: (part) => set({ part }),
   setPartLoading: (loading) => set({ partLoading: loading }),
   // When switching models, atomically clear old seams so they never stack up or float in space!
-  setActiveModelName: (name) => set({ activeModelName: name, seams: [], selectedSeamId: null, completedSeamIds: [] }),
+  setActiveModelName: (name) => set({ activeModelName: name, seams: [], seamHistory: [], selectedSeamId: null, completedSeamIds: [] }),
   setMode: (mode) => set({ mode, manualStartPoint: null, manualCandidatePoint: null }),
   toggleWireframe: () => set((s) => ({ showWireframe: !s.showWireframe })),
   toggleNormals: () => set((s) => ({ showNormals: !s.showNormals })),
@@ -161,7 +164,14 @@ export const useWeldStore = create<WeldState>((set, get) => ({
     const dz = end.z - start.z;
     const length = parseFloat(Math.sqrt(dx * dx + dy * dy + dz * dz).toFixed(2));
 
+    // Reject accidental micro-clicks (< 2 mm) so accidental clicks don't spawn floating zero-length spheres
+    if (length < 2.0) {
+      set({ manualStartPoint: null, manualCandidatePoint: null });
+      return null as any;
+    }
+
     const seams = get().seams;
+    const prevHistory = get().seamHistory;
     const nextOrder = seams.length + 1;
     const id = `SEAM-${String(nextOrder).padStart(2, '0')}`;
 
@@ -179,6 +189,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
 
     set({
       seams: [...seams, newSeam],
+      seamHistory: [...prevHistory, seams].slice(-25),
       selectedSeamId: id,
       manualStartPoint: null,
       manualCandidatePoint: null,
@@ -189,6 +200,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
 
   removeSeam: (id) =>
     set((state) => {
+      const prevSeams = state.seams;
       const filtered = state.seams.filter((s) => s.id !== id);
       const reindexed = filtered.map((s, idx) => ({
         ...s,
@@ -196,6 +208,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       }));
       return {
         seams: reindexed,
+        seamHistory: [...state.seamHistory, prevSeams].slice(-25),
         selectedSeamId: state.selectedSeamId === id ? (reindexed[0]?.id ?? null) : state.selectedSeamId,
         completedSeamIds: state.completedSeamIds.filter((cid) => cid !== id),
       };
@@ -216,6 +229,19 @@ export const useWeldStore = create<WeldState>((set, get) => ({
     })),
 
   resetCompletedSeams: () => set({ completedSeamIds: [] }),
+
+  undo: () =>
+    set((state) => {
+      if (state.seamHistory.length === 0) return state;
+      const history = [...state.seamHistory];
+      const previousSeams = history.pop()!;
+      return {
+        seams: previousSeams,
+        seamHistory: history,
+        selectedSeamId: previousSeams[previousSeams.length - 1]?.id ?? null,
+        completedSeamIds: state.completedSeamIds.filter((cid) => previousSeams.some((s) => s.id === cid)),
+      };
+    }),
 
   optimizeSeamSequence: () =>
     set((state) => {
@@ -266,7 +292,13 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       }),
     })),
 
-  clearSeams: () => set({ seams: [], selectedSeamId: null, completedSeamIds: [] }),
+  clearSeams: () =>
+    set((state) => ({
+      seamHistory: state.seams.length > 0 ? [...state.seamHistory, state.seams].slice(-25) : state.seamHistory,
+      seams: [],
+      selectedSeamId: null,
+      completedSeamIds: [],
+    })),
 
   setRobotConfig: (config) =>
     set((state) => ({

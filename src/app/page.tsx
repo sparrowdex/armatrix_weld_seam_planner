@@ -1,18 +1,75 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/panels/Header';
 import { SidebarLeft } from '@/components/panels/SidebarLeft';
 import { SidebarRight } from '@/components/panels/SidebarRight';
 import { ViewportCanvas } from '@/components/viewport/ViewportCanvas';
 import { SimulationHUD } from '@/components/panels/SimulationHUD';
 import { ExportModal } from '@/components/panels/ExportModal';
-import { Sliders, ListOrdered, ChevronRight, ChevronLeft } from 'lucide-react';
+import { useWeldStore } from '@/store/useWeldStore';
+import { Sliders, ListOrdered, ChevronRight, ChevronLeft, Undo2 } from 'lucide-react';
 
 export default function Home() {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Global CAD Keyboard Shortcuts (Ctrl+Z, Delete/Backspace, Escape)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Do not trigger hotkeys if user is focused inside a text input or select
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) {
+        return;
+      }
+
+      // 1. Ctrl + Z (or Cmd + Z) -> Undo
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        const historyLen = useWeldStore.getState().seamHistory.length;
+        if (historyLen > 0) {
+          useWeldStore.getState().undo();
+          setToastMessage('Reverted last seam action (Ctrl+Z)');
+          setTimeout(() => setToastMessage(null), 2500);
+        }
+        return;
+      }
+
+      // 2. Delete or Backspace -> Delete Selected Seam
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const selectedId = useWeldStore.getState().selectedSeamId;
+        if (selectedId) {
+          e.preventDefault();
+          useWeldStore.getState().removeSeam(selectedId);
+          setToastMessage(`Deleted seam: ${selectedId} (Delete key)`);
+          setTimeout(() => setToastMessage(null), 2500);
+        }
+        return;
+      }
+
+      // 3. Escape -> Cancel active point, exit add_seam mode, or deselect
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        const { mode, manualStartPoint, setManualStartPoint, setMode, selectSeam } = useWeldStore.getState();
+        if (mode === 'add_seam') {
+          if (manualStartPoint) {
+            setManualStartPoint(null, null);
+            setToastMessage('Canceled anchored start point (Esc)');
+            setTimeout(() => setToastMessage(null), 2000);
+          } else {
+            setMode('orbit');
+          }
+        } else {
+          selectSeam(null);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <main className="flex flex-col h-screen w-screen overflow-hidden bg-[#0A0D0A] select-none text-[#F6F5EE]">
@@ -105,6 +162,16 @@ export default function Home() {
           </button>
         </div>
       </div>
+
+      {/* Floating Keyboard Shortcut Notification Toast */}
+      {toastMessage && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-200">
+          <div className="bg-[#121E14]/95 border border-[#22C55E]/40 text-[#22C55E] px-4 py-2 rounded-full font-mono text-xs shadow-2xl flex items-center gap-2 backdrop-blur">
+            <Undo2 className="w-3.5 h-3.5 text-[#e97f01]" />
+            <span>{toastMessage}</span>
+          </div>
+        </div>
+      )}
 
       {/* Export Modal */}
       <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} />

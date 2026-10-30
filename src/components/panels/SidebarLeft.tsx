@@ -27,6 +27,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     mode,
     setMode,
     seams,
+    seamHistory,
     selectedSeamId,
     completedSeamIds,
     selectSeam,
@@ -35,6 +36,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     reverseSeamDirection,
     reorderSeams,
     clearSeams,
+    undo,
     optimizeSeamSequence,
     activeModelName,
   } = useWeldStore();
@@ -180,14 +182,25 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
         <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[#8FA18E] font-bold tracking-wide">
           PLANNED SEAMS ({seams.length})
         </span>
-        {seams.length > 0 && (
-          <button
-            onClick={clearSeams}
-            className="text-[10px] text-[#EF4444] hover:underline font-mono"
-          >
-            Clear All
-          </button>
-        )}
+        <div className="flex items-center gap-2.5">
+          {seamHistory.length > 0 && (
+            <button
+              onClick={undo}
+              className="text-[10px] text-[#38BDF8] hover:underline font-mono flex items-center gap-1 transition"
+              title="Undo last action (Ctrl+Z)"
+            >
+              <span>↩ Undo</span>
+            </button>
+          )}
+          {seams.length > 0 && (
+            <button
+              onClick={clearSeams}
+              className="text-[10px] text-[#EF4444] hover:underline font-mono"
+            >
+              Clear All
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Seam Items Scroll Area */}
