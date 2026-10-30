@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0d100d;
+  --foreground: #f6f5ee;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Custom scrollbars for technical CAD look */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #111611;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #253322;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ff5b00;
+}
