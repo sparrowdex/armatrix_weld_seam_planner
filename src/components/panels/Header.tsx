@@ -102,10 +102,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
             onChange={(e) => setActiveModelName(e.target.value)}
             className="bg-[#121912] hover:bg-[#1A231A] text-xs font-mono text-[#DCE6DB] px-3 py-1.5 rounded border border-[#283626] focus:outline-none focus:border-[#e97f01] transition cursor-pointer"
           >
-            <option value="Structural L-Bracket">Benchmark: Structural L-Bracket</option>
-            <option value="Armatrix Emblem">Benchmark: Armatrix Emblem Plaque</option>
-            <option value="Pipe T-Joint">Benchmark: Pipe T-Joint</option>
-            <option value="Box Flange">Benchmark: Hazardous Box Flange</option>
+            <option value="Structural L-Bracket">Structural L-Bracket</option>
+            <option value="Pipe T-Joint">Pipe T-Joint</option>
+            <option value="Box Flange">Confined Box Flange</option>
           </select>
         </div>
 

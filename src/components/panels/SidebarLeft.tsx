@@ -61,10 +61,6 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
       addSeam({ x: -30, y: 14, z: -31 }, { x: -30, y: 74, z: -31 }, { x: 0.707, y: 0, z: 0.707 }, 'detected');
       // 5. Right Stiffener Rib - Vertical Fillet (Joint on upright wall)
       addSeam({ x: 30, y: 14, z: -31 }, { x: 30, y: 74, z: -31 }, { x: -0.707, y: 0, z: 0.707 }, 'detected');
-    } else if (activeModelName === 'Armatrix Emblem') {
-      addSeam({ x: -27.5, y: 16, z: -25 }, { x: -27.5, y: 16, z: 15 }, { x: 0, y: 1, z: 0 }, 'detected');
-      addSeam({ x: 0, y: 16, z: -25 }, { x: 0, y: 16, z: 20 }, { x: 0, y: 1, z: 0 }, 'detected');
-      addSeam({ x: 27.5, y: 16, z: -25 }, { x: 27.5, y: 16, z: 15 }, { x: 0, y: 1, z: 0 }, 'detected');
     } else if (activeModelName === 'Pipe T-Joint') {
       addSeam({ x: -18, y: 25, z: 0 }, { x: 0, y: 25, z: 18 }, { x: -0.5, y: 0.707, z: 0.5 }, 'detected');
       addSeam({ x: 0, y: 25, z: 18 }, { x: 18, y: 25, z: 0 }, { x: 0.5, y: 0.707, z: 0.5 }, 'detected');
