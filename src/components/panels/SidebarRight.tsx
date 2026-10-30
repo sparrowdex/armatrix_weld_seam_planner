@@ -192,24 +192,6 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
               TORCH ANGLES & CLEARANCE
             </span>
 
-            {/* Interchangeable Robotic Torch Nozzle */}
-            <div>
-              <span className="text-[10px] text-[#7C8E7B] block font-mono mb-1">Torch Nozzle Geometry</span>
-              <select
-                value={selectedSeam.parameters.nozzleType || nozzleType}
-                onChange={(e) => {
-                  const nt = e.target.value as any;
-                  updateSeamParameters(selectedSeam.id, { nozzleType: nt });
-                  setNozzleType(nt);
-                }}
-                className="w-full bg-[#141C14] border border-[#223121] rounded px-2.5 py-1.5 text-white text-xs font-mono outline-none focus:border-[#e97f01] cursor-pointer"
-              >
-                <option value="narrow">Narrow Bottleneck (Confined Snake-Arm)</option>
-                <option value="conical">Standard Conical (GMAW Heavy Fillet)</option>
-                <option value="laser">Coaxial Laser Optic (Precision Narrow-Gap)</option>
-              </select>
-            </div>
-
             <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
               <div>
                 <span className="text-[10px] text-[#7C8E7B] block">Lead Angle</span>
@@ -295,24 +277,8 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
           </div>
         </div>
       ) : (
-        <div className="p-4 flex flex-col gap-3">
-          <div className="border border-[#1E2B1D] rounded-lg p-3 bg-[#0D130D]">
-            <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[11px] font-bold text-[#8EA08D] block mb-2 tracking-wide">
-              GLOBAL TORCH NOZZLE
-            </span>
-            <select
-              value={nozzleType}
-              onChange={(e) => setNozzleType(e.target.value as any)}
-              className="w-full bg-[#141C14] border border-[#223121] rounded px-2.5 py-1.5 text-white text-xs font-mono outline-none focus:border-[#e97f01] cursor-pointer"
-            >
-              <option value="narrow">Narrow Bottleneck (Confined Snake-Arm)</option>
-              <option value="conical">Standard Conical (GMAW Heavy Fillet)</option>
-              <option value="laser">Coaxial Laser Optic (Precision Narrow-Gap)</option>
-            </select>
-          </div>
-          <div className="text-center text-[#6A7B69] text-xs py-3 font-mono">
-            Select or add a seam to adjust seam-specific welding parameters.
-          </div>
+        <div className="p-4 text-center text-[#6A7B69] text-xs">
+          Select or add a seam to adjust parameters.
         </div>
       )}
 

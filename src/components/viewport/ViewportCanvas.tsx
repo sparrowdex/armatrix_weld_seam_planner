@@ -7,125 +7,46 @@ import { STLLoader } from 'three-stdlib';
 import { useWeldStore } from '@/store/useWeldStore';
 import { Vector3D, TorchNozzleType } from '@/types/weld';
 
-// Industrial Swan-Neck Robotic Torch Builder matching Armatrix's hyper-redundant arms
-function buildRoboticTorch(nozzle: TorchNozzleType): THREE.Group {
+// Clean Unified Robotic Welding Torch (Cohesive, single-axis industrial end-effector)
+function buildRoboticTorch(): THREE.Group {
   const group = new THREE.Group();
 
-  // 1. Robot Wrist Mounting Flange (ISO standard circular flange, gunmetal grey)
-  const flangeGeom = new THREE.CylinderGeometry(7.0, 7.0, 4.0, 24);
+  // 1. Tool Flange / Upper Mount
+  const flangeGeom = new THREE.CylinderGeometry(5.2, 5.2, 4, 24);
   const flangeMat = new THREE.MeshStandardMaterial({ color: '#1B211B', metalness: 0.85, roughness: 0.3 });
   const flange = new THREE.Mesh(flangeGeom, flangeMat);
-  flange.position.y = 52;
+  flange.position.y = 38;
   group.add(flange);
 
-  // 2. Armatrix Actuation Collar (Armatrix Safety Orange #e97f01)
-  const collarGeom = new THREE.CylinderGeometry(6.2, 6.2, 6.0, 24);
-  const collarMat = new THREE.MeshStandardMaterial({ color: '#e97f01', metalness: 0.6, roughness: 0.25 });
-  const collar = new THREE.Mesh(collarGeom, collarMat);
-  collar.position.y = 47;
-  group.add(collar);
+  // 2. Main Torch Body Barrel (Dark industrial steel)
+  const bodyGeom = new THREE.CylinderGeometry(4.0, 4.0, 24, 24);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: '#222822', metalness: 0.8, roughness: 0.25 });
+  const body = new THREE.Mesh(bodyGeom, bodyMat);
+  body.position.y = 24;
+  group.add(body);
 
-  // 3. Swan-Neck Curved Gooseneck (Bent at 35 degrees toward the weld puddle)
-  const upperTubeGeom = new THREE.CylinderGeometry(3.6, 3.6, 16, 20);
-  const neckMat = new THREE.MeshStandardMaterial({ color: '#C8A051', metalness: 0.85, roughness: 0.25 }); // Polished bronze/brass
-  const upperTube = new THREE.Mesh(upperTubeGeom, neckMat);
-  upperTube.position.set(0, 36, 0);
-  group.add(upperTube);
+  // 3. Armatrix Safety Orange Actuation Ring
+  const ringGeom = new THREE.CylinderGeometry(4.4, 4.4, 6, 24);
+  const ringMat = new THREE.MeshStandardMaterial({ color: '#e97f01', metalness: 0.6, roughness: 0.25 });
+  const ring = new THREE.Mesh(ringGeom, ringMat);
+  ring.position.y = 13;
+  group.add(ring);
 
-  const elbowGeom = new THREE.SphereGeometry(4.2, 16, 16);
-  const elbow = new THREE.Mesh(elbowGeom, flangeMat);
-  elbow.position.set(0, 27, 0);
-  group.add(elbow);
+  // 4. Heavy-Duty Conical Copper Welding Nozzle
+  const nozzleGeom = new THREE.ConeGeometry(3.6, 11, 24);
+  const nozzleMat = new THREE.MeshStandardMaterial({ color: '#C87D40', metalness: 0.92, roughness: 0.15 });
+  const nozzle = new THREE.Mesh(nozzleGeom, nozzleMat);
+  nozzle.rotation.x = Math.PI; // Invert cone so nozzle tip points down to joint
+  nozzle.position.y = 5.5;
+  group.add(nozzle);
 
-  const lowerNeckGeom = new THREE.CylinderGeometry(3.2, 3.2, 18, 20);
-  const lowerNeck = new THREE.Mesh(lowerNeckGeom, neckMat);
-  lowerNeck.position.set(3.5, 17, 0);
-  lowerNeck.rotation.z = -0.38;
-  group.add(lowerNeck);
+  // 5. Contact Wire Tip (Extending right to 0,0,0)
+  const wireGeom = new THREE.CylinderGeometry(0.35, 0.35, 4, 12);
+  const wireMat = new THREE.MeshStandardMaterial({ color: '#E2E8F0', metalness: 0.95, roughness: 0.1 });
+  const wire = new THREE.Mesh(wireGeom, wireMat);
+  wire.position.y = 1.0;
+  group.add(wire);
 
-  // 4. Gas Diffuser / Torch Housing
-  const diffuserGeom = new THREE.CylinderGeometry(4.5, 4.0, 10, 20);
-  const diffuserMat = new THREE.MeshStandardMaterial({ color: '#2C352B', metalness: 0.9, roughness: 0.2 });
-  const diffuser = new THREE.Mesh(diffuserGeom, diffuserMat);
-  diffuser.position.set(6.8, 8, 0);
-  diffuser.rotation.z = -0.38;
-  group.add(diffuser);
-
-  // 5. Interchangeable Industrial Nozzle Heads
-  if (nozzle === 'conical') {
-    // Heavy-duty GMAW/MIG Conical Bell Nozzle
-    const nozzGeom = new THREE.CylinderGeometry(3.0, 5.2, 12, 20);
-    const nozzMat = new THREE.MeshStandardMaterial({ color: '#C87D40', metalness: 0.92, roughness: 0.15 });
-    const nozz = new THREE.Mesh(nozzGeom, nozzMat);
-    nozz.position.set(9.0, -1.5, 0);
-    nozz.rotation.z = -0.38;
-    group.add(nozz);
-
-    // Copper Contact Tip & Solid Wire Stick-out
-    const tipGeom = new THREE.CylinderGeometry(1.0, 1.0, 5, 12);
-    const tipMat = new THREE.MeshStandardMaterial({ color: '#E07A5F', metalness: 0.95, roughness: 0.1 });
-    const tip = new THREE.Mesh(tipGeom, tipMat);
-    tip.position.set(10.2, -5.5, 0);
-    tip.rotation.z = -0.38;
-    group.add(tip);
-
-    const wireGeom = new THREE.CylinderGeometry(0.4, 0.4, 6, 8);
-    const wireMat = new THREE.MeshStandardMaterial({ color: '#C5C6C7', metalness: 0.9, roughness: 0.1 });
-    const wire = new THREE.Mesh(wireGeom, wireMat);
-    wire.position.set(11.2, -9.0, 0);
-    wire.rotation.z = -0.38;
-    group.add(wire);
-  } else if (nozzle === 'narrow') {
-    // Bottleneck Slim Needle Nozzle for Deep Confined Spaces (Armatrix Snake-Arm specialty)
-    const bottleGeom = new THREE.CylinderGeometry(2.0, 4.2, 10, 20);
-    const nozzMat = new THREE.MeshStandardMaterial({ color: '#D97706', metalness: 0.9, roughness: 0.2 });
-    const bottle = new THREE.Mesh(bottleGeom, nozzMat);
-    bottle.position.set(8.5, 0.5, 0);
-    bottle.rotation.z = -0.38;
-    group.add(bottle);
-
-    // Slim needle extension
-    const needleGeom = new THREE.CylinderGeometry(1.6, 1.8, 14, 20);
-    const needleMat = new THREE.MeshStandardMaterial({ color: '#E5E7EB', metalness: 0.95, roughness: 0.15 });
-    const needle = new THREE.Mesh(needleGeom, needleMat);
-    needle.position.set(11.2, -8.5, 0);
-    needle.rotation.z = -0.38;
-    group.add(needle);
-
-    // Wire stick-out
-    const wireGeom = new THREE.CylinderGeometry(0.35, 0.35, 5, 8);
-    const wireMat = new THREE.MeshStandardMaterial({ color: '#C5C6C7', metalness: 0.9, roughness: 0.1 });
-    const wire = new THREE.Mesh(wireGeom, wireMat);
-    wire.position.set(12.8, -14.5, 0);
-    wire.rotation.z = -0.38;
-    group.add(wire);
-  } else {
-    // Coaxial Laser Optic Head with focus cone
-    const laserHeadGeom = new THREE.CylinderGeometry(4.2, 4.2, 16, 24);
-    const laserMat = new THREE.MeshStandardMaterial({ color: '#1F2937', metalness: 0.85, roughness: 0.25 });
-    const laserHead = new THREE.Mesh(laserHeadGeom, laserMat);
-    laserHead.position.set(8.8, -1.0, 0);
-    laserHead.rotation.z = -0.38;
-    group.add(laserHead);
-
-    const opticRingGeom = new THREE.TorusGeometry(3.2, 0.8, 12, 24);
-    const opticRingMat = new THREE.MeshStandardMaterial({ color: '#0284C7', emissive: '#38BDF8', emissiveIntensity: 0.8 });
-    const opticRing = new THREE.Mesh(opticRingGeom, opticRingMat);
-    opticRing.position.set(10.5, -6.5, 0);
-    opticRing.rotation.x = Math.PI / 2;
-    opticRing.rotation.y = -0.38;
-    group.add(opticRing);
-
-    const coneGeom = new THREE.ConeGeometry(2.8, 8, 20);
-    const coneMat = new THREE.MeshStandardMaterial({ color: '#374151', metalness: 0.9, roughness: 0.2 });
-    const cone = new THREE.Mesh(coneGeom, coneMat);
-    cone.position.set(11.8, -9.5, 0);
-    cone.rotation.z = -0.38;
-    group.add(cone);
-  }
-
-  // Adjust tip offset so the active contact point aligns with the seam
-  group.position.set(-11, 10, 0);
   return group;
 }
 
@@ -274,9 +195,9 @@ export const ViewportCanvas: React.FC = () => {
     scene.add(reticleGroup);
     reticleRef.current = reticleGroup;
 
-    // 7. Industrial Robotic Swan-Neck Welding Torch & Arc Lighting
+    // 7. Industrial Robotic Welding Torch & Arc Lighting (Single unified coaxial assembly)
     const torchContainer = new THREE.Group();
-    const torchMesh = buildRoboticTorch(nozzleType);
+    const torchMesh = buildRoboticTorch();
     torchContainer.add(torchMesh);
 
     const arcLight = new THREE.PointLight('#38BDF8', 0, 90);
@@ -330,20 +251,6 @@ export const ViewportCanvas: React.FC = () => {
       }
     };
   }, []);
-
-  // Dynamically update Robotic Torch when nozzle type changes
-  useEffect(() => {
-    if (!torchRef.current) return;
-    const torchContainer = torchRef.current;
-    for (let i = torchContainer.children.length - 1; i >= 0; i--) {
-      const child = torchContainer.children[i];
-      if (child.type === 'Group') {
-        torchContainer.remove(child);
-      }
-    }
-    const newTorchMesh = buildRoboticTorch(nozzleType);
-    torchContainer.add(newTorchMesh);
-  }, [nozzleType]);
 
   // Handle Preset Views
   useEffect(() => {
