@@ -287,6 +287,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
 
   // Cursor coordinates display & smooth fade-in/fade-out
   const [cursorPos, setCursorPos] = useState<Vector3D | null>(null);
+  const [cursorNormal, setCursorNormal] = useState<Vector3D | null>(null);
   const [activeSnapType, setActiveSnapType] = useState<string | null>(null);
   const [measuredDist, setMeasuredDist] = useState<number | null>(null);
   const [displayCoords, setDisplayCoords] = useState<Vector3D | null>(null);
@@ -847,16 +848,28 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
     }
   }, [mode, manualStartPoint, cursorPos]);
 
-  // Interactive Snapping Reticle visibility
+  // Interactive Snapping Reticle visibility & Dynamic 3D Surface Normal Orientation
   useEffect(() => {
     if (!reticleRef.current) return;
     if (mode === 'add_seam' && cursorPos) {
       reticleRef.current.visible = true;
       reticleRef.current.position.set(cursorPos.x, cursorPos.y, cursorPos.z);
+
+      if (cursorNormal) {
+        const normVec = new THREE.Vector3(cursorNormal.x, cursorNormal.y, cursorNormal.z);
+        if (normVec.lengthSq() > 0.001) {
+          normVec.normalize();
+          if (Math.abs(normVec.y + 1) < 0.0001) {
+            reticleRef.current.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+          } else {
+            reticleRef.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normVec);
+          }
+        }
+      }
     } else {
       reticleRef.current.visible = false;
     }
-  }, [mode, cursorPos]);
+  }, [mode, cursorPos, cursorNormal]);
 
   // Robust Simulation Animation Runner (Non-blocking, zero re-render feedback)
   useEffect(() => {
@@ -1072,6 +1085,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
         z: parseFloat(p.z.toFixed(2)),
       };
       setCursorPos(hitCoord);
+      setCursorNormal({ x: n.x, y: n.y, z: n.z });
       setDisplayCoords(hitCoord);
 
       if (manualStartPoint) {
@@ -1098,6 +1112,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
       setIsCoordsVisible(true);
     } else {
       setCursorPos(null);
+      setCursorNormal(null);
       setActiveSnapType(null);
       setMeasuredDist(null);
 

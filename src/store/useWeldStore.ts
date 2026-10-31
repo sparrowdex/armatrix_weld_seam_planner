@@ -73,6 +73,8 @@ export interface WeldState {
   optimizeSeamSequence: () => void;
   reorderSeams: (newOrder: WeldSeam[]) => void;
   reverseSeamDirection: (id: string) => void;
+  flipSeamNormal: (id: string) => void;
+  setSeamNormal: (id: string, normal: Vector3D) => void;
   renameSeam: (id: string, name: string) => void;
   undo: () => void;
   clearSeams: () => void;
@@ -312,6 +314,32 @@ export const useWeldStore = create<WeldState>((set, get) => ({
           ...s,
           startPoint: s.endPoint,
           endPoint: s.startPoint,
+        };
+      }),
+    })),
+
+  flipSeamNormal: (id) =>
+    set((state) => ({
+      seams: state.seams.map((s) => {
+        if (s.id !== id) return s;
+        return {
+          ...s,
+          normal: {
+            x: parseFloat((-s.normal.x).toFixed(3)),
+            y: parseFloat((-s.normal.y).toFixed(3)),
+            z: parseFloat((-s.normal.z).toFixed(3)),
+          },
+        };
+      }),
+    })),
+
+  setSeamNormal: (id, normal) =>
+    set((state) => ({
+      seams: state.seams.map((s) => {
+        if (s.id !== id) return s;
+        return {
+          ...s,
+          normal,
         };
       }),
     })),

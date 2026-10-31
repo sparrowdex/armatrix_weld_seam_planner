@@ -36,6 +36,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     addSeam,
     removeSeam,
     reverseSeamDirection,
+    flipSeamNormal,
     renameSeam,
     reorderSeams,
     clearSeams,
@@ -392,6 +393,13 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                         title="Flip start & end points (reverse travel direction of the snake torch)"
                       >
                         <span>⇄ Flip Path</span>
+                      </button>
+                      <button
+                        onClick={() => flipSeamNormal(seam.id)}
+                        className="px-2 py-1 bg-[#17212B] hover:bg-[#1E2E3E] rounded-md border border-[#23435E] text-[#7DD3FC] hover:text-white transition-all duration-150 active:scale-95 flex items-center gap-1 font-medium"
+                        title="Invert torch normal vector 180° (flips approach and retract side)"
+                      >
+                        <span>⤾ Invert Normal</span>
                       </button>
                     </div>
 

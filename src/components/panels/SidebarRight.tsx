@@ -21,6 +21,8 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
     seams,
     selectedSeamId,
     updateSeamParameters,
+    flipSeamNormal,
+    setSeamNormal,
     rapidTraverseSpeed,
     exportJobJSON,
     nozzleType,
@@ -252,6 +254,60 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
             <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[11px] font-bold text-[#8EA08D] tracking-wide">
               TORCH ANGLES & CLEARANCE
             </span>
+
+            {/* Surface Normal & Multi-Orientation Presets */}
+            <div className="pt-2 border-t border-[#1C281B] flex flex-col gap-1.5 font-mono text-[10px]">
+              <div className="flex items-center justify-between text-[#8EA08D]">
+                <span>Surface Normal [Nx, Ny, Nz]:</span>
+                <span className="text-white font-bold">
+                  {selectedSeam.normal.x.toFixed(2)}, {selectedSeam.normal.y.toFixed(2)}, {selectedSeam.normal.z.toFixed(2)}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1 mt-0.5">
+                <button
+                  type="button"
+                  onClick={() => flipSeamNormal(selectedSeam.id)}
+                  className="py-1 px-1.5 rounded bg-[#17212B] hover:bg-[#1E2E3E] border border-[#23435E] text-[#7DD3FC] hover:text-white transition active:scale-95 text-center font-medium"
+                  title="Invert torch normal vector 180°"
+                >
+                  ⤾ Invert (180°)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSeamNormal(selectedSeam.id, { x: 0, y: 0.707, z: 0.707 })}
+                  className="py-1 px-1.5 rounded bg-[#152317] hover:bg-[#1D3320] border border-[#224A27] text-[#86EFAC] hover:text-white transition active:scale-95 text-center font-medium"
+                  title="Set 45° corner bisecting normal"
+                >
+                  ⛛ 45° Fillet
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSeamNormal(selectedSeam.id, { x: 0, y: 1, z: 0 })}
+                  className="py-1 px-1.5 rounded bg-[#141C14] hover:bg-[#1D291D] border border-[#253523] text-[#A6BAA5] hover:text-white transition active:scale-95 text-center font-medium"
+                  title="Align normal straight up (+Y)"
+                >
+                  ↑ Top (+Y)
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setSeamNormal(selectedSeam.id, { x: 0, y: 0, z: 1 })}
+                  className="py-1 px-1.5 rounded bg-[#141C14] hover:bg-[#1D291D] border border-[#253523] text-[#A6BAA5] hover:text-white transition active:scale-95 text-center font-medium"
+                  title="Align normal forward (+Z)"
+                >
+                  → Front (+Z)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSeamNormal(selectedSeam.id, { x: 1, y: 0, z: 0 })}
+                  className="py-1 px-1.5 rounded bg-[#141C14] hover:bg-[#1D291D] border border-[#253523] text-[#A6BAA5] hover:text-white transition active:scale-95 text-center font-medium"
+                  title="Align normal sideways (+X)"
+                >
+                  → Side (+X)
+                </button>
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
               <div>
