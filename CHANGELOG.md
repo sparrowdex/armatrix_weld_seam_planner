@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.4.0] - 2026-10-31
+
+### Added
+- **Dynamic Canvas Gliding While Drawing**: In `ViewportCanvas.tsx`, when actively drawing down or across a tall/long workpiece (such as the lockbox latch or chassis), approaching the viewport margins ($12\text{--}15\%$) smoothly pans and glides the camera target and orientation in real-time without interrupting the seam.
+- **Mid-Draw Orbit Navigation**: Enabled OrbitControls Right-Click orbit/pan while in click-to-weld mode, allowing engineers to rotate freely around 3D geometry mid-draw without canceling active anchor points.
+- **Translucent Ghost X-Ray View**: Added 1-click `[X-RAY]` viewport toggle rendering workpiece geometry with $35\%$ translucent opacity and glowing cyan contour edges, revealing occluded interior floor seams in deep enclosures (e.g., Box Flange cavities, Lockbox compartments, and Pipe T-joint saddles).
+- **True Topological Dihedral Edge Detection for Custom STLs**: Integrated `detectCandidateSeams` directly into the Auto-Detect button for custom uploaded geometries, extracting true $\sim 90^\circ$ dihedral fillet creases from facet normals and discarding non-fillet flat perimeters.
+
+### Changed
+- **Aerospace CAD Simulation Dock**: Replaced the bulky `rounded-full` pill bar in `SimulationHUD.tsx` with a low-profile aerospace CAD simulation dock (`rounded-xl bg-[#080C08]/80 backdrop-blur-xl border border-white/10 shadow-2xl`), eliminating viewport obstruction.
+- **Glassmorphic In-Focus Seam Specs HUD**: Upgraded the on-focus seam HUD from opaque containers to transparent frosted glass (`bg-[#080D08]/75 backdrop-blur-xl border border-white/10 rounded-2xl`), replacing harsh borders with lightweight telemetry pills.
+- **Decluttered Weld Parameters**: Removed redundant "Torch Tooling" hardware callouts from `SidebarRight.tsx` and streamlined parameter sliders into clean, minimalist $3\text{px}$ tracks.
+
+### Fixed
+- **Armatrix Logo SVG Clipping**: Resolved logo clipping in `Header.tsx` by correcting the SVG viewBox in `ArmatrixLogo.tsx` from `235 145 352 232` to the true geometry bounds `205 170 385 208`, restoring the truncated left wing and giving clean breathing room.
+- **Structural L-Bracket 5mm Centering Offset**: Realigned the benchmark L-Bracket root and upright fillet seams from $Z = -26\text{ mm}$ to $Z = -31\text{ mm}$, eliminating the $5\text{ mm}$ forward hover caused by Three.js `geometry.center()` and making beads sit perfectly flush against the vertical backplate.
+
 ## [1.3.0] - 2026-10-31
 
 ### Added

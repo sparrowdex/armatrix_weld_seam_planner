@@ -57,6 +57,8 @@ export interface WeldState {
   toggleNormals: () => void;
   toggleBoundingBox: () => void;
   toggleWaypoints: () => void;
+  showXRay: boolean;
+  toggleXRay: () => void;
   setViewPreset: (preset: 'iso' | 'top' | 'front' | 'right' | null) => void;
   setNozzleType: (nozzle: TorchNozzleType) => void;
   setTorchStyle: (style: 'robotic_gooseneck' | 'sleek_pencil') => void;
@@ -123,6 +125,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   showNormals: true,
   showBoundingBox: false,
   showWaypoints: true,
+  showXRay: false,
   viewPreset: null,
 
   manualStartPoint: null,
@@ -172,6 +175,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   toggleNormals: () => set((s) => ({ showNormals: !s.showNormals })),
   toggleBoundingBox: () => set((s) => ({ showBoundingBox: !s.showBoundingBox })),
   toggleWaypoints: () => set((s) => ({ showWaypoints: !s.showWaypoints })),
+  toggleXRay: () => set((s) => ({ showXRay: !s.showXRay })),
   setViewPreset: (preset) => set({ viewPreset: preset }),
   setNozzleType: (nozzle) => set({ nozzleType: nozzle }),
   setTorchStyle: (style) => set({ torchStyle: style }),

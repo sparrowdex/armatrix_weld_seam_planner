@@ -38,14 +38,14 @@ export const SimulationHUD: React.FC = () => {
   const currentPhaseStyle = phaseColors[simPhase] || phaseColors.idle;
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 select-none pointer-events-auto">
-      {/* Sleek Floating Glass Pill Container */}
-      <div className="bg-[#0B0F0B]/92 backdrop-blur-md border border-[#223121] px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-3.5 text-xs text-white whitespace-nowrap shrink-0">
+    <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 select-none pointer-events-auto">
+      {/* Sleek Aerospace Simulation Control Dock */}
+      <div className="bg-[#080C08]/80 backdrop-blur-xl border border-white/10 px-3.5 py-1.5 rounded-xl shadow-2xl flex items-center gap-3 text-xs text-white whitespace-nowrap shrink-0">
         {/* Play/Pause Button - Context-aware (Single Seam vs All) */}
         <button
           onClick={() => (isSimulating ? pauseSimulation() : startSimulation(selectedSeamId))}
           style={{ fontFamily: 'Onest, sans-serif' }}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg font-bold text-xs transition-all duration-200 active:scale-95 shrink-0 shadow-lg ${
+          className={`flex items-center gap-1.5 px-3.5 py-1 rounded-lg font-bold text-xs transition-all duration-200 active:scale-95 shrink-0 shadow-lg ${
             isSimulating
               ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-black border border-amber-300/60 font-black'
               : 'bg-gradient-to-r from-[#e97f01] via-[#d46a00] to-[#b35400] hover:from-[#f38b0e] hover:to-[#c25e00] text-white border border-[#f59e0b]/40'
@@ -78,19 +78,19 @@ export const SimulationHUD: React.FC = () => {
         {/* Reset Button */}
         <button
           onClick={resetSimulation}
-          className="p-1.5 hover:bg-[#1A2519] rounded-full text-[#7E8F7D] hover:text-white transition shrink-0"
+          className="p-1 hover:bg-white/10 rounded-md text-[#7E8F7D] hover:text-white transition shrink-0"
           title="Reset Simulation"
         >
           <RotateCcw className="w-3.5 h-3.5" />
         </button>
 
-        <div className="h-4 w-px bg-[#1F2B1D] shrink-0" />
+        <div className="h-4 w-px bg-white/10 shrink-0" />
 
-        {/* Polished Minimalist Phase Badge (No emojis, sleek glowing status dot) */}
+        {/* Minimalist Phase Badge */}
         <div className="flex items-center gap-1.5 font-mono shrink-0 whitespace-nowrap">
           <span className="text-[10px] text-[#7E8F7D] tracking-wider uppercase">PHASE:</span>
           <span
-            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border flex items-center gap-1.5 ${currentPhaseStyle.bg} ${currentPhaseStyle.text} ${currentPhaseStyle.border}`}
+            className={`px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border flex items-center gap-1.5 ${currentPhaseStyle.bg} ${currentPhaseStyle.text} ${currentPhaseStyle.border}`}
           >
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${currentPhaseStyle.dot}`} />
             <span>{simPhase.replace('_', ' ')}</span>
@@ -129,15 +129,15 @@ export const SimulationHUD: React.FC = () => {
           </button>
         </div>
 
-        <div className="h-4 w-px bg-[#1F2B1D] shrink-0" />
+        <div className="h-4 w-px bg-white/10 shrink-0" />
 
-        {/* Speed Multiplier Pill */}
-        <div className="flex items-center bg-[#121A12] border border-[#202E1E] rounded-full p-0.5 text-[10px] font-mono shrink-0">
+        {/* Speed Multiplier */}
+        <div className="flex items-center bg-white/[0.04] border border-white/10 rounded-lg p-0.5 text-[10px] font-mono shrink-0">
           {[1, 2, 5].map((spd) => (
             <button
               key={spd}
               onClick={() => setPlaybackSpeed(spd)}
-              className={`px-2 py-0.5 rounded-full font-bold transition-all text-[10px] ${
+              className={`px-2 py-0.5 rounded-md font-bold transition-all text-[10px] ${
                 playbackSpeed === spd
                   ? 'bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white shadow-sm'
                   : 'text-[#7E8F7D] hover:text-white'

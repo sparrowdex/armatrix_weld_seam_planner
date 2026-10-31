@@ -406,12 +406,6 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
               </span>
             </div>
           </div>
-
-          {/* Torch Model Spec */}
-          <div className="border border-[#1E2B1D] rounded-lg p-2.5 bg-[#0D130D] flex items-center justify-between font-mono text-[10px]">
-            <span className="text-[#7C8E7B]">TORCH TOOLING:</span>
-            <span className="text-[#e97f01] font-semibold">Binzel Robotic Curved Gooseneck</span>
-          </div>
         </div>
       ) : (
         <div className="p-4 text-center text-[#6A7B69] text-xs">

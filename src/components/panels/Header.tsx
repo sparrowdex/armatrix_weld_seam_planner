@@ -30,6 +30,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
     toggleNormals,
     showBoundingBox,
     toggleBoundingBox,
+    showXRay,
+    toggleXRay,
     setViewPreset,
     isSimulating,
     startSimulation,
@@ -88,10 +90,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
   };
 
   return (
-    <header className="h-12 bg-transparent pl-7 pr-6 flex items-center justify-between z-20 select-none pointer-events-auto">
+    <header className="h-12 bg-transparent px-6 sm:px-8 flex items-center justify-between z-20 select-none pointer-events-auto">
       {/* Brand: Standalone Armatrix logo + refined logotype with comfortable left margin */}
-      <div className="flex items-center gap-2.5 ml-2 shrink-0">
-        <ArmatrixLogo className="w-6 h-6" color="#e97f01" />
+      <div className="flex items-center gap-3 shrink-0">
+        <ArmatrixLogo className="w-6 h-6 shrink-0" color="#e97f01" />
         <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-extrabold tracking-wider text-xs text-white">
           ARMATRIX
         </span>
@@ -187,6 +189,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
             title="Toggle Part Bounding Dimensions Box"
           >
             BOUNDS
+          </button>
+          <button
+            onClick={toggleXRay}
+            className={`px-2.5 py-1 rounded transition ${
+              showXRay ? 'bg-[#A855F7] text-white font-semibold shadow-sm' : 'text-[#7D8F7C] hover:text-white'
+            }`}
+            title="Toggle Translucent Ghost X-Ray to inspect internal floor and cavity seams"
+          >
+            X-RAY
           </button>
         </div>
       </div>

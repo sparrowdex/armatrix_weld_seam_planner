@@ -314,6 +314,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   const showNormals = useWeldStore((s) => s.showNormals);
   const showBoundingBox = useWeldStore((s) => s.showBoundingBox);
   const showWaypoints = useWeldStore((s) => s.showWaypoints);
+  const showXRay = useWeldStore((s) => s.showXRay);
   const viewPreset = useWeldStore((s) => s.viewPreset);
   const setViewPreset = useWeldStore((s) => s.setViewPreset);
   const activeModelName = useWeldStore((s) => s.activeModelName);
@@ -467,6 +468,11 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     controls.maxDistance = 1400;
     controls.minDistance = 20;
     controls.target.set(0, 35, 0);
+    controls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.ROTATE,
+    };
     // Instant manual break-out: if user drags or orbits manually, cancel automated camera lerp immediately
     controls.addEventListener('start', () => {
       isCameraTransitioning.current = false;
@@ -566,6 +572,43 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           controls.target.copy(targetControlsTarget.current);
           camera.position.copy(targetCameraPos.current);
           isCameraTransitioning.current = false;
+        }
+      }
+
+      // Smooth Dynamic Canvas Gliding while drawing seams ('add_seam' mode with anchored start point)
+      const state = useWeldStore.getState();
+      if (state.mode === 'add_seam' && state.manualStartPoint && !isCameraTransitioning.current) {
+        const mx = mouseRef.current.x; // [-1, 1]
+        const my = mouseRef.current.y; // [-1, 1], +1 top, -1 bottom
+        const glideSpeed = 1.6;
+
+        // Downward panning when cursor approaches bottom margin (my < -0.62)
+        if (my < -0.62) {
+          const factor = Math.min(1.0, (-0.62 - my) / 0.32);
+          controls.target.y -= glideSpeed * factor;
+          camera.position.y -= glideSpeed * factor;
+        } else if (my > 0.62) {
+          // Upward panning when cursor approaches top margin (my > 0.62)
+          const factor = Math.min(1.0, (my - 0.62) / 0.32);
+          controls.target.y += glideSpeed * factor;
+          camera.position.y += glideSpeed * factor;
+        }
+
+        // Horizontal panning relative to camera orientation
+        if (mx < -0.72) {
+          const factor = Math.min(1.0, (-0.72 - mx) / 0.22);
+          const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+          right.y = 0;
+          if (right.lengthSq() > 0.001) right.normalize();
+          controls.target.addScaledVector(right, -glideSpeed * factor);
+          camera.position.addScaledVector(right, -glideSpeed * factor);
+        } else if (mx > 0.72) {
+          const factor = Math.min(1.0, (mx - 0.72) / 0.22);
+          const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+          right.y = 0;
+          if (right.lengthSq() > 0.001) right.normalize();
+          controls.target.addScaledVector(right, glideSpeed * factor);
+          camera.position.addScaledVector(right, glideSpeed * factor);
         }
       }
 
@@ -759,6 +802,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       }
 
       // Refined industrial machine alloy material
+      const isXRayActive = useWeldStore.getState().showXRay;
       const material = new THREE.MeshStandardMaterial({
         color: '#5C6D60',
         metalness: 0.28,
@@ -767,6 +811,9 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         polygonOffset: true,
         polygonOffsetFactor: 1,
         polygonOffsetUnits: 1,
+        transparent: isXRayActive,
+        opacity: isXRayActive ? 0.35 : 1.0,
+        depthWrite: !isXRayActive,
       });
 
       const mesh = new THREE.Mesh(geometry, material);
@@ -845,6 +892,30 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   useEffect(() => {
     if (boundingBoxRef.current) boundingBoxRef.current.visible = showBoundingBox;
   }, [showBoundingBox]);
+
+  // Translucent Ghost X-Ray mode to inspect occluded interior / cavity seams
+  useEffect(() => {
+    if (!meshRef.current) return;
+    const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+    if (showXRay) {
+      mat.transparent = true;
+      mat.opacity = 0.35;
+      mat.depthWrite = false;
+      mat.needsUpdate = true;
+      if (edgesRef.current) {
+        (edgesRef.current.material as THREE.LineBasicMaterial).color.set('#38BDF8');
+        edgesRef.current.visible = true;
+      }
+    } else {
+      mat.transparent = false;
+      mat.opacity = 1.0;
+      mat.depthWrite = true;
+      mat.needsUpdate = true;
+      if (edgesRef.current) {
+        (edgesRef.current.material as THREE.LineBasicMaterial).color.set('#243523');
+      }
+    }
+  }, [showXRay]);
 
   // Dynamically switch torch style (Robotic Gooseneck vs Sleek Pencil)
   useEffect(() => {
@@ -1384,9 +1455,6 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         onPointerDown={handlePointerDown}
         onContextMenu={(e) => {
           e.preventDefault();
-          if (manualStartPoint) {
-            setManualStartPoint(null, null);
-          }
         }}
         className="w-full h-full cursor-crosshair"
       />
@@ -1423,32 +1491,26 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         </div>
       </div>
 
-      {/* Tactical In-Game Seam Specs Card (Appears with Game-Style Zoom when Right Sidebar is Collapsed) */}
+      {/* Modern Glassmorphic In-Focus Seam Specs Card (Appears when Right Sidebar is Collapsed) */}
       {isRightCollapsed && selectedSeam && !isSimulating && (
         <div
-          className="absolute top-4 right-4 z-30 w-80 max-w-[calc(100vw-2.5rem)] bg-[#0C130D]/95 backdrop-blur-md border border-[#233824] rounded-xl shadow-2xl p-4 text-white font-mono animate-in fade-in slide-in-from-right-4 duration-300"
+          className="absolute top-4 right-4 z-30 w-80 max-w-[calc(100vw-2.5rem)] bg-[#080D08]/75 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-4 text-white font-mono animate-in fade-in slide-in-from-right-4 duration-300"
           style={{ fontFamily: 'Onest, sans-serif' }}
         >
-          {/* Tactical Corner Brackets for authentic game HUD aesthetic */}
-          <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t-2 border-l-2 border-[#e97f01] rounded-tl pointer-events-none" />
-          <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t-2 border-r-2 border-[#e97f01] rounded-tr pointer-events-none" />
-          <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b-2 border-l-2 border-[#e97f01] rounded-bl pointer-events-none" />
-          <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b-2 border-r-2 border-[#e97f01] rounded-br pointer-events-none" />
-
           {/* Header Status & Dismiss */}
-          <div className="flex items-center justify-between pb-2.5 border-b border-[#1C2C1E]">
+          <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-[0_0_8px_#10B981]" />
               <span className="text-[10px] uppercase tracking-widest text-[#86EFAC] font-bold">
                 SEAM IN FOCUS
               </span>
-              <span className="text-[10px] px-1.5 py-0.5 bg-[#172619] border border-[#2A462C] text-[#A7F3D0] rounded">
+              <span className="text-[10px] px-1.5 py-0.5 bg-white/[0.06] border border-white/10 text-[#A7F3D0] rounded">
                 #{selectedSeam.sequenceOrder}
               </span>
             </div>
             <button
               onClick={() => selectSeam(null)}
-              className="text-[#64748B] hover:text-white p-1 rounded hover:bg-[#1A281C] transition active:scale-95"
+              className="text-[#64748B] hover:text-white p-1 rounded-md hover:bg-white/10 transition active:scale-95"
               title="Deselect Seam"
             >
               <X className="w-3.5 h-3.5" />
@@ -1471,7 +1533,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
           {/* Air Gap / Non-Manufacturable Warning Tag in HUD Card */}
           {selectedSeam.hasAirGap && (
-            <div className="my-2 p-2 rounded-lg bg-[#271305] border border-[#F59E0B]/60 text-[#FCD34D] text-[10px] font-mono flex items-start gap-2">
+            <div className="my-2 p-2 rounded-lg bg-[#271305]/80 border border-[#F59E0B]/50 text-[#FCD34D] text-[10px] font-mono flex items-start gap-2 backdrop-blur-sm">
               <AlertTriangle className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
               <div>
                 <span className="font-bold text-[#FBBF24]">Air Gap Detected (Non-Manufacturable)</span>
@@ -1482,22 +1544,22 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
             </div>
           )}
 
-          {/* 4x2 Tactical Parameter Grid */}
+          {/* Transparent Glassmorphic Parameter Grid */}
           <div className="grid grid-cols-2 gap-1.5 my-2 text-[10px] font-mono">
-            <div className="bg-[#101811] border border-[#1E2E20] rounded p-2">
-              <span className="text-[#64748B] block text-[9px] uppercase tracking-wider">SPEED</span>
-              <span className="text-white font-bold text-xs">{selectedSeam.parameters.travelSpeed} mm per s</span>
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg p-2 hover:bg-white/[0.06] transition">
+              <span className="text-[#8EA08D] block text-[9px] uppercase tracking-wider">SPEED</span>
+              <span className="text-white font-bold text-xs">{selectedSeam.parameters.travelSpeed} mm/s</span>
             </div>
-            <div className="bg-[#101811] border border-[#1E2E20] rounded p-2">
-              <span className="text-[#64748B] block text-[9px] uppercase tracking-wider">ARC POWER</span>
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg p-2 hover:bg-white/[0.06] transition">
+              <span className="text-[#8EA08D] block text-[9px] uppercase tracking-wider">ARC POWER</span>
               <span className="text-[#38BDF8] font-bold text-xs">{selectedSeam.parameters.current}A • {selectedSeam.parameters.voltage}V</span>
             </div>
-            <div className="bg-[#101811] border border-[#1E2E20] rounded p-2">
-              <span className="text-[#64748B] block text-[9px] uppercase tracking-wider">WIRE FEED • Ø</span>
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg p-2 hover:bg-white/[0.06] transition">
+              <span className="text-[#8EA08D] block text-[9px] uppercase tracking-wider">WIRE FEED • Ø</span>
               <span className="text-white font-bold text-xs">{selectedSeam.parameters.wireFeedSpeed}m • {selectedSeam.parameters.wireDiameter || 1.2}mm</span>
             </div>
-            <div className="bg-[#101811] border border-[#1E2E20] rounded p-2">
-              <span className="text-[#64748B] block text-[9px] uppercase tracking-wider">TILT • LEAD</span>
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg p-2 hover:bg-white/[0.06] transition">
+              <span className="text-[#8EA08D] block text-[9px] uppercase tracking-wider">TILT • LEAD</span>
               <span className="text-[#e97f01] font-bold text-xs">{selectedSeam.parameters.torchTiltAngle}° • {selectedSeam.parameters.torchLeadAngle}°</span>
             </div>
           </div>
@@ -1506,8 +1568,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           <div className="grid grid-cols-2 gap-1.5 pt-1">
             <button
               onClick={() => startSimulation(selectedSeam.id)}
-              className="py-1.5 px-2 bg-gradient-to-r from-[#142618] to-[#1E3B24] hover:from-[#1A3320] hover:to-[#284E30] border border-[#234E2B] rounded-md text-[#86EFAC] hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
-              title="Simulate / test this specific seam path only"
+              className="py-1.5 px-2 bg-gradient-to-r from-[#17301c] to-[#224428] hover:from-[#1e3c23] hover:to-[#2c5834] border border-[#2b5832] rounded-lg text-[#86EFAC] hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
+              title="Simulate this specific seam path"
             >
               <Play className="w-3 h-3 fill-current text-[#4ADE80]" />
               <span>Simulate</span>
@@ -1515,8 +1577,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
             <button
               onClick={() => focusOnSeam(selectedSeam)}
-              className="py-1.5 px-2 bg-[#141C15] hover:bg-[#1D2A1F] border border-[#243526] rounded-md text-[#CBD5E1] hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition"
-              title="Re-focus cinematic camera on this seam"
+              className="py-1.5 px-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 rounded-lg text-[#CBD5E1] hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition"
+              title="Re-focus camera on this seam"
             >
               <Target className="w-3 h-3 text-[#38BDF8]" />
               <span>Re-Focus</span>
@@ -1527,7 +1589,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           {onExpandRight && (
             <button
               onClick={onExpandRight}
-              className="w-full mt-2 py-1.5 bg-[#131B14] hover:bg-[#1A251B] border border-[#243725] hover:border-[#e97f01]/50 rounded-md text-[#e97f01] hover:text-[#fb923c] text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 transition"
+              className="w-full mt-2 py-1.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-[#e97f01]/50 rounded-lg text-[#e97f01] hover:text-[#fb923c] text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 transition"
             >
               <Sliders className="w-3 h-3" />
               <span>Open Parameters Panel</span>

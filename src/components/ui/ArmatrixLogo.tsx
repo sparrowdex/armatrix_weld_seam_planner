@@ -15,7 +15,7 @@ export const ArmatrixLogo: React.FC<ArmatrixLogoProps> = ({
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="235 145 352 232"
+      viewBox="205 170 385 208"
       fill={color}
       className={className}
       preserveAspectRatio="xMidYMid meet"

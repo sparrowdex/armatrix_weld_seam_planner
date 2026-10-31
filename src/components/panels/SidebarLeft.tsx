@@ -20,6 +20,8 @@ import {
   AlertTriangle,
   Split,
 } from 'lucide-react';
+import { STLLoader } from 'three-stdlib';
+import { detectCandidateSeams } from '@/utils/seamDetector';
 
 interface SidebarLeftProps {
   onToggleCollapse?: () => void;
@@ -47,10 +49,12 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     undo,
     optimizeSeamSequence,
     activeModelName,
+    customModels,
     startSimulation,
   } = useWeldStore();
 
   const [showOptimizedToast, setShowOptimizedToast] = useState(false);
+  const [detectionToast, setDetectionToast] = useState<string | null>(null);
   const [editingSeamId, setEditingSeamId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>('');
 
@@ -76,41 +80,60 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     clearSeams();
 
     if (activeModelName === 'Structural L-Bracket') {
-      // 1. Center Bay 90° Root Fillet (Between the two stiffener gussets: x = -26 to +26, 4mm nozzle standoff)
-      addSeam({ x: -26, y: 14, z: -26 }, { x: 26, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Center Root Fillet');
-      // 2. Left Gusset - Base Plate Fillet (Center bay side: z = -22 to +25, 4mm nozzle standoff)
-      addSeam({ x: -30, y: 14, z: -22 }, { x: -30, y: 14, z: 25 }, { x: 0.707, y: 0.707, z: 0 }, 'detected', 'Left Gusset Base');
-      // 3. Left Gusset - Vertical Upright Fillet (Center bay side: y = 18 to 70, 4mm nozzle standoff)
-      addSeam({ x: -30, y: 18, z: -26 }, { x: -30, y: 70, z: -26 }, { x: 0.707, y: 0, z: 0.707 }, 'detected', 'Left Gusset Vertical');
-      // 4. Right Gusset - Base Plate Fillet (Center bay side: z = -22 to +25, 4mm nozzle standoff)
-      addSeam({ x: 30, y: 14, z: -22 }, { x: 30, y: 14, z: 25 }, { x: -0.707, y: 0.707, z: 0 }, 'detected', 'Right Gusset Base');
-      // 5. Right Gusset - Vertical Upright Fillet (Center bay side: y = 18 to 70, 4mm nozzle standoff)
-      addSeam({ x: 30, y: 18, z: -26 }, { x: 30, y: 70, z: -26 }, { x: -0.707, y: 0, z: 0.707 }, 'detected', 'Right Gusset Vertical');
-      // 6. Left Outer Root Fillet (Outside left rib: x = -55 to -44, 4mm nozzle standoff)
-      addSeam({ x: -55, y: 14, z: -26 }, { x: -44, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Left Outer Root');
-      // 7. Right Outer Root Fillet (Outside right rib: x = 44 to 55, 4mm nozzle standoff)
-      addSeam({ x: 44, y: 14, z: -26 }, { x: 55, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
+      // 1. Center Bay 90° Root Fillet (Flush in root corner at z = -31, 4mm nozzle standoff)
+      addSeam({ x: -26, y: 14, z: -31 }, { x: 26, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Center Root Fillet');
+      // 2. Left Gusset - Base Plate Fillet (Center bay side: z = -27 to +20, 4mm nozzle standoff)
+      addSeam({ x: -30, y: 14, z: -27 }, { x: -30, y: 14, z: 20 }, { x: 0.707, y: 0.707, z: 0 }, 'detected', 'Left Gusset Base');
+      // 3. Left Gusset - Vertical Upright Fillet (Center bay side: y = 18 to 70 at z = -31, 4mm nozzle standoff)
+      addSeam({ x: -30, y: 18, z: -31 }, { x: -30, y: 70, z: -31 }, { x: 0.707, y: 0, z: 0.707 }, 'detected', 'Left Gusset Vertical');
+      // 4. Right Gusset - Base Plate Fillet (Center bay side: z = -27 to +20, 4mm nozzle standoff)
+      addSeam({ x: 30, y: 14, z: -27 }, { x: 30, y: 14, z: 20 }, { x: -0.707, y: 0.707, z: 0 }, 'detected', 'Right Gusset Base');
+      // 5. Right Gusset - Vertical Upright Fillet (Center bay side: y = 18 to 70 at z = -31, 4mm nozzle standoff)
+      addSeam({ x: 30, y: 18, z: -31 }, { x: 30, y: 70, z: -31 }, { x: -0.707, y: 0, z: 0.707 }, 'detected', 'Right Gusset Vertical');
+      // 6. Left Outer Root Fillet (Outside left rib: x = -55 to -44 at z = -31, 4mm nozzle standoff)
+      addSeam({ x: -55, y: 14, z: -31 }, { x: -44, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Left Outer Root');
+      // 7. Right Outer Root Fillet (Outside right rib: x = 44 to 55 at z = -31, 4mm nozzle standoff)
+      addSeam({ x: 44, y: 14, z: -31 }, { x: 55, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
     } else if (activeModelName === 'Pipe T-Joint') {
       // 4 Quadrants of the 3D intersecting saddle weld seam
       addSeam({ x: -18, y: 25, z: 0 }, { x: 0, y: 25, z: 18 }, { x: -0.5, y: 0.707, z: 0.5 }, 'detected', 'Saddle Quadrant 1');
       addSeam({ x: 0, y: 25, z: 18 }, { x: 18, y: 25, z: 0 }, { x: 0.5, y: 0.707, z: 0.5 }, 'detected', 'Saddle Quadrant 2');
       addSeam({ x: 18, y: 25, z: 0 }, { x: 0, y: 25, z: -18 }, { x: 0.5, y: 0.707, z: -0.5 }, 'detected', 'Saddle Quadrant 3');
       addSeam({ x: 0, y: 25, z: -18 }, { x: -18, y: 25, z: 0 }, { x: -0.5, y: 0.707, z: -0.5 }, 'detected', 'Saddle Quadrant 4');
-    } else if (activeModelName === 'Confined Box Flange' || activeModelName === 'Box Flange' || activeModelName.includes('Box')) {
+    } else if (activeModelName === 'Confined Box Flange' || activeModelName === 'Box Flange') {
       // 4 Internal Floor Fillet Seams inside the deep confined ship cell / compartment
       addSeam({ x: -46, y: 14, z: -37 }, { x: 46, y: 14, z: -37 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Back Floor Fillet');
       addSeam({ x: 46, y: 14, z: -37 }, { x: 46, y: 14, z: 37 }, { x: -0.707, y: 0.707, z: 0 }, 'detected', 'Right Floor Fillet');
       addSeam({ x: 46, y: 14, z: 37 }, { x: -46, y: 14, z: 37 }, { x: 0, y: 0.707, z: -0.707 }, 'detected', 'Front Floor Fillet');
       addSeam({ x: -46, y: 14, z: 37 }, { x: -46, y: 14, z: -37 }, { x: 0.707, y: 0.707, z: 0 }, 'detected', 'Left Floor Fillet');
-    } else if (part) {
-      // Dynamic boundary crease detection for any arbitrary uploaded custom STL!
-      const hw = parseFloat(((part.dimensions.width / 2) * 0.75).toFixed(1));
-      const hd = parseFloat(((part.dimensions.depth / 2) * 0.75).toFixed(1));
-      const y = parseFloat(Math.max(8, part.dimensions.height * 0.2).toFixed(1));
-      addSeam({ x: -hw, y, z: hd }, { x: hw, y, z: hd }, { x: 0, y: 0.707, z: 0.707 }, 'detected');
-      addSeam({ x: hw, y, z: hd }, { x: hw, y, z: -hd }, { x: 0.707, y: 0.707, z: 0 }, 'detected');
-      addSeam({ x: hw, y, z: -hd }, { x: -hw, y, z: -hd }, { x: 0, y: 0.707, z: -0.707 }, 'detected');
-      addSeam({ x: -hw, y, z: -hd }, { x: -hw, y, z: hd }, { x: -0.707, y: 0.707, z: 0 }, 'detected');
+    } else {
+      // True Topological Mesh Crease Detection for uploaded custom STLs
+      const activeCustom = customModels.find((m) => m.name === activeModelName);
+      if (activeCustom) {
+        try {
+          const loader = new STLLoader();
+          const geom = loader.parse(activeCustom.buffer);
+          geom.computeVertexNormals();
+          geom.center();
+          geom.computeBoundingBox();
+          const bbox = geom.boundingBox!;
+          geom.translate(0, -bbox.min.y, 0);
+
+          const candidateSeams = detectCandidateSeams(geom, 40, 12);
+          if (candidateSeams.length > 0) {
+            candidateSeams.slice(0, 8).forEach((cs, i) => {
+              addSeam(cs.start, cs.end, cs.normal, 'detected', `Crease ${i + 1}`);
+            });
+            setDetectionToast(`Detected ${Math.min(candidateSeams.length, 8)} true topological fillet creases.`);
+            setTimeout(() => setDetectionToast(null), 3500);
+            return;
+          }
+        } catch (e) {
+          console.error('Failed topological crease detection on custom STL:', e);
+        }
+      }
+      setDetectionToast('No 90° weld creases detected on this mechanical component. Use Manual Click-to-Weld with OSNAP.');
+      setTimeout(() => setDetectionToast(null), 3500);
     }
   };
 
@@ -122,23 +145,23 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     const crossesLeft = minX < -33 && maxX > -33;
     const crossesRight = minX < 33 && maxX > 33;
     const nearRootY = seam.startPoint.y < 35 && seam.endPoint.y < 35;
-    const nearRootZ = Math.abs(seam.startPoint.z - (-26)) < 15 || Math.abs(seam.endPoint.z - (-26)) < 15;
+    const nearRootZ = Math.abs(seam.startPoint.z - (-31)) < 15 || Math.abs(seam.endPoint.z - (-31)) < 15;
     return (crossesLeft || crossesRight) && nearRootY && nearRootZ;
   };
 
   const handleSplitAroundGussets = (seamId: string) => {
     removeSeam(seamId);
     // Replaces the colliding continuous pass with 3 collision-free segmented passes with 4mm setback from gussets
-    addSeam({ x: -58, y: 14, z: -26 }, { x: -40, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Left Outer Root');
-    addSeam({ x: -26, y: 14, z: -26 }, { x: 26, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Center Root Fillet');
-    addSeam({ x: 40, y: 14, z: -26 }, { x: 58, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
+    addSeam({ x: -58, y: 14, z: -31 }, { x: -40, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Left Outer Root');
+    addSeam({ x: -26, y: 14, z: -31 }, { x: 26, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Center Root Fillet');
+    addSeam({ x: 40, y: 14, z: -31 }, { x: 58, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
   };
 
   const handleFullRootPass = () => {
     clearSeams();
     addSeam(
-      { x: -58, y: 14, z: -26 },
-      { x: 58, y: 14, z: -26 },
+      { x: -58, y: 14, z: -31 },
+      { x: 58, y: 14, z: -31 },
       { x: 0, y: 0.707, z: 0.707 },
       'detected',
       'Stage 1 Continuous Root (Pre-Gusset)'
