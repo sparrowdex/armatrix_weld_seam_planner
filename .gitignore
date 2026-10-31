@@ -20,6 +20,8 @@ pnpm-debug.log*
 USER_FEEDBACK_AND_BUG_FIXES.md
 POST_MVP_ITERATIONS_AND_BUGS.md
 AGENTS.md
+INTERVIEW.md
+KNOWLEDGE.md
 
 # Environment
 .env
