@@ -235,9 +235,57 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
     scene.background = new THREE.Color('#0D120D');
     sceneRef.current = scene;
 
-    // CAD Grid Floor
-    const grid = new THREE.GridHelper(360, 36, '#283B25', '#162215');
-    grid.position.y = 0;
+    // 1b. Industrial Machined Steel Welding Fixture Platen (Machine Table Bed)
+    const platenGroup = new THREE.Group();
+    
+    // Main Solid Steel Bed Slab (360 x 8 x 360mm)
+    const platenGeom = new THREE.BoxGeometry(360, 8, 360);
+    const platenMat = new THREE.MeshStandardMaterial({
+      color: '#131A13',
+      metalness: 0.58,
+      roughness: 0.52,
+    });
+    const platenMesh = new THREE.Mesh(platenGeom, platenMat);
+    platenMesh.position.set(0, -4.01, 0); // Top face flush at y = -0.01mm
+    platenGroup.add(platenMesh);
+
+    // Machined Chamfered Lower Base Frame
+    const borderGeom = new THREE.BoxGeometry(370, 2.5, 370);
+    const borderMat = new THREE.MeshStandardMaterial({
+      color: '#0A0E0A',
+      metalness: 0.75,
+      roughness: 0.4,
+    });
+    const borderMesh = new THREE.Mesh(borderGeom, borderMat);
+    borderMesh.position.set(0, -7.5, 0);
+    platenGroup.add(borderMesh);
+
+    // 4 Corner Leveling Mounts / Fixture Clamping Lugs with Hex Bolts
+    const cornerOffsets = [
+      [-165, -165],
+      [165, -165],
+      [-165, 165],
+      [165, 165],
+    ];
+    cornerOffsets.forEach(([cx, cz]) => {
+      const lugGeom = new THREE.CylinderGeometry(7, 8, 9, 16);
+      const lugMat = new THREE.MeshStandardMaterial({ color: '#253523', metalness: 0.7, roughness: 0.35 });
+      const lug = new THREE.Mesh(lugGeom, lugMat);
+      lug.position.set(cx, -4.5, cz);
+      platenGroup.add(lug);
+      
+      const boltGeom = new THREE.CylinderGeometry(3.5, 3.5, 1.2, 6);
+      const boltMat = new THREE.MeshStandardMaterial({ color: '#8EA08D', metalness: 0.85, roughness: 0.25 });
+      const bolt = new THREE.Mesh(boltGeom, boltMat);
+      bolt.position.set(cx, 0.1, cz);
+      platenGroup.add(bolt);
+    });
+
+    scene.add(platenGroup);
+
+    // CAD Grid Floor resting crisply on top of the steel platen
+    const grid = new THREE.GridHelper(360, 36, '#385235', '#1F2E1E');
+    grid.position.y = 0.05;
     scene.add(grid);
 
     // 2. Camera
