@@ -19,6 +19,7 @@ pnpm-debug.log*
 # User Feedback & Post-MVP Iteration Internal Log
 USER_FEEDBACK_AND_BUG_FIXES.md
 POST_MVP_ITERATIONS_AND_BUGS.md
+AGENTS.md
 
 # Environment
 .env
