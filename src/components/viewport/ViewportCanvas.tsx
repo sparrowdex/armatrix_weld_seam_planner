@@ -824,7 +824,9 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
     dynamicGroup.add(moltenPuddleMesh);
 
     let animId: number;
-    let currentSeamIdx = 0;
+    const storeState = useWeldStore.getState();
+    let currentSeamIdx = Math.min(Math.max(0, storeState.simCurrentSeamIndex), seams.length - 1);
+    const targetSeamId = storeState.simTargetSeamId;
     let phase: 'approach' | 'welding' | 'retract' | 'traverse' = 'approach';
     let progress = 0;
     let lastTime = performance.now();
@@ -838,7 +840,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
     };
 
     updatePhase('approach');
-    useWeldStore.getState().setSimCurrentSeamIndex(0);
+    useWeldStore.getState().setSimCurrentSeamIndex(currentSeamIdx);
 
     const loop = (now: number) => {
       const dt = Math.min(0.1, (now - lastTime) / 1000);
@@ -932,6 +934,11 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
 
         if (progress >= 1) {
           progress = 0;
+          if (targetSeamId) {
+            // Targeted single-seam preview complete! Retract cleanly and stop.
+            useWeldStore.getState().pauseSimulation();
+            return;
+          }
           if (currentSeamIdx < seams.length - 1) {
             phase = 'traverse';
           } else {

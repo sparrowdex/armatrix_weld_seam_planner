@@ -43,6 +43,7 @@ export interface WeldState {
   isSimulating: boolean;
   simProgress: number; // 0 to 1
   simCurrentSeamIndex: number;
+  simTargetSeamId: string | null;
   simPhase: 'idle' | 'rapid_traverse' | 'approach' | 'welding' | 'retract' | 'cooling';
   playbackSpeed: number;
 
@@ -80,7 +81,7 @@ export interface WeldState {
   setDefaultParameters: (params: Partial<WeldParameters>) => void;
 
   // Simulation controls
-  startSimulation: () => void;
+  startSimulation: (targetSeamId?: string | null) => void;
   pauseSimulation: () => void;
   resetSimulation: () => void;
   setSimProgress: (progress: number) => void;
@@ -144,6 +145,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   isSimulating: false,
   simProgress: 0,
   simCurrentSeamIndex: 0,
+  simTargetSeamId: null,
   simPhase: 'idle',
   playbackSpeed: 1,
 
@@ -335,20 +337,41 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       defaultParameters: { ...state.defaultParameters, ...params },
     })),
 
-  startSimulation: () =>
-    set((state) => ({
-      isSimulating: true,
-      mode: 'simulate',
-      selectedSeamId: null, // Clear selection during active welding so beads transition to shiny metal without fighting
-      completedSeamIds:
-        state.completedSeamIds.length === state.seams.length ? [] : state.completedSeamIds,
-    })),
-  pauseSimulation: () => set({ isSimulating: false }),
+  startSimulation: (targetSeamId = null) =>
+    set((state) => {
+      let startIndex = 0;
+      if (targetSeamId) {
+        const found = state.seams.findIndex((s) => s.id === targetSeamId);
+        if (found !== -1) startIndex = found;
+      } else if (state.selectedSeamId) {
+        const found = state.seams.findIndex((s) => s.id === state.selectedSeamId);
+        if (found !== -1) startIndex = found;
+      } else {
+        const uncompletedIdx = state.seams.findIndex((s) => !state.completedSeamIds.includes(s.id));
+        if (uncompletedIdx !== -1 && uncompletedIdx < state.seams.length) {
+          startIndex = uncompletedIdx;
+        }
+      }
+
+      return {
+        isSimulating: true,
+        mode: 'simulate',
+        simTargetSeamId: targetSeamId,
+        simCurrentSeamIndex: startIndex,
+        selectedSeamId: targetSeamId ? targetSeamId : null,
+        completedSeamIds:
+          state.completedSeamIds.length === state.seams.length && !targetSeamId
+            ? []
+            : state.completedSeamIds,
+      };
+    }),
+  pauseSimulation: () => set({ isSimulating: false, simTargetSeamId: null }),
   resetSimulation: () =>
     set({
       isSimulating: false,
       simProgress: 0,
       simCurrentSeamIndex: 0,
+      simTargetSeamId: null,
       simPhase: 'idle',
       completedSeamIds: [],
     }),

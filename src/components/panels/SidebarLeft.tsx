@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
   CheckCircle,
   Pencil,
+  Play,
 } from 'lucide-react';
 
 interface SidebarLeftProps {
@@ -41,6 +42,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     undo,
     optimizeSeamSequence,
     activeModelName,
+    startSimulation,
   } = useWeldStore();
 
   const [showOptimizedToast, setShowOptimizedToast] = useState(false);
@@ -356,6 +358,14 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                     className="flex items-center justify-between pt-2 mt-2 border-t border-[#1F2B1E] text-[10px] font-mono"
                   >
                     <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => startSimulation(seam.id)}
+                        className="px-2 py-1 bg-[#142618] hover:bg-[#1E3B24] rounded-md border border-[#234E2B] text-[#86EFAC] hover:text-white transition-all duration-150 active:scale-95 flex items-center gap-1 font-semibold"
+                        title="Simulate / test this specific seam path only"
+                      >
+                        <Play className="w-2.5 h-2.5 fill-current text-[#4ADE80]" />
+                        <span>Preview</span>
+                      </button>
                       <button
                         onClick={() => handleMoveUp(idx)}
                         disabled={idx === 0}

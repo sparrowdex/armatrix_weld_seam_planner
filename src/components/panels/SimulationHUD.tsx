@@ -16,6 +16,9 @@ export const SimulationHUD: React.FC = () => {
     resetSimulation,
     simPhase,
     simCurrentSeamIndex,
+    setSimCurrentSeamIndex,
+    selectedSeamId,
+    selectSeam,
     seams,
     playbackSpeed,
     setPlaybackSpeed,
@@ -38,9 +41,9 @@ export const SimulationHUD: React.FC = () => {
     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 select-none pointer-events-auto">
       {/* Sleek Floating Glass Pill Container */}
       <div className="bg-[#0B0F0B]/92 backdrop-blur-md border border-[#223121] px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-3.5 text-xs text-white whitespace-nowrap shrink-0">
-        {/* Play/Pause Button */}
+        {/* Play/Pause Button - Context-aware (Single Seam vs All) */}
         <button
-          onClick={() => (isSimulating ? pauseSimulation() : startSimulation())}
+          onClick={() => (isSimulating ? pauseSimulation() : startSimulation(selectedSeamId))}
           style={{ fontFamily: 'Onest, sans-serif' }}
           className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-bold text-xs transition active:scale-95 shrink-0 shadow-md ${
             isSimulating
@@ -49,8 +52,28 @@ export const SimulationHUD: React.FC = () => {
           }`}
         >
           {isSimulating ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-          <span>{isSimulating ? 'PAUSE' : 'SIMULATE PATH'}</span>
+          <span>
+            {isSimulating
+              ? 'PAUSE'
+              : selectedSeamId
+              ? `RUN SEAM ${Math.min(simCurrentSeamIndex + 1, seams.length)}`
+              : 'SIMULATE PATH'}
+          </span>
         </button>
+
+        {/* Run All link when single seam is selected */}
+        {selectedSeamId && !isSimulating && (
+          <button
+            onClick={() => {
+              selectSeam(null);
+              startSimulation(null);
+            }}
+            className="text-[10px] font-mono text-[#7E8F7D] hover:text-[#38BDF8] underline transition px-1"
+            title="Deselect and simulate all seams sequentially"
+          >
+            Run All ({seams.length})
+          </button>
+        )}
 
         {/* Reset Button */}
         <button
@@ -74,12 +97,36 @@ export const SimulationHUD: React.FC = () => {
           </span>
         </div>
 
-        {/* Current Seam indicator - strictly locked in 1 line, never stacks */}
-        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#8EA28D] shrink-0 whitespace-nowrap">
-          <span className="text-[10px] text-[#7E8F7D] tracking-wider uppercase">SEAM:</span>
-          <strong className="text-white font-bold">
+        {/* Current Seam indicator with direct step navigation (◀ / ▶) */}
+        <div className="flex items-center gap-1 text-[11px] font-mono text-[#8EA28D] shrink-0 whitespace-nowrap">
+          <span className="text-[10px] text-[#7E8F7D] tracking-wider uppercase mr-0.5">SEAM:</span>
+          <button
+            onClick={() => {
+              const prev = Math.max(0, simCurrentSeamIndex - 1);
+              setSimCurrentSeamIndex(prev);
+              selectSeam(seams[prev]?.id ?? null);
+            }}
+            disabled={simCurrentSeamIndex === 0}
+            className="px-1 text-[10px] hover:text-white disabled:opacity-20 text-[#8EA28D] transition active:scale-95"
+            title="Step back to previous seam"
+          >
+            ◀
+          </button>
+          <strong className="text-white font-bold px-0.5">
             {Math.min(simCurrentSeamIndex + 1, seams.length)} / {seams.length}
           </strong>
+          <button
+            onClick={() => {
+              const next = Math.min(seams.length - 1, simCurrentSeamIndex + 1);
+              setSimCurrentSeamIndex(next);
+              selectSeam(seams[next]?.id ?? null);
+            }}
+            disabled={simCurrentSeamIndex >= seams.length - 1}
+            className="px-1 text-[10px] hover:text-white disabled:opacity-20 text-[#8EA28D] transition active:scale-95"
+            title="Step forward to next seam"
+          >
+            ▶
+          </button>
         </div>
 
         <div className="h-4 w-px bg-[#1F2B1D] shrink-0" />
