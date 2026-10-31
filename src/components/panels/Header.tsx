@@ -191,23 +191,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
         </div>
       </div>
 
-      {/* Right Actions: Simulation & Export */}
+      {/* Right Actions: Primary Export & Docs */}
       <div className="flex items-center gap-2">
-        {seams.length > 0 && (
-          <button
-            onClick={() => (isSimulating ? pauseSimulation() : startSimulation())}
-            style={{ fontFamily: 'Onest, sans-serif' }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition active:scale-95 ${
-              isSimulating
-                ? 'bg-[#EAB308] text-black'
-                : 'bg-[#182317] text-[#22C55E] border border-[#253624] hover:bg-[#202E1F]'
-            }`}
-          >
-            {isSimulating ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            <span>{isSimulating ? 'PAUSE' : 'SIMULATE'}</span>
-          </button>
-        )}
-
         <button
           onClick={onOpenExport}
           style={{ fontFamily: 'Onest, sans-serif', backgroundColor: '#e97f01' }}

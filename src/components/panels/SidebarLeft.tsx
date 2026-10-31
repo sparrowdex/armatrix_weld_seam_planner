@@ -188,34 +188,47 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
         </button>
       </div>
 
-      {/* Planned Seams Header */}
-      <div className="px-3.5 py-2 bg-[#0E140E] border-b border-[#1E291C] flex items-center justify-between text-xs">
-        <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[#8FA18E] font-bold tracking-wide">
-          PLANNED SEAMS ({seams.length})
-        </span>
-        <div className="flex items-center gap-2.5">
-          {seamHistory.length > 0 && (
-            <button
-              onClick={undo}
-              className="text-[10px] text-[#38BDF8] hover:underline font-mono flex items-center gap-1 transition"
-              title="Undo last action (Ctrl+Z)"
-            >
-              <span>↩ Undo</span>
-            </button>
-          )}
-          {seams.length > 0 && (
-            <button
-              onClick={clearSeams}
-              className="text-[10px] text-[#EF4444] hover:underline font-mono"
-            >
-              Clear All
-            </button>
-          )}
+      {/* Planned Seams Header with Summary Metrics */}
+      <div className="px-3.5 py-2 bg-[#0E140E] border-b border-[#1E291C] flex flex-col gap-1 text-xs">
+        <div className="flex items-center justify-between">
+          <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[#8FA18E] font-bold tracking-wide">
+            PLANNED SEAMS ({seams.length})
+          </span>
+          <div className="flex items-center gap-2.5">
+            {seamHistory.length > 0 && (
+              <button
+                onClick={undo}
+                className="text-[10px] text-[#38BDF8] hover:underline font-mono flex items-center gap-1 transition"
+                title="Undo last action (Ctrl+Z)"
+              >
+                <span>↩ Undo</span>
+              </button>
+            )}
+            {seams.length > 0 && (
+              <button
+                onClick={clearSeams}
+                className="text-[10px] text-[#EF4444] hover:underline font-mono"
+                title="Clear all planned seams"
+              >
+                Clear All
+              </button>
+            )}
+          </div>
         </div>
+        {seams.length > 0 && (
+          <div className="flex items-center justify-between text-[10px] font-mono text-[#6A7E69]">
+            <span>
+              Total: <strong className="text-[#C2D1C1]">{seams.reduce((acc, s) => acc + s.length, 0).toFixed(1)} mm</strong>
+            </span>
+            <span>
+              Est. Arc: <strong className="text-[#e97f01]">{(seams.reduce((acc, s) => acc + (s.length / Math.max(1, s.parameters.travelSpeed)), 0)).toFixed(1)}s</strong>
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Seam Items Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
+      {/* Seam Items Scroll Area: Scalable, high-density list that gracefully handles 10+ seams */}
+      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1.5">
         {seams.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center text-xs text-[#7A8E79] px-4">
             <Target className="w-7 h-7 text-[#e97f01]/40 mb-2" />
@@ -232,18 +245,19 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
               <div
                 key={seam.id}
                 onClick={() => selectSeam(isSelected ? null : seam.id)}
-                className={`p-2.5 rounded border transition cursor-pointer select-none text-xs ${
+                className={`p-2 rounded border transition cursor-pointer select-none text-xs ${
                   isSelected
-                    ? 'bg-[#182317] border-[#e97f01]'
+                    ? 'bg-[#182317] border-[#e97f01] shadow-sm'
                     : isCompleted
-                    ? 'bg-[#101712] border-[#233827]'
+                    ? 'bg-[#101712] border-[#233827] opacity-90'
                     : 'bg-[#0E140E] border-[#1C271B] hover:border-[#2C3E2A]'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1.5">
+                {/* Header row: Index, Human Name, Process, and Length */}
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold font-mono ${
+                      className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold font-mono shrink-0 ${
                         isSelected
                           ? 'bg-[#e97f01] text-white'
                           : isCompleted
@@ -254,7 +268,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                       {idx + 1}
                     </span>
                     <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-bold text-white tracking-wide">
-                      {seam.id}
+                      Seam {idx + 1}
                     </span>
                     {isCompleted && (
                       <span className="text-[9px] px-1 py-0.2 rounded bg-[#132A1C] border border-[#22C55E]/40 text-[#22C55E] font-mono font-bold">
@@ -262,71 +276,66 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                       </span>
                     )}
                   </div>
-                  <span
-                    style={{ color: '#e97f01' }}
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-[#1A2518] border border-[#283925] font-mono font-bold"
-                  >
-                    {seam.parameters.process}
+                  <div className="flex items-center gap-1.5 font-mono">
+                    <span className="text-[10px] text-[#A6BAA5] font-semibold">{seam.length} mm</span>
+                    <span
+                      style={{ color: '#e97f01' }}
+                      className="text-[9px] px-1.5 py-0.5 rounded bg-[#1A2518] border border-[#283925] font-bold"
+                    >
+                      {seam.parameters.process}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Subtitle metrics: joint type & travel speed */}
+                <div className="flex items-center justify-between text-[10px] font-mono text-[#7D917C] mt-1">
+                  <span>
+                    {seam.parameters.jointType} ({seam.parameters.torchTiltAngle}° Tilt)
                   </span>
+                  <span>{seam.parameters.travelSpeed} mm/s</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-1 text-[10px] font-mono text-[#7D917C] mb-2">
-                  <div>
-                    Length: <strong className="text-white">{seam.length} mm</strong>
-                  </div>
-                  <div>
-                    Speed: <strong className="text-white">{seam.parameters.travelSpeed} mm/s</strong>
-                  </div>
-                </div>
-
-                {/* Seam Action Controls */}
-                <div className="flex items-center justify-between pt-1.5 border-t border-[#1C291B]">
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMoveUp(idx);
-                      }}
-                      disabled={idx === 0}
-                      className="p-1 hover:bg-[#202E1E] disabled:opacity-30 rounded text-[#7D917C] hover:text-white"
-                      title="Move earlier in sequence"
-                    >
-                      <MoveUp className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMoveDown(idx);
-                      }}
-                      disabled={idx === seams.length - 1}
-                      className="p-1 hover:bg-[#202E1E] disabled:opacity-30 rounded text-[#7D917C] hover:text-white"
-                      title="Move later in sequence"
-                    >
-                      <MoveDown className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        reverseSeamDirection(seam.id);
-                      }}
-                      className="p-1 hover:bg-[#202E1E] rounded text-[#7D917C] hover:text-[#38BDF8]"
-                      title="Reverse travel direction"
-                    >
-                      <RotateCw className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeSeam(seam.id);
-                    }}
-                    className="p-1 hover:bg-[#331414] rounded text-[#7D917C] hover:text-[#EF4444]"
-                    title="Delete seam"
+                {/* Contextual Action Toolbar: Expands ONLY on selected seam to keep list clean & uncluttered */}
+                {isSelected && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center justify-between pt-2 mt-2 border-t border-[#273826] text-[10px] font-mono text-[#8FA28E]"
                   >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleMoveUp(idx)}
+                        disabled={idx === 0}
+                        className="px-1.5 py-0.5 bg-[#141E14] hover:bg-[#202E1E] disabled:opacity-25 rounded border border-[#283A26] text-[#A6BAA5] hover:text-white transition active:scale-95"
+                        title="Move earlier in sequence (welds sooner)"
+                      >
+                        ▲ Up
+                      </button>
+                      <button
+                        onClick={() => handleMoveDown(idx)}
+                        disabled={idx === seams.length - 1}
+                        className="px-1.5 py-0.5 bg-[#141E14] hover:bg-[#202E1E] disabled:opacity-25 rounded border border-[#283A26] text-[#A6BAA5] hover:text-white transition active:scale-95"
+                        title="Move later in sequence (welds later)"
+                      >
+                        ▼ Down
+                      </button>
+                      <button
+                        onClick={() => reverseSeamDirection(seam.id)}
+                        className="px-1.5 py-0.5 bg-[#141E14] hover:bg-[#202E1E] rounded border border-[#283A26] text-[#38BDF8] hover:text-white transition active:scale-95 flex items-center gap-1"
+                        title="Flip start & end points (reverse travel direction of the snake torch)"
+                      >
+                        <span>⇄ Flip Path</span>
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={() => removeSeam(seam.id)}
+                      className="px-1.5 py-0.5 bg-[#2B1414] hover:bg-[#3D1A1A] rounded border border-[#522323] text-[#EF4444] hover:text-white transition active:scale-95"
+                      title="Delete seam (or press Delete key)"
+                    >
+                      ✕ Delete
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })
