@@ -9,6 +9,7 @@ import {
   Download,
   ExternalLink,
   FileJson,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface ExportModalProps {
@@ -93,6 +94,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
             {jsonString}
           </pre>
         </div>
+
+        {/* Air Gap Alert if non-manufacturable seams exist */}
+        {jobData.seams.some((s) => s.air_gap_detected) && (
+          <div className="px-4 py-2.5 bg-[#261305] border-t border-[#F59E0B]/50 text-[#FCD34D] text-xs font-mono flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-[#F59E0B] shrink-0" />
+            <span>
+              NON-MANUFACTURABLE SEAMS DETECTED: One or more seams bridge open air with no substrate. Review before transferring to robot controller.
+            </span>
+          </div>
+        )}
 
         {/* Footer Actions */}
         <div className="p-3.5 border-t border-[#1E291C] flex items-center justify-between bg-[#101710]">

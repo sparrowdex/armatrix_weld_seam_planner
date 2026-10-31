@@ -8,6 +8,7 @@ import {
   Zap,
   Shield,
   ChevronRight,
+  AlertTriangle,
 } from 'lucide-react';
 import { WeldJointType, WeldProcess } from '@/types/weld';
 
@@ -67,6 +68,19 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
 
       {selectedSeam ? (
         <div className="p-3.5 flex flex-col gap-3.5">
+          {/* Air Gap / Non-Manufacturable Warning Tag */}
+          {selectedSeam.hasAirGap && (
+            <div className="p-2.5 rounded-lg bg-[#251305] border border-[#F59E0B]/60 text-[#FCD34D] text-[10px] font-mono flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-[#FBBF24]">Air Gap Detected (Non-Manufacturable)</span>
+                <p className="text-[9px] text-[#FDE68A]/85 font-sans mt-0.5 leading-tight">
+                  This seam spans across open air ({selectedSeam.airGapDistanceMm || 0}mm gap) without underlying substrate. Cannot be executed on physical workpiece.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Process & Joint Type */}
           <div className="flex flex-col gap-1.5">
             <div className="grid grid-cols-2 gap-2">
@@ -393,36 +407,10 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
             </div>
           </div>
 
-          {/* Torch 3D Model Switcher */}
-          <div className="border border-[#1E2B1D] rounded-lg p-2.5 bg-[#0D130D]">
-            <div className="flex justify-between items-center mb-1.5">
-              <span className="text-[10px] text-[#7C8E7B] font-mono">TORCH 3D MODEL</span>
-              <span className="text-[10px] font-mono text-[#e97f01]">
-                {torchStyle === 'robotic_gooseneck' ? 'Binzel Gooseneck' : 'Sleek Pencil'}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                onClick={() => setTorchStyle('robotic_gooseneck')}
-                className={`py-1.5 px-2 rounded text-[10px] font-mono font-semibold transition border ${
-                  torchStyle === 'robotic_gooseneck'
-                    ? 'bg-[#1D291C] text-white border-[#e97f01]'
-                    : 'bg-[#101610] text-[#7A8E79] border-[#1C281B] hover:text-white'
-                }`}
-              >
-                Robotic Gooseneck
-              </button>
-              <button
-                onClick={() => setTorchStyle('sleek_pencil')}
-                className={`py-1.5 px-2 rounded text-[10px] font-mono font-semibold transition border ${
-                  torchStyle === 'sleek_pencil'
-                    ? 'bg-[#1D291C] text-white border-[#e97f01]'
-                    : 'bg-[#101610] text-[#7A8E79] border-[#1C281B] hover:text-white'
-                }`}
-              >
-                Sleek Pencil
-              </button>
-            </div>
+          {/* Torch Model Spec */}
+          <div className="border border-[#1E2B1D] rounded-lg p-2.5 bg-[#0D130D] flex items-center justify-between font-mono text-[10px]">
+            <span className="text-[#7C8E7B]">TORCH TOOLING:</span>
+            <span className="text-[#e97f01] font-semibold">Binzel Robotic Curved Gooseneck</span>
           </div>
         </div>
       ) : (

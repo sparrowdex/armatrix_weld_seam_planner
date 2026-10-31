@@ -5,7 +5,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { STLLoader } from 'three-stdlib';
 import { useWeldStore } from '@/store/useWeldStore';
-import { Vector3D, TorchNozzleType, WeldSeam } from '@/types/weld';
+import { Vector3D, TorchNozzleType, WeldSeam, WeldJointType } from '@/types/weld';
+import { Play, X, Sliders, Target, Crosshair, AlertTriangle } from 'lucide-react';
+import { validatePathSubstrate } from '@/utils/substrateValidator';
 
 // Authentic Robotic Welding Torch & Sleek Pencil Industrial End-Effectors
 function buildRoboticTorch(style: 'robotic_gooseneck' | 'sleek_pencil' = 'robotic_gooseneck'): THREE.Group {
@@ -41,6 +43,7 @@ function buildRoboticTorch(style: 'robotic_gooseneck' | 'sleek_pencil' = 'roboti
     const wireGeom = new THREE.CylinderGeometry(0.35, 0.35, 4, 12);
     const wireMat = new THREE.MeshStandardMaterial({ color: '#E2E8F0', metalness: 0.95, roughness: 0.1 });
     const wire = new THREE.Mesh(wireGeom, wireMat);
+    wire.name = 'torch_wire';
     wire.position.y = 1.0;
     group.add(wire);
 
@@ -52,6 +55,7 @@ function buildRoboticTorch(style: 'robotic_gooseneck' | 'sleek_pencil' = 'roboti
   const wireGeom = new THREE.CylinderGeometry(0.35, 0.35, 4.5, 12);
   const wireMat = new THREE.MeshStandardMaterial({ color: '#F8FAFC', metalness: 0.95, roughness: 0.1 });
   const wire = new THREE.Mesh(wireGeom, wireMat);
+  wire.name = 'torch_wire';
   wire.position.y = 1.6;
   group.add(wire);
 
@@ -62,55 +66,49 @@ function buildRoboticTorch(style: 'robotic_gooseneck' | 'sleek_pencil' = 'roboti
   group.add(contactTip);
 
   // 2. Tapered Chrome Gas Nozzle (Chrome finish, tapered towards joint)
-  const nozzleGeom = new THREE.CylinderGeometry(3.5, 2.2, 13, 24);
+  const nozzleGeom = new THREE.CylinderGeometry(3.2, 1.8, 14, 24);
   const nozzleMat = new THREE.MeshStandardMaterial({ color: '#F1F5F9', metalness: 0.95, roughness: 0.12 });
   const nozzle = new THREE.Mesh(nozzleGeom, nozzleMat);
-  nozzle.position.y = 11.5;
+  nozzle.position.y = 12.0;
   group.add(nozzle);
 
   // 3. Nozzle Retaining Ring / Gas Diffuser Collar (Knurled chrome slots)
-  const collarGeom = new THREE.CylinderGeometry(3.8, 3.7, 3, 24);
+  const collarGeom = new THREE.CylinderGeometry(3.6, 3.4, 3, 24);
   const collarMat = new THREE.MeshStandardMaterial({ color: '#CBD5E1', metalness: 0.9, roughness: 0.25 });
   const collar = new THREE.Mesh(collarGeom, collarMat);
-  collar.position.y = 18.5;
+  collar.position.y = 19.5;
   group.add(collar);
 
-  // 4. Smooth Curved Stainless Steel Gooseneck (Continuous curve)
-  const curvePoints = [
-    new THREE.Vector3(0, 20, 0),
-    new THREE.Vector3(0, 26, 2),
-    new THREE.Vector3(0, 33, 4.5),
-    new THREE.Vector3(0, 39, 6),
-  ];
-  const curve = new THREE.CatmullRomCurve3(curvePoints);
-  const neckGeom = new THREE.TubeGeometry(curve, 24, 2.1, 16, false);
+  // 4. Stainless Steel Neck Extension (Coaxial along tool bisector axis for 100% collision clearance)
+  const neckGeom = new THREE.CylinderGeometry(2.4, 2.4, 18, 20);
   const neckMat = new THREE.MeshStandardMaterial({ color: '#E2E8F0', metalness: 0.88, roughness: 0.22 });
   const neck = new THREE.Mesh(neckGeom, neckMat);
+  neck.position.y = 30.0;
   group.add(neck);
 
-  // 5. Machined Hex/Round Brass Mounting Collar (Golden brass)
-  const brassGeom = new THREE.CylinderGeometry(3.8, 3.8, 5.5, 20);
+  // 5. Machined Golden Brass Mounting Collar
+  const brassGeom = new THREE.CylinderGeometry(3.6, 3.6, 5, 20);
   const brassMat = new THREE.MeshStandardMaterial({ color: '#D4AF37', metalness: 0.92, roughness: 0.22 });
   const brass = new THREE.Mesh(brassGeom, brassMat);
-  brass.position.set(0, 42, 6);
+  brass.position.y = 41.5;
   group.add(brass);
 
-  // 6. Heavy-Duty Ergonomic Torch Body (Matte black housing)
-  const bodyGeom = new THREE.CylinderGeometry(4.5, 4.5, 20, 24);
+  // 6. Heavy-Duty Ergonomic Torch Body (Matte black housing, centered on tool axis)
+  const bodyGeom = new THREE.CylinderGeometry(4.2, 4.2, 22, 24);
   const bodyMat = new THREE.MeshStandardMaterial({ color: '#1B201C', metalness: 0.35, roughness: 0.55 });
   const body = new THREE.Mesh(bodyGeom, bodyMat);
-  body.position.set(0, 54, 6);
+  body.position.y = 54.0;
   group.add(body);
 
   // 7. Raised Switch/Sensor Module on Torch Body
-  const sensorBoxGeom = new THREE.BoxGeometry(4.0, 9.5, 5.0);
+  const sensorBoxGeom = new THREE.BoxGeometry(3.5, 9.0, 3.0);
   const sensorBoxMat = new THREE.MeshStandardMaterial({ color: '#141814', metalness: 0.4, roughness: 0.5 });
   const sensorBox = new THREE.Mesh(sensorBoxGeom, sensorBoxMat);
-  sensorBox.position.set(0, 56, 9.2);
+  sensorBox.position.set(0, 56, 3.5);
   group.add(sensorBox);
 
   // 8. Tactile Red Actuation Button on Sensor Module (From user photo)
-  const buttonGeom = new THREE.CylinderGeometry(1.3, 1.3, 1.4, 16);
+  const buttonGeom = new THREE.CylinderGeometry(1.2, 1.2, 1.2, 16);
   const buttonMat = new THREE.MeshStandardMaterial({
     color: '#EF4444',
     emissive: '#B91C1C',
@@ -120,23 +118,23 @@ function buildRoboticTorch(style: 'robotic_gooseneck' | 'sleek_pencil' = 'roboti
   });
   const button = new THREE.Mesh(buttonGeom, buttonMat);
   button.rotation.x = Math.PI / 2;
-  button.position.set(0, 58, 12.0);
+  button.position.set(0, 58, 5.2);
   group.add(button);
 
   // 9. Rear Corrugated Cable Strain-Relief Hose (Flexible black corrugated tubing)
-  const hoseGeom = new THREE.CylinderGeometry(3.9, 3.9, 22, 20);
+  const hoseGeom = new THREE.CylinderGeometry(3.6, 3.6, 22, 20);
   const hoseMat = new THREE.MeshStandardMaterial({ color: '#111411', metalness: 0.2, roughness: 0.75 });
   const hose = new THREE.Mesh(hoseGeom, hoseMat);
-  hose.position.set(0, 74, 6);
+  hose.position.y = 74.0;
   group.add(hose);
 
   // Corrugated ribbed rings along the hose
   for (let r = 0; r < 6; r++) {
-    const ringGeom = new THREE.TorusGeometry(4.0, 0.35, 8, 20);
+    const ringGeom = new THREE.TorusGeometry(3.7, 0.3, 8, 20);
     const ringMat = new THREE.MeshStandardMaterial({ color: '#1C221C', roughness: 0.6 });
     const ring = new THREE.Mesh(ringGeom, ringMat);
     ring.rotation.x = Math.PI / 2;
-    ring.position.set(0, 65 + r * 3.4, 6);
+    ring.position.set(0, 65 + r * 3.4, 0);
     group.add(ring);
   }
 
@@ -155,6 +153,75 @@ function positionCylinderBetweenPoints(mesh: THREE.Mesh, p1: THREE.Vector3, p2: 
   mesh.scale.set(radius, len, radius);
   mesh.position.copy(p1).addScaledVector(dir, 0.5);
   mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+}
+
+// Computes true 3D torch orientation vector taking into account surface normal, seam direction, work tilt angle, travel lead angle, and joint type
+function getEffectiveTorchVector(
+  pStart: THREE.Vector3,
+  pEnd: THREE.Vector3,
+  surfaceNormal: THREE.Vector3,
+  tiltAngleDeg: number = 45,
+  leadAngleDeg: number = 0,
+  jointType: WeldJointType = 'FILLET'
+): THREE.Vector3 {
+  const norm = surfaceNormal.clone().normalize();
+  if (norm.lengthSq() < 0.001) norm.set(0, 1, 0);
+
+  const travelDir = new THREE.Vector3().subVectors(pEnd, pStart).normalize();
+  if (travelDir.lengthSq() < 0.001) travelDir.set(1, 0, 0);
+
+  let side = new THREE.Vector3().crossVectors(travelDir, norm).normalize();
+  if (side.lengthSq() < 0.001) {
+    side = new THREE.Vector3(1, 0, 0).cross(norm).normalize();
+    if (side.lengthSq() < 0.001) side = new THREE.Vector3(0, 0, 1).cross(norm).normalize();
+  }
+
+  // Joint nominal tilt angle: 45° for fillet/corner/lap bisectors, 0° for butt/groove
+  const nominalTilt = jointType === 'BUTT' ? 0 : 45;
+  const deltaTilt = ((tiltAngleDeg ?? nominalTilt) - nominalTilt) * (Math.PI / 180);
+  const leadRad = (leadAngleDeg || 0) * (Math.PI / 180);
+
+  const torchAxis = norm.clone();
+
+  // Apply work tilt angle in the transverse cross-section plane
+  if (Math.abs(deltaTilt) > 0.001) {
+    torchAxis.applyAxisAngle(travelDir, deltaTilt);
+  }
+
+  // Apply travel lead/push angle along the seam travel direction
+  if (Math.abs(leadRad) > 0.001) {
+    torchAxis.applyAxisAngle(side, -leadRad);
+  }
+
+  return torchAxis.normalize();
+}
+
+// Robust 6-DOF Orthonormal Torch Pose Calculator
+// Positions the torch longitudinal axis along targetVector, while aligning the curved gooseneck
+// handle strictly into open workspace clearance (UP / OUT), preventing upside-down or gusset collisions.
+function orientTorch(torch: THREE.Object3D, targetVector: THREE.Vector3) {
+  const Y_world = targetVector.clone().normalize();
+  if (Y_world.lengthSq() < 0.001) Y_world.set(0, 1, 0);
+
+  // Clearance reference vector: for welding, open clearance is primarily UP (+Y)
+  let refClearance = new THREE.Vector3(0, 1, 0);
+  // If the torch is pointing nearly straight up (+Y) or down (-Y), use front (+Z) as reference clearance
+  if (Math.abs(Y_world.y) > 0.85) {
+    refClearance.set(0, 0, 1);
+  }
+
+  // Project refClearance perpendicular to Y_world so the gooseneck handle (local +Z) curves UP into clearance
+  let Z_world = new THREE.Vector3().copy(refClearance).addScaledVector(Y_world, -refClearance.dot(Y_world)).normalize();
+  if (Z_world.lengthSq() < 0.001) {
+    Z_world.set(0, 0, 1).addScaledVector(Y_world, -new THREE.Vector3(0, 0, 1).dot(Y_world)).normalize();
+  }
+
+  // Right-handed orthonormal basis: X = Y x Z, then Z = X x Y
+  const X_world = new THREE.Vector3().crossVectors(Y_world, Z_world).normalize();
+  Z_world.crossVectors(X_world, Y_world).normalize();
+
+  const rotMatrix = new THREE.Matrix4().makeBasis(X_world, Y_world, Z_world);
+  torch.quaternion.setFromRotationMatrix(rotMatrix);
 }
 
 // CAD Magnetic Object Snapping (OSNAP) helper
@@ -230,9 +297,14 @@ function getSnappedPoint(
 interface ViewportCanvasProps {
   isRightCollapsed?: boolean;
   isLeftCollapsed?: boolean;
+  onExpandRight?: () => void;
 }
 
-export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed = false, isLeftCollapsed = false }) => {
+export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
+  isRightCollapsed = false,
+  isLeftCollapsed = false,
+  onExpandRight,
+}) => {
   // Separate mount ref for Three.js WebGL canvas to avoid React reconciliation conflicts
   const canvasMountRef = useRef<HTMLDivElement>(null);
 
@@ -256,12 +328,14 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
   const torchStyle = useWeldStore((s) => s.torchStyle);
   const selectSeam = useWeldStore((s) => s.selectSeam);
   const isSimulating = useWeldStore((s) => s.isSimulating);
+  const startSimulation = useWeldStore((s) => s.startSimulation);
   const playbackSpeed = useWeldStore((s) => s.playbackSpeed);
   const rapidTraverseSpeed = useWeldStore((s) => s.rapidTraverseSpeed);
   const exportJobJSON = useWeldStore((s) => s.exportJobJSON);
   const setPart = useWeldStore((s) => s.setPart);
   const setPartLoading = useWeldStore((s) => s.setPartLoading);
 
+  const selectedSeam = seams.find((s) => s.id === selectedSeamId) || null;
   const jobSummary = exportJobJSON().job_summary;
 
   // Internal Three.js refs
@@ -285,11 +359,18 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
 
+  // Game-style Cinematic Camera Focus & Orbit Lerp refs
+  const targetCameraPos = useRef<THREE.Vector3 | null>(null);
+  const targetControlsTarget = useRef<THREE.Vector3 | null>(null);
+  const isCameraTransitioning = useRef<boolean>(false);
+  const lastSelectedSeamIdRef = useRef<string | null>(null);
+
   // Cursor coordinates display & smooth fade-in/fade-out
   const [cursorPos, setCursorPos] = useState<Vector3D | null>(null);
   const [cursorNormal, setCursorNormal] = useState<Vector3D | null>(null);
   const [activeSnapType, setActiveSnapType] = useState<string | null>(null);
   const [measuredDist, setMeasuredDist] = useState<number | null>(null);
+  const [liveAirGap, setLiveAirGap] = useState<{ isAirGap: boolean; gapDistanceMm: number } | null>(null);
   const [displayCoords, setDisplayCoords] = useState<Vector3D | null>(null);
   const [displayDist, setDisplayDist] = useState<number | null>(null);
   const [isCoordsVisible, setIsCoordsVisible] = useState(false);
@@ -386,6 +467,10 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
     controls.maxDistance = 1400;
     controls.minDistance = 20;
     controls.target.set(0, 35, 0);
+    // Instant manual break-out: if user drags or orbits manually, cancel automated camera lerp immediately
+    controls.addEventListener('start', () => {
+      isCameraTransitioning.current = false;
+    });
     controlsRef.current = controls;
 
     // 5. Balanced CAD Studio Lighting (Natural metallic depth, no harsh white wash)
@@ -468,6 +553,22 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
     let animId: number;
     const animate = () => {
       animId = requestAnimationFrame(animate);
+
+      // Smooth Game-Style Cinematic Camera Focus Lerp
+      if (isCameraTransitioning.current && targetCameraPos.current && targetControlsTarget.current) {
+        controls.target.lerp(targetControlsTarget.current, 0.08);
+        camera.position.lerp(targetCameraPos.current, 0.08);
+
+        if (
+          controls.target.distanceTo(targetControlsTarget.current) < 0.25 &&
+          camera.position.distanceTo(targetCameraPos.current) < 0.5
+        ) {
+          controls.target.copy(targetControlsTarget.current);
+          camera.position.copy(targetCameraPos.current);
+          isCameraTransitioning.current = false;
+        }
+      }
+
       controls.update();
       renderer.render(scene, camera);
     };
@@ -554,6 +655,51 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
     controls.update();
     setViewPreset(null);
   }, [viewPreset, setViewPreset]);
+
+  // Game-Style Cinematic Camera Focus / Zoom on Seam
+  const focusOnSeam = (seam: WeldSeam) => {
+    if (!cameraRef.current || !controlsRef.current) return;
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+
+    const p1 = new THREE.Vector3(seam.startPoint.x, seam.startPoint.y, seam.startPoint.z);
+    const p2 = new THREE.Vector3(seam.endPoint.x, seam.endPoint.y, seam.endPoint.z);
+    const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+    const norm = new THREE.Vector3(seam.normal.x, seam.normal.y, seam.normal.z).normalize();
+    if (norm.lengthSq() < 0.001) norm.set(0, 1, 0);
+
+    // Current camera direction relative to current controls target
+    const curCamDir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+    // Blend current camera vantage direction with outward seam normal for an optimal 3/4 perspective
+    const viewDir = new THREE.Vector3().lerpVectors(curCamDir, norm, 0.45).normalize();
+    if (viewDir.y < 0.28) viewDir.y = 0.38; // maintain elevated vantage angle
+    viewDir.normalize();
+
+    // Cinematic framing distance proportional to seam length (between 85mm and 150mm)
+    const focusDist = Math.max(90, Math.min(150, seam.length * 1.6));
+    const targetCamPos = mid.clone().addScaledVector(viewDir, focusDist);
+
+    targetControlsTarget.current = mid;
+    targetCameraPos.current = targetCamPos;
+    isCameraTransitioning.current = true;
+  };
+
+  // Automatically trigger cinematic camera focus when a seam is newly mapped or selected
+  useEffect(() => {
+    if (!selectedSeamId) {
+      lastSelectedSeamIdRef.current = null;
+      return;
+    }
+    if (selectedSeamId !== lastSelectedSeamIdRef.current) {
+      lastSelectedSeamIdRef.current = selectedSeamId;
+      if (!isSimulating) {
+        const seam = seams.find((s) => s.id === selectedSeamId);
+        if (seam) {
+          focusOnSeam(seam);
+        }
+      }
+    }
+  }, [selectedSeamId, seams, isSimulating]);
 
   // Load STL Model
   useEffect(() => {
@@ -736,7 +882,16 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
       cylinderGeom.rotateX(Math.PI / 2);
 
       let cylinderMat: THREE.Material;
-      if (isSelected) {
+      if (seam.hasAirGap) {
+        // High-visibility hazard amber for non-manufacturable air-gap seams
+        cylinderMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color('#D97706'),
+          emissive: new THREE.Color('#B45309'),
+          emissiveIntensity: 0.8,
+          roughness: 0.35,
+          metalness: 0.4,
+        });
+      } else if (isSelected) {
         cylinderMat = new THREE.MeshStandardMaterial({
           color: new THREE.Color('#e97f01'),
           emissive: new THREE.Color('#e97f01'),
@@ -786,11 +941,19 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
       seamContainer.add(arrowHelper);
 
       if (showNormals) {
-        const normalHelper = new THREE.ArrowHelper(normal, mid, 20, 0x38bdf8, 4, 2.5);
+        const effectiveVector = getEffectiveTorchVector(
+          p1,
+          p2,
+          normal,
+          seam.parameters.torchTiltAngle,
+          seam.parameters.torchLeadAngle,
+          seam.parameters.jointType
+        );
+        const normalHelper = new THREE.ArrowHelper(effectiveVector, mid, 20, 0x38bdf8, 4, 2.5);
         seamContainer.add(normalHelper);
 
-        const appPt = new THREE.Vector3().copy(p1).addScaledVector(normal, seam.parameters.approachDistance);
-        const retPt = new THREE.Vector3().copy(p2).addScaledVector(normal, seam.parameters.retractDistance);
+        const appPt = new THREE.Vector3().copy(p1).addScaledVector(effectiveVector, seam.parameters.approachDistance);
+        const retPt = new THREE.Vector3().copy(p2).addScaledVector(effectiveVector, seam.parameters.retractDistance);
 
         const approachGeom = new THREE.BufferGeometry().setFromPoints([appPt, p1]);
         const retractGeom = new THREE.BufferGeometry().setFromPoints([p2, retPt]);
@@ -833,20 +996,24 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
 
       if (cursorPos) {
         const p2 = new THREE.Vector3(cursorPos.x, cursorPos.y, cursorPos.z);
+        const isAir = liveAirGap?.isAirGap;
         const lineGeom = new THREE.BufferGeometry().setFromPoints([p1, p2]);
-        const lineMat = new THREE.LineBasicMaterial({ color: '#e97f01', linewidth: 3 });
+        const lineMat = new THREE.LineBasicMaterial({
+          color: isAir ? '#F59E0B' : '#e97f01',
+          linewidth: 3,
+        });
         const line = new THREE.Line(lineGeom, lineMat);
         group.add(line);
 
         const endPreview = new THREE.Mesh(
           new THREE.SphereGeometry(2.5, 12, 12),
-          new THREE.MeshBasicMaterial({ color: '#38BDF8' })
+          new THREE.MeshBasicMaterial({ color: isAir ? '#F59E0B' : '#38BDF8' })
         );
         endPreview.position.copy(p2);
         group.add(endPreview);
       }
     }
-  }, [mode, manualStartPoint, cursorPos]);
+  }, [mode, manualStartPoint, cursorPos, liveAirGap]);
 
   // Interactive Snapping Reticle visibility & Dynamic 3D Surface Normal Orientation
   useEffect(() => {
@@ -936,14 +1103,31 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
         return;
       }
 
+      // Synchronize torch wire diameter scale to active seam parameters
+      const wireScale = (seam.parameters.wireDiameter ?? 1.2) / 1.2;
+      const wireMesh = torch.getObjectByName('torch_wire');
+      if (wireMesh) {
+        wireMesh.scale.set(wireScale, 1, wireScale);
+      }
+
       const pStart = new THREE.Vector3(seam.startPoint.x, seam.startPoint.y, seam.startPoint.z);
       const pEnd = new THREE.Vector3(seam.endPoint.x, seam.endPoint.y, seam.endPoint.z);
       const normal = new THREE.Vector3(seam.normal.x, seam.normal.y, seam.normal.z);
       if (normal.lengthSq() < 0.001) normal.set(0, 1, 0);
       normal.normalize();
 
-      const pApproach = new THREE.Vector3().copy(pStart).addScaledVector(normal, Math.max(10, seam.parameters.approachDistance));
-      const pRetract = new THREE.Vector3().copy(pEnd).addScaledVector(normal, Math.max(10, seam.parameters.retractDistance));
+      // Dynamic Effective Torch Orientation (respects work tilt angle, travel lead angle, and joint type)
+      const effectiveTorchAxis = getEffectiveTorchVector(
+        pStart,
+        pEnd,
+        normal,
+        seam.parameters.torchTiltAngle,
+        seam.parameters.torchLeadAngle,
+        seam.parameters.jointType
+      );
+
+      const pApproach = new THREE.Vector3().copy(pStart).addScaledVector(effectiveTorchAxis, Math.max(10, seam.parameters.approachDistance));
+      const pRetract = new THREE.Vector3().copy(pEnd).addScaledVector(effectiveTorchAxis, Math.max(10, seam.parameters.retractDistance));
 
       const spd = Math.max(0.2, playbackSpeed);
       const weldDuration = Math.max(0.6, seam.length / Math.max(1, seam.parameters.travelSpeed)) / spd;
@@ -951,20 +1135,16 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
       const retractDuration = 0.8 / spd;
       const traverseDuration = 1.0 / spd;
 
-      // Safe orientation calculation
-      const safeQuaternion = (targetNormal: THREE.Vector3) => {
-        const up = new THREE.Vector3(0, 1, 0);
-        if (Math.abs(up.dot(targetNormal)) > 0.99) {
-          up.set(0, 0, 1);
-        }
-        torch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), targetNormal);
+      // Safe 6-DOF orientation calculation (guarantees handle curves UP into workspace clearance)
+      const safeQuaternion = (targetVector: THREE.Vector3) => {
+        orientTorch(torch, targetVector);
       };
 
       if (phase === 'approach') {
         progress += dt / approachDuration;
         const currentPos = new THREE.Vector3().lerpVectors(pApproach, pStart, Math.min(1, progress));
         torch.position.copy(currentPos);
-        safeQuaternion(normal);
+        safeQuaternion(effectiveTorchAxis);
         if (arcLight) arcLight.intensity = 0;
         if (arcSparksRef.current) (arcSparksRef.current.material as THREE.PointsMaterial).opacity = 0;
         activeBeadMesh.visible = false;
@@ -979,12 +1159,14 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
         progress += dt / weldDuration;
         const currentPos = new THREE.Vector3().lerpVectors(pStart, pEnd, Math.min(1, progress));
         torch.position.copy(currentPos);
-        safeQuaternion(normal);
+        safeQuaternion(effectiveTorchAxis);
 
-        // Progressive Metallic Weld Bead Deposition behind torch tip
-        positionCylinderBetweenPoints(activeBeadMesh, pStart, currentPos, 2.5);
+        // Progressive Metallic Weld Bead Deposition behind torch tip (scaled dynamically to wire diameter)
+        const activeBeadRadius = 2.35 * wireScale;
+        positionCylinderBetweenPoints(activeBeadMesh, pStart, currentPos, activeBeadRadius);
 
-        // Active glowing molten puddle at contact point
+        // Active glowing molten puddle at contact point (scaled dynamically to wire diameter)
+        moltenPuddleMesh.scale.setScalar(wireScale);
         moltenPuddleMesh.visible = true;
         moltenPuddleMesh.position.copy(currentPos);
 
@@ -1009,7 +1191,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
         progress += dt / retractDuration;
         const currentPos = new THREE.Vector3().lerpVectors(pEnd, pRetract, Math.min(1, progress));
         torch.position.copy(currentPos);
-        safeQuaternion(normal);
+        safeQuaternion(effectiveTorchAxis);
         if (arcLight) arcLight.intensity = 0;
         if (arcSparksRef.current) (arcSparksRef.current.material as THREE.PointsMaterial).opacity = 0;
         activeBeadMesh.visible = false;
@@ -1034,13 +1216,24 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
         progress += dt / traverseDuration;
         const nextSeam = seams[currentSeamIdx + 1];
         const nextNorm = new THREE.Vector3(nextSeam.normal.x, nextSeam.normal.y, nextSeam.normal.z).normalize();
-        const nextApproach = new THREE.Vector3(nextSeam.startPoint.x, nextSeam.startPoint.y, nextSeam.startPoint.z).addScaledVector(
+        const nextStart = new THREE.Vector3(nextSeam.startPoint.x, nextSeam.startPoint.y, nextSeam.startPoint.z);
+        const nextEnd = new THREE.Vector3(nextSeam.endPoint.x, nextSeam.endPoint.y, nextSeam.endPoint.z);
+        const nextTorchAxis = getEffectiveTorchVector(
+          nextStart,
+          nextEnd,
           nextNorm,
+          nextSeam.parameters.torchTiltAngle,
+          nextSeam.parameters.torchLeadAngle,
+          nextSeam.parameters.jointType
+        );
+        const nextApproach = new THREE.Vector3().copy(nextStart).addScaledVector(
+          nextTorchAxis,
           Math.max(10, nextSeam.parameters.approachDistance)
         );
         const currentPos = new THREE.Vector3().lerpVectors(pRetract, nextApproach, Math.min(1, progress));
         torch.position.copy(currentPos);
-        safeQuaternion(nextNorm);
+        const interpAxis = new THREE.Vector3().lerpVectors(effectiveTorchAxis, nextTorchAxis, progress).normalize();
+        safeQuaternion(interpAxis);
         if (arcLight) arcLight.intensity = 0;
         if (arcSparksRef.current) (arcSparksRef.current.material as THREE.PointsMaterial).opacity = 0;
         activeBeadMesh.visible = false;
@@ -1095,9 +1288,14 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
         const dist = parseFloat(Math.sqrt(dx * dx + dy * dy + dz * dz).toFixed(1));
         setMeasuredDist(dist);
         setDisplayDist(dist);
+
+        // Real-time Air Gap Substrate Validation
+        const subCheck = validatePathSubstrate(manualStartPoint, p, n, meshRef.current);
+        setLiveAirGap(subCheck.isAirGap ? { isAirGap: true, gapDistanceMm: subCheck.gapDistanceMm } : null);
       } else {
         setMeasuredDist(null);
         setDisplayDist(null);
+        setLiveAirGap(null);
       }
 
       if (mode === 'add_seam') {
@@ -1153,7 +1351,9 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
       if (!manualStartPoint) {
         setManualStartPoint(pt, norm);
       } else {
-        addSeam(manualStartPoint, pt, norm, 'manual');
+        const subCheck = validatePathSubstrate(manualStartPoint, pt, norm, meshRef.current);
+        addSeam(manualStartPoint, pt, norm, 'manual', undefined, subCheck.isAirGap, subCheck.gapDistanceMm);
+        setLiveAirGap(null);
       }
     } else if (mode === 'orbit' && cameraRef.current) {
       // Direct 3D Click-to-Select Seams & Click-to-Deselect
@@ -1223,6 +1423,119 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
         </div>
       </div>
 
+      {/* Tactical In-Game Seam Specs Card (Appears with Game-Style Zoom when Right Sidebar is Collapsed) */}
+      {isRightCollapsed && selectedSeam && !isSimulating && (
+        <div
+          className="absolute top-4 right-4 z-30 w-80 max-w-[calc(100vw-2.5rem)] bg-[#0C130D]/95 backdrop-blur-md border border-[#233824] rounded-xl shadow-2xl p-4 text-white font-mono animate-in fade-in slide-in-from-right-4 duration-300"
+          style={{ fontFamily: 'Onest, sans-serif' }}
+        >
+          {/* Tactical Corner Brackets for authentic game HUD aesthetic */}
+          <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t-2 border-l-2 border-[#e97f01] rounded-tl pointer-events-none" />
+          <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t-2 border-r-2 border-[#e97f01] rounded-tr pointer-events-none" />
+          <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b-2 border-l-2 border-[#e97f01] rounded-bl pointer-events-none" />
+          <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b-2 border-r-2 border-[#e97f01] rounded-br pointer-events-none" />
+
+          {/* Header Status & Dismiss */}
+          <div className="flex items-center justify-between pb-2.5 border-b border-[#1C2C1E]">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-[0_0_8px_#10B981]" />
+              <span className="text-[10px] uppercase tracking-widest text-[#86EFAC] font-bold">
+                SEAM IN FOCUS
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 bg-[#172619] border border-[#2A462C] text-[#A7F3D0] rounded">
+                #{selectedSeam.sequenceOrder}
+              </span>
+            </div>
+            <button
+              onClick={() => selectSeam(null)}
+              className="text-[#64748B] hover:text-white p-1 rounded hover:bg-[#1A281C] transition active:scale-95"
+              title="Deselect Seam"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Seam Title & Quick Tag */}
+          <div className="pt-2.5 pb-2">
+            <h3 className="text-sm font-bold text-white tracking-wide truncate">
+              {selectedSeam.name}
+            </h3>
+            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[#A4B3A3]">
+              <span className="font-semibold text-[#e97f01]">{selectedSeam.parameters.jointType}</span>
+              <span>•</span>
+              <span>{selectedSeam.parameters.process}</span>
+              <span>•</span>
+              <span className="text-white font-medium">{selectedSeam.length} mm</span>
+            </div>
+          </div>
+
+          {/* Air Gap / Non-Manufacturable Warning Tag in HUD Card */}
+          {selectedSeam.hasAirGap && (
+            <div className="my-2 p-2 rounded-lg bg-[#271305] border border-[#F59E0B]/60 text-[#FCD34D] text-[10px] font-mono flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-[#FBBF24]">Air Gap Detected (Non-Manufacturable)</span>
+                <p className="text-[9px] text-[#FDE68A]/80 font-sans mt-0.5 leading-tight">
+                  Path bridges empty space ({selectedSeam.airGapDistanceMm || 0}mm gap) without underlying substrate.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 4x2 Tactical Parameter Grid */}
+          <div className="grid grid-cols-2 gap-1.5 my-2 text-[10px] font-mono">
+            <div className="bg-[#101811] border border-[#1E2E20] rounded p-2">
+              <span className="text-[#64748B] block text-[9px] uppercase tracking-wider">SPEED</span>
+              <span className="text-white font-bold text-xs">{selectedSeam.parameters.travelSpeed} mm per s</span>
+            </div>
+            <div className="bg-[#101811] border border-[#1E2E20] rounded p-2">
+              <span className="text-[#64748B] block text-[9px] uppercase tracking-wider">ARC POWER</span>
+              <span className="text-[#38BDF8] font-bold text-xs">{selectedSeam.parameters.current}A • {selectedSeam.parameters.voltage}V</span>
+            </div>
+            <div className="bg-[#101811] border border-[#1E2E20] rounded p-2">
+              <span className="text-[#64748B] block text-[9px] uppercase tracking-wider">WIRE FEED • Ø</span>
+              <span className="text-white font-bold text-xs">{selectedSeam.parameters.wireFeedSpeed}m • {selectedSeam.parameters.wireDiameter || 1.2}mm</span>
+            </div>
+            <div className="bg-[#101811] border border-[#1E2E20] rounded p-2">
+              <span className="text-[#64748B] block text-[9px] uppercase tracking-wider">TILT • LEAD</span>
+              <span className="text-[#e97f01] font-bold text-xs">{selectedSeam.parameters.torchTiltAngle}° • {selectedSeam.parameters.torchLeadAngle}°</span>
+            </div>
+          </div>
+
+          {/* Action Row */}
+          <div className="grid grid-cols-2 gap-1.5 pt-1">
+            <button
+              onClick={() => startSimulation(selectedSeam.id)}
+              className="py-1.5 px-2 bg-gradient-to-r from-[#142618] to-[#1E3B24] hover:from-[#1A3320] hover:to-[#284E30] border border-[#234E2B] rounded-md text-[#86EFAC] hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
+              title="Simulate / test this specific seam path only"
+            >
+              <Play className="w-3 h-3 fill-current text-[#4ADE80]" />
+              <span>Simulate</span>
+            </button>
+
+            <button
+              onClick={() => focusOnSeam(selectedSeam)}
+              className="py-1.5 px-2 bg-[#141C15] hover:bg-[#1D2A1F] border border-[#243526] rounded-md text-[#CBD5E1] hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition"
+              title="Re-focus cinematic camera on this seam"
+            >
+              <Target className="w-3 h-3 text-[#38BDF8]" />
+              <span>Re-Focus</span>
+            </button>
+          </div>
+
+          {/* Expand Full Parameters Panel */}
+          {onExpandRight && (
+            <button
+              onClick={onExpandRight}
+              className="w-full mt-2 py-1.5 bg-[#131B14] hover:bg-[#1A251B] border border-[#243725] hover:border-[#e97f01]/50 rounded-md text-[#e97f01] hover:text-[#fb923c] text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 transition"
+            >
+              <Sliders className="w-3 h-3" />
+              <span>Open Parameters Panel</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Floating Kinematics Telemetry when Right Sidebar is Collapsed (Seamless, transparent, white at bottom-right) */}
       <div
         className={`absolute bottom-5 right-5 z-10 pointer-events-none flex flex-col gap-1 font-mono text-xs select-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition-all duration-700 ease-out ${
@@ -1262,15 +1575,35 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
             : 'opacity-0 -translate-y-2 scale-95 pointer-events-none'
         }`}
       >
-        <div className="bg-[#0C120C]/92 border border-white/20 text-white font-mono text-xs px-4 py-2.5 rounded-lg shadow-2xl backdrop-blur-md flex items-center gap-3 tracking-wide">
-          <span className="text-white font-bold">
-            {manualStartPoint ? 'STEP 2:' : 'CLICK-TO-WELD:'}
-          </span>
-          <span className="text-[#E2ECE1] font-normal">
-            {manualStartPoint
-              ? `Click 2nd point to finalize seam (${measuredDist || 0} mm) — [ESC to Cancel]`
-              : 'Click 3D part to anchor start point — [ESC to Cancel]'}
-          </span>
+        <div
+          className={`font-mono text-xs px-4 py-2.5 rounded-lg shadow-2xl backdrop-blur-md flex items-center gap-3 tracking-wide transition-all ${
+            liveAirGap?.isAirGap
+              ? 'bg-[#291305]/95 border border-[#F59E0B] text-[#FDE68A] shadow-[0_0_20px_rgba(245,158,11,0.25)]'
+              : 'bg-[#0C120C]/92 border border-white/20 text-white'
+          }`}
+        >
+          {liveAirGap?.isAirGap ? (
+            <>
+              <span className="flex items-center gap-1.5 text-[#F59E0B] font-bold">
+                <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
+                <span>NO SUBSTRATE:</span>
+              </span>
+              <span className="text-[#FCD34D] font-medium">
+                Bridging empty space ({liveAirGap.gapDistanceMm} mm air gap) — Non-manufacturable!
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-white font-bold">
+                {manualStartPoint ? 'STEP 2:' : 'CLICK-TO-WELD:'}
+              </span>
+              <span className="text-[#E2ECE1] font-normal">
+                {manualStartPoint
+                  ? `Click 2nd point to finalize seam (${measuredDist || 0} mm) — [ESC to Cancel]`
+                  : 'Click 3D part to anchor start point — [ESC to Cancel]'}
+              </span>
+            </>
+          )}
           {activeSnapType && (
             <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] tracking-wider font-mono font-semibold">
               SNAP: {activeSnapType}

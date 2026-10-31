@@ -6,8 +6,6 @@ import {
   Target,
   Plus,
   Trash2,
-  MoveUp,
-  MoveDown,
   RotateCw,
   Box,
   ChevronLeft,
@@ -15,6 +13,12 @@ import {
   CheckCircle,
   Pencil,
   Play,
+  Layers,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeftRight,
+  AlertTriangle,
+  Split,
 } from 'lucide-react';
 
 interface SidebarLeftProps {
@@ -72,20 +76,20 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     clearSeams();
 
     if (activeModelName === 'Structural L-Bracket') {
-      // 1. Center Bay 90° Root Fillet (Between the two stiffener gussets: x = -30 to +30)
-      addSeam({ x: -30, y: 14, z: -26 }, { x: 30, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Center Root Fillet');
-      // 2. Left Gusset - Base Plate Fillet (Center bay side: z = -26 to +29)
-      addSeam({ x: -30, y: 14, z: -26 }, { x: -30, y: 14, z: 29 }, { x: 0.707, y: 0.707, z: 0 }, 'detected', 'Left Gusset Base');
-      // 3. Left Gusset - Vertical Upright Fillet (Center bay side: y = 14 to 74)
-      addSeam({ x: -30, y: 14, z: -26 }, { x: -30, y: 74, z: -26 }, { x: 0.707, y: 0, z: 0.707 }, 'detected', 'Left Gusset Vertical');
-      // 4. Right Gusset - Base Plate Fillet (Center bay side: z = -26 to +29)
-      addSeam({ x: 30, y: 14, z: -26 }, { x: 30, y: 14, z: 29 }, { x: -0.707, y: 0.707, z: 0 }, 'detected', 'Right Gusset Base');
-      // 5. Right Gusset - Vertical Upright Fillet (Center bay side: y = 14 to 74)
-      addSeam({ x: 30, y: 14, z: -26 }, { x: 30, y: 74, z: -26 }, { x: -0.707, y: 0, z: 0.707 }, 'detected', 'Right Gusset Vertical');
-      // 6. Left Outer Root Fillet (Outside left rib: x = -55 to -40)
-      addSeam({ x: -55, y: 14, z: -26 }, { x: -40, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Left Outer Root');
-      // 7. Right Outer Root Fillet (Outside right rib: x = 40 to 55)
-      addSeam({ x: 40, y: 14, z: -26 }, { x: 55, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
+      // 1. Center Bay 90° Root Fillet (Between the two stiffener gussets: x = -26 to +26, 4mm nozzle standoff)
+      addSeam({ x: -26, y: 14, z: -26 }, { x: 26, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Center Root Fillet');
+      // 2. Left Gusset - Base Plate Fillet (Center bay side: z = -22 to +25, 4mm nozzle standoff)
+      addSeam({ x: -30, y: 14, z: -22 }, { x: -30, y: 14, z: 25 }, { x: 0.707, y: 0.707, z: 0 }, 'detected', 'Left Gusset Base');
+      // 3. Left Gusset - Vertical Upright Fillet (Center bay side: y = 18 to 70, 4mm nozzle standoff)
+      addSeam({ x: -30, y: 18, z: -26 }, { x: -30, y: 70, z: -26 }, { x: 0.707, y: 0, z: 0.707 }, 'detected', 'Left Gusset Vertical');
+      // 4. Right Gusset - Base Plate Fillet (Center bay side: z = -22 to +25, 4mm nozzle standoff)
+      addSeam({ x: 30, y: 14, z: -22 }, { x: 30, y: 14, z: 25 }, { x: -0.707, y: 0.707, z: 0 }, 'detected', 'Right Gusset Base');
+      // 5. Right Gusset - Vertical Upright Fillet (Center bay side: y = 18 to 70, 4mm nozzle standoff)
+      addSeam({ x: 30, y: 18, z: -26 }, { x: 30, y: 70, z: -26 }, { x: -0.707, y: 0, z: 0.707 }, 'detected', 'Right Gusset Vertical');
+      // 6. Left Outer Root Fillet (Outside left rib: x = -55 to -44, 4mm nozzle standoff)
+      addSeam({ x: -55, y: 14, z: -26 }, { x: -44, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Left Outer Root');
+      // 7. Right Outer Root Fillet (Outside right rib: x = 44 to 55, 4mm nozzle standoff)
+      addSeam({ x: 44, y: 14, z: -26 }, { x: 55, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
     } else if (activeModelName === 'Pipe T-Joint') {
       // 4 Quadrants of the 3D intersecting saddle weld seam
       addSeam({ x: -18, y: 25, z: 0 }, { x: 0, y: 25, z: 18 }, { x: -0.5, y: 0.707, z: 0.5 }, 'detected', 'Saddle Quadrant 1');
@@ -108,6 +112,37 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
       addSeam({ x: hw, y, z: -hd }, { x: -hw, y, z: -hd }, { x: 0, y: 0.707, z: -0.707 }, 'detected');
       addSeam({ x: -hw, y, z: -hd }, { x: -hw, y, z: hd }, { x: -0.707, y: 0.707, z: 0 }, 'detected');
     }
+  };
+
+  const checkGussetClash = (seam: { startPoint: { x: number; y: number; z: number }; endPoint: { x: number; y: number; z: number } }): boolean => {
+    if (activeModelName !== 'Structural L-Bracket') return false;
+    const minX = Math.min(seam.startPoint.x, seam.endPoint.x);
+    const maxX = Math.max(seam.startPoint.x, seam.endPoint.x);
+    // Left gusset spans x = -36 to -30; right gusset spans x = 30 to 36
+    const crossesLeft = minX < -33 && maxX > -33;
+    const crossesRight = minX < 33 && maxX > 33;
+    const nearRootY = seam.startPoint.y < 35 && seam.endPoint.y < 35;
+    const nearRootZ = Math.abs(seam.startPoint.z - (-26)) < 15 || Math.abs(seam.endPoint.z - (-26)) < 15;
+    return (crossesLeft || crossesRight) && nearRootY && nearRootZ;
+  };
+
+  const handleSplitAroundGussets = (seamId: string) => {
+    removeSeam(seamId);
+    // Replaces the colliding continuous pass with 3 collision-free segmented passes with 4mm setback from gussets
+    addSeam({ x: -58, y: 14, z: -26 }, { x: -40, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Left Outer Root');
+    addSeam({ x: -26, y: 14, z: -26 }, { x: 26, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Center Root Fillet');
+    addSeam({ x: 40, y: 14, z: -26 }, { x: 58, y: 14, z: -26 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
+  };
+
+  const handleFullRootPass = () => {
+    clearSeams();
+    addSeam(
+      { x: -58, y: 14, z: -26 },
+      { x: 58, y: 14, z: -26 },
+      { x: 0, y: 0.707, z: 0.707 },
+      'detected',
+      'Stage 1 Continuous Root (Pre-Gusset)'
+    );
   };
 
   const handleMoveUp = (index: number) => {
@@ -148,19 +183,48 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
         )}
       </div>
 
-      {/* CAD Telemetry Card */}
+      {/* CAD Telemetry Card - Physical Workpiece Envelope & Mesh Specs */}
       <div className="p-3 border-b border-[#1E291C] bg-[#0C120C]">
         {part ? (
-          <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-            <div className="bg-[#131B13] p-2 rounded border border-[#202D1E]">
-              <span className="text-[#7A8E79] block text-[9px] uppercase tracking-wider">Dimensions (mm)</span>
-              <span className="font-semibold text-white">
-                {part.dimensions.width} × {part.dimensions.height} × {part.dimensions.depth}
+          <div className="space-y-1.5 font-mono">
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="flex items-center gap-1.5 text-[#A6BAA5] font-semibold">
+                <Box className="w-3 h-3 text-[#e97f01]" />
+                <span>PART TELEMETRY (STL)</span>
+              </span>
+              <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#152317] text-[#4ADE80] border border-[#224A27] font-bold">
+                WATERTIGHT
               </span>
             </div>
-            <div className="bg-[#131B13] p-2 rounded border border-[#202D1E]">
-              <span className="text-[#7A8E79] block text-[9px] uppercase tracking-wider">Triangles</span>
-              <span className="font-semibold text-white">{part.triangleCount.toLocaleString()}</span>
+
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div
+                className="bg-[#131B13] p-2 rounded-lg border border-[#202D1E] hover:border-[#2C3E29] transition"
+                title="Workpiece 3D bounding envelope (Width × Height × Depth in mm). Used for machine clamping & robot reach checks."
+              >
+                <div className="flex items-center gap-1 text-[#7A8E79] text-[9px] uppercase tracking-wider mb-0.5">
+                  <Box className="w-2.5 h-2.5 text-[#38BDF8]" />
+                  <span>Envelope (W×H×D)</span>
+                </div>
+                <span className="font-semibold text-white tracking-tight text-xs">
+                  {part.dimensions.width} × {part.dimensions.height} × {part.dimensions.depth}
+                </span>
+                <span className="block text-[8px] text-[#637662] mt-0.5 font-sans">mm</span>
+              </div>
+
+              <div
+                className="bg-[#131B13] p-2 rounded-lg border border-[#202D1E] hover:border-[#2C3E29] transition"
+                title="Total triangular polygon facets in the ingested STL mesh."
+              >
+                <div className="flex items-center gap-1 text-[#7A8E79] text-[9px] uppercase tracking-wider mb-0.5">
+                  <Layers className="w-2.5 h-2.5 text-[#4ADE80]" />
+                  <span>Mesh Facets</span>
+                </div>
+                <span className="font-semibold text-white tracking-tight text-xs">
+                  {part.triangleCount.toLocaleString()}
+                </span>
+                <span className="block text-[8px] text-[#637662] mt-0.5 font-sans">Triangles</span>
+              </div>
             </div>
           </div>
         ) : (
@@ -170,14 +234,26 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
 
       {/* Action Buttons */}
       <div className="p-3 border-b border-[#1E291C] flex flex-col gap-2 bg-[#0E140E]">
-        <button
-          onClick={handleAutoDetect}
-          style={{ fontFamily: 'Onest, sans-serif' }}
-          className="w-full flex items-center justify-center gap-2 bg-[#172216] hover:bg-[#202E1E] border border-[#273825] text-white py-2 rounded text-xs font-bold transition active:scale-95"
-        >
-          <Target className="w-3.5 h-3.5 text-[#e97f01]" />
-          <span>AUTO-DETECT CREASE SEAMS</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={handleAutoDetect}
+            style={{ fontFamily: 'Onest, sans-serif' }}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-[#172216] hover:bg-[#202E1E] border border-[#273825] text-white py-2 rounded-lg text-xs font-bold transition active:scale-95"
+            title="Auto-detects all 7 finished assembly seams with gusset collision clearance"
+          >
+            <Target className="w-3.5 h-3.5 text-[#e97f01]" />
+            <span>AUTO-DETECT CREASES</span>
+          </button>
+          {activeModelName === 'Structural L-Bracket' && (
+            <button
+              onClick={handleFullRootPass}
+              className="px-2.5 py-2 bg-[#121A16] hover:bg-[#1A2520] border border-[#203426] text-[#6EE7B7] hover:text-white rounded-lg text-[10px] font-mono font-medium transition active:scale-95 whitespace-nowrap"
+              title="Plan single continuous 120mm root seam for Stage-1 subassembly (before gusset stiffeners are installed)"
+            >
+              120mm Root
+            </button>
+          )}
+        </div>
 
         <button
           onClick={handleOptimize}
@@ -356,60 +432,122 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                   <span>{seam.parameters.travelSpeed} mm/s</span>
                 </div>
 
-                {/* Contextual Action Toolbar: Figma-Style smooth micro-controls */}
+                {/* Air Gap / Non-Manufacturable Warning Tag */}
+                {seam.hasAirGap && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-2 p-2 rounded-md bg-[#241305] border border-[#F59E0B]/50 text-[#FCD34D] text-[10px] font-mono flex items-start gap-1.5"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-[#FBBF24]">Air Gap Detected (Non-Manufacturable)</span>
+                      <p className="text-[9px] text-[#FDE68A]/85 mt-0.5 font-sans leading-tight">
+                        Path bridges empty space ({seam.airGapDistanceMm || 0}mm gap) without underlying metal substrate.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Gusset Clash Warning & 1-Click Split Action */}
+                {checkGussetClash(seam) && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-2 p-2 rounded-md bg-[#231206] border border-[#F59E0B]/50 text-[#FCD34D] text-[10px] font-mono flex flex-col gap-1.5"
+                  >
+                    <div className="flex items-start gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold text-[#FBBF24]">OBSTACLE CLASH: Intersects Gusset Ribs</span>
+                        <p className="text-[9px] text-[#FDE68A]/85 mt-0.5 font-sans leading-tight">
+                          Physical torch will phase through solid gusset plates at X = ±33mm. Robot must stop before the triangle, retract, and resume on the other side.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleSplitAroundGussets(seam.id)}
+                      className="w-full py-1.5 px-2 bg-gradient-to-r from-[#B45309] to-[#D97706] hover:from-[#D97706] hover:to-[#F59E0B] text-white font-bold rounded text-[10px] transition active:scale-95 flex items-center justify-center gap-1.5 shadow-sm"
+                      title="Split continuous line into 3 collision-free passes (Left Outer Root, Center Bay, Right Outer Root) with 4mm setback"
+                    >
+                      <Split className="w-3 h-3 text-white" />
+                      <span>Split Around Gussets (3 Clean Passes)</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Contextual Action Toolbar: Sleek Balanced CAD Control Bar */}
                 {isSelected && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="flex items-center justify-between pt-2 mt-2 border-t border-[#1F2B1E] text-[10px] font-mono"
+                    className="pt-2 mt-2 border-t border-[#1F2B1E] flex flex-col gap-1.5 font-mono text-[10px]"
                   >
-                    <div className="flex items-center gap-1">
+                    {/* Primary Toolpath Execution & Reversal */}
+                    <div className="grid grid-cols-2 gap-1.5">
                       <button
                         onClick={() => startSimulation(seam.id)}
-                        className="px-2 py-1 bg-[#142618] hover:bg-[#1E3B24] rounded-md border border-[#234E2B] text-[#86EFAC] hover:text-white transition-all duration-150 active:scale-95 flex items-center gap-1 font-semibold"
+                        className="py-1 px-2 bg-gradient-to-r from-[#142618] to-[#1E3B24] hover:from-[#1A3320] hover:to-[#284E30] rounded-md border border-[#234E2B] text-[#86EFAC] hover:text-white transition-all duration-150 active:scale-95 flex items-center justify-center gap-1.5 font-semibold shadow-sm"
                         title="Simulate / test this specific seam path only"
                       >
-                        <Play className="w-2.5 h-2.5 fill-current text-[#4ADE80]" />
-                        <span>Preview</span>
+                        <Play className="w-3 h-3 fill-current text-[#4ADE80]" />
+                        <span>Simulate Seam</span>
                       </button>
-                      <button
-                        onClick={() => handleMoveUp(idx)}
-                        disabled={idx === 0}
-                        className="px-2 py-1 bg-[#162016] hover:bg-[#202E20] disabled:opacity-25 rounded-md border border-[#273826] text-[#A6BAA5] hover:text-white transition-all duration-150 active:scale-95"
-                        title="Move earlier in sequence (welds sooner)"
-                      >
-                        ▲ Up
-                      </button>
-                      <button
-                        onClick={() => handleMoveDown(idx)}
-                        disabled={idx === seams.length - 1}
-                        className="px-2 py-1 bg-[#162016] hover:bg-[#202E20] disabled:opacity-25 rounded-md border border-[#273826] text-[#A6BAA5] hover:text-white transition-all duration-150 active:scale-95"
-                        title="Move later in sequence (welds later)"
-                      >
-                        ▼ Down
-                      </button>
+
                       <button
                         onClick={() => reverseSeamDirection(seam.id)}
-                        className="px-2 py-1 bg-[#12231C] hover:bg-[#1A3328] rounded-md border border-[#1E4334] text-[#6EE7B7] hover:text-white transition-all duration-150 active:scale-95 flex items-center gap-1 font-medium"
+                        className="py-1 px-2 bg-[#12231C] hover:bg-[#1A3328] rounded-md border border-[#1E4334] text-[#6EE7B7] hover:text-white transition-all duration-150 active:scale-95 flex items-center justify-center gap-1.5 font-medium"
                         title="Flip start & end points (reverse travel direction of the snake torch)"
                       >
-                        <span>⇄ Flip Path</span>
-                      </button>
-                      <button
-                        onClick={() => flipSeamNormal(seam.id)}
-                        className="px-2 py-1 bg-[#17212B] hover:bg-[#1E2E3E] rounded-md border border-[#23435E] text-[#7DD3FC] hover:text-white transition-all duration-150 active:scale-95 flex items-center gap-1 font-medium"
-                        title="Invert torch normal vector 180° (flips approach and retract side)"
-                      >
-                        <span>⤾ Invert Normal</span>
+                        <ArrowLeftRight className="w-3 h-3" />
+                        <span>Reverse Path</span>
                       </button>
                     </div>
 
-                    <button
-                      onClick={() => removeSeam(seam.id)}
-                      className="px-2 py-1 bg-[#231212] hover:bg-[#351616] rounded-md border border-[#441B1B] text-[#FCA5A5] hover:text-white transition-all duration-150 active:scale-95 font-medium"
-                      title="Delete seam (or press Delete key)"
-                    >
-                      ✕ Delete
-                    </button>
+                    {/* Secondary Sequence & Angle Micro-Controls */}
+                    <div className="flex items-center justify-between gap-1 pt-0.5">
+                      <div className="flex items-center gap-1.5">
+                        {/* Segmented Reorder Pill */}
+                        <div className="flex items-center bg-[#141C14] border border-[#223021] rounded-md p-0.5">
+                          <button
+                            onClick={() => handleMoveUp(idx)}
+                            disabled={idx === 0}
+                            className="px-2 py-0.5 hover:bg-[#1F2E1E] disabled:opacity-20 rounded text-[#A6BAA5] hover:text-white transition flex items-center gap-0.5 text-[9px]"
+                            title="Move earlier in welding sequence"
+                          >
+                            <ArrowUp className="w-2.5 h-2.5" />
+                            <span>Up</span>
+                          </button>
+                          <div className="w-px h-3 bg-[#223021]" />
+                          <button
+                            onClick={() => handleMoveDown(idx)}
+                            disabled={idx === seams.length - 1}
+                            className="px-2 py-0.5 hover:bg-[#1F2E1E] disabled:opacity-20 rounded text-[#A6BAA5] hover:text-white transition flex items-center gap-0.5 text-[9px]"
+                            title="Move later in welding sequence"
+                          >
+                            <ArrowDown className="w-2.5 h-2.5" />
+                            <span>Down</span>
+                          </button>
+                        </div>
+
+                        {/* Invert Normal Button */}
+                        <button
+                          onClick={() => flipSeamNormal(seam.id)}
+                          className="px-2 py-1 bg-[#15202B] hover:bg-[#1C2C3C] rounded-md border border-[#23435E] text-[#7DD3FC] hover:text-white transition-all active:scale-95 flex items-center gap-1 text-[9px] font-medium"
+                          title="Invert torch normal vector 180° (flips approach and retract side)"
+                        >
+                          <RotateCw className="w-2.5 h-2.5" />
+                          <span>Flip Angle</span>
+                        </button>
+                      </div>
+
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => removeSeam(seam.id)}
+                        className="px-2 py-1 bg-[#231212]/80 hover:bg-[#351616] rounded-md border border-[#441B1B] text-[#FCA5A5] hover:text-white transition-all duration-150 active:scale-95 flex items-center gap-1 text-[9px] font-medium"
+                        title="Delete seam (or press Delete key)"
+                      >
+                        <Trash2 className="w-2.5 h-2.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

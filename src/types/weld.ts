@@ -37,6 +37,8 @@ export interface WeldSeam {
   length: number; // mm
   parameters: WeldParameters;
   createdVia: 'manual' | 'detected';
+  hasAirGap?: boolean;
+  airGapDistanceMm?: number;
 }
 
 export interface PartMetadata {
@@ -80,6 +82,7 @@ export interface WeldSeamExport {
     interpass_delay_sec: number;
     wire_diameter_mm?: number;
   };
+  air_gap_detected?: boolean;
   waypoints: Array<[number, number, number]>;
 }
 

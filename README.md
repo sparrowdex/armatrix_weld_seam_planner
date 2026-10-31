@@ -55,8 +55,24 @@ This application provides an end-to-end, browser-based workflow fulfilling these
 * **Interpass Cooling Delay**: Configurable cooling duration between seams to prevent thin metal buckling.
 * Reverse travel direction (swap Start ⇄ End coordinates) with a single click.
 
-### 5. High-Fidelity 3D Simulation Engine
+### 5. High-Fidelity 3D Simulation Engine & 4-Waypoint Trajectory Pipeline
 * Realistic 3D model of **Armatrix's modular welding end-effector** (dark graphite casing with safety red collar and copper nozzle).
+* **The 4-Stage Collision-Free Trajectory Pipeline**:
+
+```mermaid
+flowchart LR
+    A["1. Approach Point\n(Blue Dot in Air)"] -->|Dashed Standoff Line| B["2. Arc Ignition\n(Blue Dot on Metal)"]
+    B -->|Welding Along Seam\n(Green Line / Torch Moves)| C["3. Arc Cutoff\n(Red Dot on Metal)"]
+    C -->|Dashed Retract Line| D["4. Retract Point\n(Red Dot in Air)"]
+```
+
+```
+[1. Approach Point]        [2. Arc Ignition]              [3. Arc Cutoff]         [4. Retract Point]
+  (Blue Dot in Air)          (Blue Dot on Metal)            (Red Dot on Metal)       (Red Dot in Air)
+         ○ -------------------------> ● =========================> ● -------------------------> ○
+            Dashed Standoff Line        Active Seam Arc Travel        Dashed Retract Line
+```
+
 * Animated simulation executing:
   1. **Rapid Traverse**: Moves from previous retract point to next approach point at 120 mm/s.
   2. **Safe Approach**: Descends along the surface normal vector to touch off at the seam start point.

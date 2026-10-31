@@ -64,7 +64,7 @@ export interface WeldState {
   setManualStartPoint: (point: Vector3D | null, normal: Vector3D | null) => void;
   setManualCandidatePoint: (point: Vector3D | null, normal: Vector3D | null) => void;
 
-  addSeam: (start: Vector3D, end: Vector3D, normal: Vector3D, createdVia?: 'manual' | 'detected', customName?: string) => WeldSeam;
+  addSeam: (start: Vector3D, end: Vector3D, normal: Vector3D, createdVia?: 'manual' | 'detected', customName?: string, hasAirGap?: boolean, airGapDistanceMm?: number) => WeldSeam;
   removeSeam: (id: string) => void;
   updateSeamParameters: (id: string, params: Partial<WeldParameters>) => void;
   selectSeam: (id: string | null) => void;
@@ -103,7 +103,7 @@ const defaultWeldParams: WeldParameters = {
   voltage: 24, // Volts
   wireFeedSpeed: 6.5, // m/min
   gasFlowRate: 14, // L/min (Argon mix)
-  torchLeadAngle: 10, // degrees
+  torchLeadAngle: 0, // degrees (0° bisecting clearance for confined bays/gussets)
   torchTiltAngle: 45, // degrees for fillet
   approachDistance: 25, // mm
   retractDistance: 30, // mm
@@ -179,7 +179,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   setManualStartPoint: (point, normal) => set({ manualStartPoint: point, manualStartNormal: normal }),
   setManualCandidatePoint: (point, normal) => set({ manualCandidatePoint: point, manualCandidateNormal: normal }),
 
-  addSeam: (start, end, normal, createdVia = 'manual', customName) => {
+  addSeam: (start, end, normal, createdVia = 'manual', customName, hasAirGap, airGapDistanceMm) => {
     const dx = end.x - start.x;
     const dy = end.y - start.y;
     const dz = end.z - start.z;
@@ -206,6 +206,8 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       length,
       parameters: { ...get().defaultParameters, nozzleType: get().nozzleType },
       createdVia,
+      hasAirGap,
+      airGapDistanceMm,
     };
 
     set({
@@ -471,6 +473,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
           interpass_delay_sec: seam.parameters.interpassDelay,
           wire_diameter_mm: seam.parameters.wireDiameter ?? 1.2,
         },
+        air_gap_detected: seam.hasAirGap || false,
         waypoints,
       };
     });

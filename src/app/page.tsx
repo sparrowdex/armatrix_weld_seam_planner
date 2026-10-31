@@ -104,7 +104,11 @@ export default function Home() {
 
         {/* 3D Interactive Viewport - Automatically fills 100% of remaining width */}
         <div className="flex-1 h-full min-w-0 relative overflow-hidden">
-          <ViewportCanvas isRightCollapsed={isRightCollapsed} isLeftCollapsed={isLeftCollapsed} />
+          <ViewportCanvas
+            isRightCollapsed={isRightCollapsed}
+            isLeftCollapsed={isLeftCollapsed}
+            onExpandRight={() => setIsRightCollapsed(false)}
+          />
           <SimulationHUD />
         </div>
 

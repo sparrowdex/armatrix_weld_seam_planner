@@ -1,0 +1,56 @@
+# Changelog
+
+All notable changes to the Armatrix Autonomous Weld Seam Planner project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+
+## [1.3.0] - 2026-10-31
+
+### Added
+- **Real-Time Air Gap Substrate Validation**: Algorithmic substrate detection (`validatePathSubstrate`) sampling candidate seam paths at $25\%$, $50\%$, and $75\%$ intervals to probe inward against the workpiece mesh. Dynamically updates the live targeting HUD with an amber `NO SUBSTRATE: Bridging empty space (${gapDistanceMm} mm air gap) — Non-manufacturable!` banner while drawing, switches preview/deposited beads to high-visibility amber hazard styling, tags non-manufacturable seams with amber alerts across Seam List, In-Game HUD, and Parameters Panel, and includes `"air_gap_detected": true` in the exported Weld Job JSON payload.
+- **Obstacle Collision Detection & 1-Click Path Splitter**: Added automatic geometric clash detection for seams intersecting structural gusset ribs ($x = \pm 33\text{ mm}$). If a continuous seam traverses solid steel plates, the planner displays an amber `OBSTACLE CLASH` warning with a 1-click `[Split Around Gussets]` button that instantly segments the line into 3 collision-free passes (`Left Outer Root`, `Center Bay Root`, `Right Outer Root`) with automated retract and rapid traverse.
+- **Game-Style Cinematic Camera Focus & Zoom**: Seamless automated camera lerp when mapping or selecting any seam. OrbitControls target smoothly glides to the seam midpoint while the camera positions into a dramatic $3/4$ elevated close-up perspective ($90\text{--}150\text{ mm}$ framing distance) with instant manual break-out upon user interaction.
+- **Tactical In-Game Seam Specs HUD Card**: Aerospace-inspired floating telemetry overlay displayed when the right sidebar is collapsed. Shows sequence order, joint type, travel speed, arc power, wire feed, and tilt/lead angles with 1-click micro-actions (`[▶ Simulate]`, `[🎯 Re-Focus]`, and `[Open Parameters Panel]`).
+
+### Fixed
+- **Eliminated Structure Phasing with Coaxial Tooling & $4\text{ mm}$ Nozzle Setback**: Re-engineered the robotic torch model to be strictly coaxial along the tool centerline axis ($4.2\text{ mm}$ maximum outer radius), completely eliminating asymmetric radial handle offsets that penetrated gussets. Applied standard $4\text{ mm}$ robotic weld crater setback to auto-detected crease endpoints, guaranteeing that the $3.2\text{ mm}$ outer gas cup maintains safe clearance from all transverse gusset walls.
+- **Active Simulation Bead & Torch Wire Sizing Synchronization**: Fixed hardcoded $2.5\text{ mm}$ active depositing bead radius and $3.0\text{ mm}$ puddle sphere during simulation. Both the depositing cylinder, the molten puddle, and the physical protruding wire on the robotic torch model now scale dynamically with the selected wire diameter ($0.8\text{ mm}$, $1.0\text{ mm}$, $1.2\text{ mm}$, $1.6\text{ mm}$), ensuring an ultra-thin bead remains thin while depositing and transitions seamlessly into the completed seam.
+- **6-DOF Orthonormal Torch Pose Frame**: Replaced unconstrained setFromUnitVectors geodesic rotation with a robust orthonormal basis [X_world, Y_world, Z_world] via orientTorch. Guarantees the curved gooseneck handle curves UP and OUT into open clearance above the part, completely eliminating upside-down handle flips into the floor plate and horizontal skewing into gusset ribs.
+- **Transverse Wall Gusset Clearance**: Standardized default seam lead angle to 0° in confined stiffener bays, ensuring approach and retract vectors stay strictly in the open bisector plane rather than pitching backward through solid steel gusset plates.
+- **Joint Type Nominal Tilt Baseline**: Parameterized getEffectiveTorchVector to calculate work tilt deltas from joint-specific baselines (45° for FILLET/CORNER/LAP bisectors, 0° for flat BUTT/GROOVE joints).
+## [1.2.0] - 2026-10-31
+
+### Added
+- **Dynamic 3D Torch Orientation & Angle Resolution**: Real-time calculation of work tilt angles (around seam line) and travel lead angles (push angle) via `getEffectiveTorchVector`.
+- **CAD Magnetic Object Snapping (OSNAP)**: 3-mode magnetic snapping (Seam Endpoint, Mesh Triangle Corner/Vertex, Orthogonal Axis Lock).
+- **Multi-Orientation Seam Controls**: 1-click 180Â° Invert Normal, 45Â° Fillet bisector preset, and Cartesian plane alignment (+Y, +Z, +X).
+- **Welding Wire Diameter Selection**: Support for AWS ER70S-6 wire sizes (0.8 mm, 1.0 mm, 1.2 mm, 1.6 mm) with dynamic 3D bead radius scaling.
+- **Machined Steel Fixture Platen**: 360 Ã— 8 Ã— 360 mm platen table with chamfered frame and leveling clamping lugs.
+- **Figma-Style Inline Seam Renaming**: Double-click or click edit pencil to rename seams directly in the list.
+- **Targeted Single-Seam Preview**: Ability to preview/simulate individual seams via `â–¶ Simulate Seam` button and HUD step scrubber.
+
+### Changed
+- **Revamped Seam Action Toolbar**: Replaced cluttered single-row buttons with an ergonomic two-tier CAD toolbar (Primary Simulate & Reverse row + Secondary Reorder, Angle Invert & Delete row).
+- **Enhanced CAD Workpiece Specs Card**: Upgraded raw dimensions and triangle count into an informative telemetry HUD with bounding envelope and mesh density tooltips.
+- **Targeting Banner Polish**: Redesigned from pill shape to sleek `rounded-lg` white card with smooth fade-in/fade-out animations; eliminated all pulse dots and slashes.
+- **Standardized Torch Tooling**: Consolidated to the authentic curved industrial Binzel gooseneck torch; removed redundant pencil toggle.
+- **Button Styling**: Upgraded flat orange buttons to multi-stop metallic industrial gradients (`from-[#e97f01] via-[#d46a00] to-[#b35400]`).
+
+### Fixed
+- **Torch Simulation Angle Disconnect**: Fixed issue where the 3D torch model stood straight up and plunged vertically regardless of the selected joint tilt angle; torch now physically angles to avoid wall collision.
+- **Reticle Rotation Lock**: Fixed bug where the cursor reticle's arrow was stuck pointing +Y `(0, 1, 0)`; reticle now dynamically rotates flush to any 3D face normal.
+- **Gusset Piercing**: Partitioned L-bracket crease seams around the 8 mm vertical steel stiffeners to prevent seams from cutting through solid ribs.
+- **UI Tab Collision**: Centered the targeting HUD banner to prevent overlapping with collapsed edge tabs.
+
+## [1.0.0] - 2026-10-30
+
+### Initial Release
+- STL CAD ingestion with client-side Three.js raycasting and telemetry.
+- Automated crease seam detection and manual click-to-weld.
+- Armatrix continuum snake-arm cycle time estimation and reach envelope validation.
+- Progressive metallic weld bead deposition simulation with electric arc flare.
+- Exportable Weld Job JSON conforming to Armatrix downstream robot controller schema.
+
+
