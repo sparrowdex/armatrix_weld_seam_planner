@@ -609,7 +609,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
       //    guaranteeing zero visual z-fighting or glitching!
       // 2. If NOT SELECTED and HAS BEEN WELDED/SIMULATED: Render shiny metallic bead (#D4E2D4, metalness 0.92, roughness 0.18).
       // 3. If NOT SELECTED and NOT WELDED: Render clean CAD planning green (#22C55E).
-      const beadRadius = isSelected ? 2.5 : isCompleted ? 2.3 : 1.7;
+      const wireScale = (seam.parameters.wireDiameter ?? 1.2) / 1.2;
+      const beadRadius = (isSelected ? 2.5 : isCompleted ? 2.3 : 1.7) * wireScale;
       const cylinderGeom = new THREE.CylinderGeometry(beadRadius, beadRadius, length, 16);
       cylinderGeom.translate(0, length / 2, 0);
       cylinderGeom.rotateX(Math.PI / 2);

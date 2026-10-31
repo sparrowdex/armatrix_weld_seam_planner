@@ -221,6 +221,30 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
                 className="w-full h-1 bg-[#1A2519] rounded cursor-pointer"
               />
             </div>
+
+            {/* Welding Wire Diameter (AWS ER70S-6) */}
+            <div>
+              <div className="flex justify-between text-[11px] mb-1 font-mono">
+                <span className="text-[#8EA08D]">Wire Diameter (AWS ER70S-6)</span>
+                <span className="font-semibold text-[#e97f01]">{selectedSeam.parameters.wireDiameter ?? 1.2} mm</span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[0.8, 1.0, 1.2, 1.6].map((dia) => (
+                  <button
+                    key={dia}
+                    type="button"
+                    onClick={() => updateSeamParameters(selectedSeam.id, { wireDiameter: dia })}
+                    className={`py-1 text-[10px] font-mono rounded border transition ${
+                      (selectedSeam.parameters.wireDiameter ?? 1.2) === dia
+                        ? 'bg-[#e97f01] text-white border-[#e97f01] font-bold shadow-sm'
+                        : 'bg-[#141C14] hover:bg-[#1D291D] border-[#253523] text-[#A6BAA5]'
+                    }`}
+                  >
+                    {dia} mm
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Torch Orientation & Clearances */}

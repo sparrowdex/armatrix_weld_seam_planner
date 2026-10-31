@@ -23,6 +23,7 @@ export interface WeldParameters {
   approachDistance: number; // mm (safe approach height)
   retractDistance: number; // mm (safe retract height)
   interpassDelay: number; // seconds (cooling delay before next seam)
+  wireDiameter?: number; // mm (0.8, 1.0, 1.2, 1.6)
   nozzleType?: TorchNozzleType;
 }
 
@@ -77,6 +78,7 @@ export interface WeldSeamExport {
     wire_feed_m_min: number;
     shielding_gas_l_min: number;
     interpass_delay_sec: number;
+    wire_diameter_mm?: number;
   };
   waypoints: Array<[number, number, number]>;
 }

@@ -104,6 +104,7 @@ const defaultWeldParams: WeldParameters = {
   approachDistance: 25, // mm
   retractDistance: 30, // mm
   interpassDelay: 5, // 5s cooling
+  wireDiameter: 1.2, // mm (AWS ER70S-6 structural standard)
   nozzleType: 'narrow',
 };
 
@@ -411,6 +412,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
           wire_feed_m_min: seam.parameters.wireFeedSpeed,
           shielding_gas_l_min: seam.parameters.gasFlowRate,
           interpass_delay_sec: seam.parameters.interpassDelay,
+          wire_diameter_mm: seam.parameters.wireDiameter ?? 1.2,
         },
         waypoints,
       };
