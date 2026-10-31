@@ -64,7 +64,7 @@ export interface WeldState {
   setManualStartPoint: (point: Vector3D | null, normal: Vector3D | null) => void;
   setManualCandidatePoint: (point: Vector3D | null, normal: Vector3D | null) => void;
 
-  addSeam: (start: Vector3D, end: Vector3D, normal: Vector3D, createdVia?: 'manual' | 'detected') => WeldSeam;
+  addSeam: (start: Vector3D, end: Vector3D, normal: Vector3D, createdVia?: 'manual' | 'detected', customName?: string) => WeldSeam;
   removeSeam: (id: string) => void;
   updateSeamParameters: (id: string, params: Partial<WeldParameters>) => void;
   selectSeam: (id: string | null) => void;
@@ -177,7 +177,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   setManualStartPoint: (point, normal) => set({ manualStartPoint: point, manualStartNormal: normal }),
   setManualCandidatePoint: (point, normal) => set({ manualCandidatePoint: point, manualCandidateNormal: normal }),
 
-  addSeam: (start, end, normal, createdVia = 'manual') => {
+  addSeam: (start, end, normal, createdVia = 'manual', customName) => {
     const dx = end.x - start.x;
     const dy = end.y - start.y;
     const dz = end.z - start.z;
@@ -196,7 +196,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
 
     const newSeam: WeldSeam = {
       id,
-      name: `Seam ${nextOrder} (${length} mm)`,
+      name: customName || `Seam ${nextOrder}`,
       sequenceOrder: nextOrder,
       startPoint: start,
       endPoint: end,
