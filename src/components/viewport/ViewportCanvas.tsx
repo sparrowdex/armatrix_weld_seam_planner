@@ -1030,8 +1030,23 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
       const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
       const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
-      const arrowHelper = new THREE.ArrowHelper(dir, mid, Math.min(12, length * 0.35), isSelectedAndIdle ? 0xffffff : 0xe97f01, 2.4, 1.6);
-      seamContainer.add(arrowHelper);
+
+      // Travel direction arrow: offset outward parallel to the seam so it floats cleanly alongside/above the bead
+      // Automatically fades out/hides completely during active simulation to prevent visual clutter with live torch/sparks
+      if (!isSimulating) {
+        const arrowOffset = new THREE.Vector3().copy(normal).multiplyScalar(beadRadius + 2.5);
+        const arrowPos = new THREE.Vector3().copy(mid).add(arrowOffset);
+        const arrowLen = Math.min(12, Math.max(5, length * 0.35));
+        const arrowHelper = new THREE.ArrowHelper(
+          dir,
+          arrowPos,
+          arrowLen,
+          isSelectedAndIdle ? 0xffffff : 0xe97f01,
+          2.4,
+          1.6
+        );
+        seamContainer.add(arrowHelper);
+      }
 
       if (showNormals) {
         const effectiveVector = getEffectiveTorchVector(

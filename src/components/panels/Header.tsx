@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
+import Link from 'next/link';
 import { useWeldStore } from '@/store/useWeldStore';
 import {
   Upload,
@@ -93,13 +94,22 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
 
   return (
     <header className="h-12 bg-transparent px-6 sm:px-8 flex items-center justify-between z-20 select-none pointer-events-auto">
-      {/* Brand: Standalone Armatrix logo + refined logotype with comfortable left margin */}
-      <div className="flex items-center gap-3 shrink-0">
-        <ArmatrixLogo className="w-6 h-6 shrink-0" color="#e97f01" />
-        <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-extrabold tracking-wider text-xs text-white">
-          ARMATRIX
-        </span>
-      </div>
+      {/* Brand: Standalone Armatrix logo + refined logotype with link to Homepage */}
+      <Link
+        href="/"
+        className="flex items-center gap-3 shrink-0 group hover:opacity-90 transition active:scale-95 cursor-pointer"
+        title="Return to Armatrix Homepage"
+      >
+        <ArmatrixLogo className="w-6 h-6 shrink-0 group-hover:scale-105 transition-transform" color="#e97f01" />
+        <div className="flex items-center gap-2">
+          <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-extrabold tracking-wider text-xs text-white">
+            ARMATRIX
+          </span>
+          <span className="text-[10px] font-mono text-[#7D8F7C] border border-[#202B1E] px-1.5 py-0.5 rounded bg-[#101710] hidden sm:inline-block">
+            PLANNER
+          </span>
+        </div>
+      </Link>
 
       {/* Center Controls: Seamless Dropdowns & Feature Toggles */}
       <div className="flex items-center gap-2">

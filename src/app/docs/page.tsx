@@ -18,13 +18,21 @@ export default function DocsPage() {
           </span>
         </div>
 
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#141E14] hover:bg-[#1D2A1C] text-xs font-mono text-[#A4B5A3] hover:text-white border border-[#223121] transition active:scale-95"
-        >
-          <ArrowLeft className="w-3.5 h-3.5 text-[#e97f01]" />
-          <span>Back to 3D Planner</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#141E14] hover:bg-[#1D2A1C] text-xs font-mono text-[#A4B5A3] hover:text-white border border-[#223121] transition active:scale-95"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-[#8EA28D]" />
+            <span>Home</span>
+          </Link>
+          <Link
+            href="/planner"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white text-xs font-bold transition active:scale-95 shadow-md shadow-[#e97f01]/20"
+          >
+            <span>Launch 3D Planner →</span>
+          </Link>
+        </div>
       </header>
 
       {/* Main Documentation Container */}

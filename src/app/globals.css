@@ -15,7 +15,7 @@ body {
   background: var(--background);
   font-family: '42dot Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   letter-spacing: 0.22px;
-  overflow: hidden;
+  overflow-x: hidden;
   user-select: none;
 }
 

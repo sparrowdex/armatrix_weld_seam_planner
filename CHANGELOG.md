@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.6.0] - 2026-10-31
+
+### Added
+- **Armatrix Commercial Product Homepage (`/`)**: Built a high-converting industrial landing page at `localhost:3000` (`/`) featuring Continuum Robotics overview, 4-stage motion pipeline breakdown, pre-loaded CAD part benchmarks, and instant launch CTAs.
+- **Dedicated 3D CAD Planner Route (`/planner`)**: Transferred the full 3D CAD/CAM workstation to `/planner` with seamless bidirectional header navigation between the product homepage, technical documentation, and 3D simulation canvas.
+- **Parallel Offset Travel Direction Arrow**: Offset the travel direction arrowhead outward along the workpiece surface normal vector ($r_{\text{bead}} + 2.5\text{ mm}$), aligning it cleanly parallel to the bead rather than intersecting the cylinder axis.
+- **Automated Arrow Simulation Fade-Out**: Programmed the direction arrow to automatically fade out / hide completely while the weld path simulation is running (`isSimulating === true`), ensuring the live torch nozzle, electrode wire, arc sparks, and depositing metallic bead are completely unobstructed.
+
+### Changed
+- **Global Page Scroll Architecture**: Adjusted body styling in `globals.css` and `layout.tsx` to `overflow-x-hidden min-h-screen`, enabling natural vertical scrolling for the homepage (`/`) and documentation (`/docs`) while maintaining strict `overflow-hidden` fixed containment for the CAD planner (`/planner`).
+- **Docs Navigation**: Updated `/docs` top bar with quick-switch links to both `Home` and `Launch 3D Planner →`.
+
 ## [1.5.0] - 2026-10-31
 
 ### Added
