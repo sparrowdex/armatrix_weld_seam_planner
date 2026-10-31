@@ -45,10 +45,10 @@ export const SimulationHUD: React.FC = () => {
         <button
           onClick={() => (isSimulating ? pauseSimulation() : startSimulation(selectedSeamId))}
           style={{ fontFamily: 'Onest, sans-serif' }}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-bold text-xs transition active:scale-95 shrink-0 shadow-md ${
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg font-bold text-xs transition-all duration-200 active:scale-95 shrink-0 shadow-lg ${
             isSimulating
-              ? 'bg-[#EAB308] text-black hover:brightness-105'
-              : 'bg-[#e97f01] hover:brightness-110 text-white'
+              ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-black border border-amber-300/60 font-black'
+              : 'bg-gradient-to-r from-[#e97f01] via-[#d46a00] to-[#b35400] hover:from-[#f38b0e] hover:to-[#c25e00] text-white border border-[#f59e0b]/40'
           }`}
         >
           {isSimulating ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
@@ -113,7 +113,7 @@ export const SimulationHUD: React.FC = () => {
             ◀
           </button>
           <strong className="text-white font-bold px-0.5">
-            {Math.min(simCurrentSeamIndex + 1, seams.length)} / {seams.length}
+            {Math.min(simCurrentSeamIndex + 1, seams.length)} of {seams.length}
           </strong>
           <button
             onClick={() => {
@@ -137,9 +137,10 @@ export const SimulationHUD: React.FC = () => {
             <button
               key={spd}
               onClick={() => setPlaybackSpeed(spd)}
-              style={playbackSpeed === spd ? { backgroundColor: '#e97f01' } : {}}
-              className={`px-2 py-0.5 rounded-full font-bold transition ${
-                playbackSpeed === spd ? 'text-white' : 'text-[#7E8F7D] hover:text-white'
+              className={`px-2 py-0.5 rounded-full font-bold transition-all text-[10px] ${
+                playbackSpeed === spd
+                  ? 'bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white shadow-sm'
+                  : 'text-[#7E8F7D] hover:text-white'
               }`}
             >
               {spd}X

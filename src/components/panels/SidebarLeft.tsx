@@ -199,9 +199,9 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
         <button
           onClick={() => setMode(mode === 'add_seam' ? 'orbit' : 'add_seam')}
           style={{ fontFamily: 'Onest, sans-serif' }}
-          className={`w-full flex items-center justify-center gap-2 py-2 rounded text-xs font-bold transition active:scale-95 border ${
+          className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 border ${
             mode === 'add_seam'
-              ? 'bg-[#e97f01] text-white border-[#e97f01]'
+              ? 'bg-gradient-to-r from-[#e97f01] via-[#d46a00] to-[#b35400] text-white border-[#f59e0b]/50 shadow-md'
               : 'bg-[#121A12] hover:bg-[#1A241A] text-[#B8C8B7] border-[#223121]'
           }`}
         >
@@ -279,9 +279,9 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold font-mono shrink-0 transition-colors ${
+                      className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold font-mono shrink-0 transition-all ${
                         isSelected
-                          ? 'bg-[#e97f01]/20 text-[#e97f01] border border-[#e97f01]/40'
+                          ? 'bg-gradient-to-br from-[#e97f01] to-[#b35400] text-white shadow-sm border border-[#f59e0b]/40'
                           : isCompleted
                           ? 'bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30'
                           : 'bg-[#182217] text-[#7E937D] border border-[#223021]'

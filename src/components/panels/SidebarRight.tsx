@@ -234,9 +234,9 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
                     key={dia}
                     type="button"
                     onClick={() => updateSeamParameters(selectedSeam.id, { wireDiameter: dia })}
-                    className={`py-1 text-[10px] font-mono rounded border transition ${
+                    className={`py-1 text-[10px] font-mono rounded-md border transition-all duration-150 ${
                       (selectedSeam.parameters.wireDiameter ?? 1.2) === dia
-                        ? 'bg-[#e97f01] text-white border-[#e97f01] font-bold shadow-sm'
+                        ? 'bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white border-[#f59e0b]/40 font-bold shadow-sm'
                         : 'bg-[#141C14] hover:bg-[#1D291D] border-[#253523] text-[#A6BAA5]'
                     }`}
                   >

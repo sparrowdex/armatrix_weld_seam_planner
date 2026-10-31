@@ -140,8 +140,10 @@ export default function Home() {
               if (isLeftCollapsed) setIsRightCollapsed(true);
             }}
             style={{ fontFamily: 'Onest, sans-serif' }}
-            className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 ${
-              !isLeftCollapsed ? 'bg-[#e97f01] text-white' : 'text-[#889988]'
+            className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all ${
+              !isLeftCollapsed
+                ? 'bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white shadow-sm'
+                : 'text-[#889988] hover:text-white'
             }`}
           >
             <ListOrdered className="w-3.5 h-3.5" />
@@ -153,8 +155,10 @@ export default function Home() {
               if (isRightCollapsed) setIsLeftCollapsed(true);
             }}
             style={{ fontFamily: 'Onest, sans-serif' }}
-            className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 ${
-              !isRightCollapsed ? 'bg-[#e97f01] text-white' : 'text-[#889988]'
+            className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all ${
+              !isRightCollapsed
+                ? 'bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white shadow-sm'
+                : 'text-[#889988] hover:text-white'
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />

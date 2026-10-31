@@ -195,8 +195,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
       <div className="flex items-center gap-2">
         <button
           onClick={onOpenExport}
-          style={{ fontFamily: 'Onest, sans-serif', backgroundColor: '#e97f01' }}
-          className="flex items-center gap-1.5 hover:brightness-110 text-white px-3.5 py-1.5 rounded text-xs font-bold transition active:scale-95 shadow-md"
+          style={{ fontFamily: 'Onest, sans-serif' }}
+          className="flex items-center gap-2 bg-gradient-to-r from-[#e97f01] via-[#d46a00] to-[#b35400] hover:from-[#f38b0e] hover:to-[#c25e00] text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95 shadow-lg border border-[#f59e0b]/40"
         >
           <Download className="w-3.5 h-3.5" />
           <span>EXPORT WELD JOB</span>

@@ -1239,27 +1239,30 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
         </div>
       </div>
 
-      {/* Centered Reticle Targeting Banner (Never collides with sidebars or collapsed tabs) */}
-      {mode === 'add_seam' && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 transition-all duration-300 ease-out whitespace-nowrap pointer-events-none">
-          <div className="bg-[#0C120C]/95 border border-[#e97f01]/60 text-white font-mono text-xs px-4 py-2 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2.5 font-bold tracking-wide">
-            <span className="w-2 h-2 rounded-full bg-[#e97f01] shrink-0" />
-            <span className="text-[#e97f01]">
-              {manualStartPoint ? 'STEP 2:' : 'CLICK-TO-WELD:'}
+      {/* Centered Reticle Targeting Banner (No pill shape, no pulse dots, white text, smooth fade in/out, zero slashes) */}
+      <div
+        className={`absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 whitespace-nowrap pointer-events-none transition-all duration-300 ease-out ${
+          mode === 'add_seam'
+            ? 'opacity-100 translate-y-0 scale-100'
+            : 'opacity-0 -translate-y-2 scale-95 pointer-events-none'
+        }`}
+      >
+        <div className="bg-[#0C120C]/92 border border-white/20 text-white font-mono text-xs px-4 py-2.5 rounded-lg shadow-2xl backdrop-blur-md flex items-center gap-3 tracking-wide">
+          <span className="text-white font-bold">
+            {manualStartPoint ? 'STEP 2:' : 'CLICK-TO-WELD:'}
+          </span>
+          <span className="text-[#E2ECE1] font-normal">
+            {manualStartPoint
+              ? `Click 2nd point to finalize seam (${measuredDist || 0} mm) — [ESC to Cancel]`
+              : 'Click 3D part to anchor start point — [ESC to Cancel]'}
+          </span>
+          {activeSnapType && (
+            <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] tracking-wider font-mono font-semibold">
+              SNAP: {activeSnapType}
             </span>
-            <span className="text-[#E2ECE1]">
-              {manualStartPoint
-                ? `CLICK 2ND POINT TO FINALIZE SEAM (${measuredDist || 0} mm) — [ESC to Cancel]`
-                : 'CLICK 3D PART TO ANCHOR START POINT — [ESC to Cancel]'}
-            </span>
-            {activeSnapType && (
-              <span className="px-2 py-0.5 rounded-full bg-[#22C55E]/20 text-[#4ADE80] border border-[#22C55E]/40 text-[10px] tracking-wider font-mono">
-                SNAP: {activeSnapType}
-              </span>
-            )}
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
