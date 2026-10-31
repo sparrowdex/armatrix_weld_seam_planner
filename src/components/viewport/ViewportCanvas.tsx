@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { STLLoader } from 'three-stdlib';
 import { useWeldStore } from '@/store/useWeldStore';
-import { Vector3D, TorchNozzleType } from '@/types/weld';
+import { Vector3D, TorchNozzleType, WeldSeam } from '@/types/weld';
 
 // Authentic Robotic Welding Torch & Sleek Pencil Industrial End-Effectors
 function buildRoboticTorch(style: 'robotic_gooseneck' | 'sleek_pencil' = 'robotic_gooseneck'): THREE.Group {
@@ -157,6 +157,76 @@ function positionCylinderBetweenPoints(mesh: THREE.Mesh, p1: THREE.Vector3, p2: 
   mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
 }
 
+// CAD Magnetic Object Snapping (OSNAP) helper
+function getSnappedPoint(
+  hit: THREE.Intersection,
+  manualStartPoint: Vector3D | null,
+  seams: WeldSeam[],
+  mesh: THREE.Mesh
+): { point: THREE.Vector3; normal: THREE.Vector3; snapType: string | null } {
+  let p = hit.point.clone();
+  let n = hit.face ? hit.face.normal.clone().transformDirection(mesh.matrixWorld).normalize() : new THREE.Vector3(0, 1, 0);
+  let snapType: string | null = null;
+
+  // 1. Existing Seam Endpoint Magnetic Snap (8mm threshold)
+  for (const seam of seams) {
+    const s1 = new THREE.Vector3(seam.startPoint.x, seam.startPoint.y, seam.startPoint.z);
+    const s2 = new THREE.Vector3(seam.endPoint.x, seam.endPoint.y, seam.endPoint.z);
+    if (p.distanceTo(s1) < 8.0) {
+      return { point: s1, normal: new THREE.Vector3(seam.normal.x, seam.normal.y, seam.normal.z), snapType: 'SEAM ENDPOINT' };
+    }
+    if (p.distanceTo(s2) < 8.0) {
+      return { point: s2, normal: new THREE.Vector3(seam.normal.x, seam.normal.y, seam.normal.z), snapType: 'SEAM ENDPOINT' };
+    }
+  }
+
+  // 2. Mesh Triangle Corner / Vertex Snap (6mm threshold)
+  if (typeof hit.faceIndex === 'number' && mesh.geometry) {
+    const geom = mesh.geometry;
+    const pos = geom.attributes.position;
+    if (pos) {
+      const idx = hit.faceIndex * 3;
+      const vA = new THREE.Vector3().fromBufferAttribute(pos, idx).applyMatrix4(mesh.matrixWorld);
+      const vB = new THREE.Vector3().fromBufferAttribute(pos, idx + 1).applyMatrix4(mesh.matrixWorld);
+      const vC = new THREE.Vector3().fromBufferAttribute(pos, idx + 2).applyMatrix4(mesh.matrixWorld);
+
+      const dA = p.distanceTo(vA);
+      const dB = p.distanceTo(vB);
+      const dC = p.distanceTo(vC);
+      const minD = Math.min(dA, dB, dC);
+
+      if (minD < 6.0) {
+        if (minD === dA) return { point: vA, normal: n, snapType: 'VERTEX CORNER' };
+        if (minD === dB) return { point: vB, normal: n, snapType: 'VERTEX CORNER' };
+        if (minD === dC) return { point: vC, normal: n, snapType: 'VERTEX CORNER' };
+      }
+    }
+  }
+
+  // 3. Orthogonal Axis Lock from manualStartPoint (Snap to exact straight line along X, Y, or Z)
+  if (manualStartPoint) {
+    const dx = Math.abs(p.x - manualStartPoint.x);
+    const dy = Math.abs(p.y - manualStartPoint.y);
+    const dz = Math.abs(p.z - manualStartPoint.z);
+
+    if (dy < 4.5 && dz < 4.5 && dx > 6.0) {
+      p.y = manualStartPoint.y;
+      p.z = manualStartPoint.z;
+      snapType = 'AXIS LOCK (X)';
+    } else if (dx < 4.5 && dz < 4.5 && dy > 6.0) {
+      p.x = manualStartPoint.x;
+      p.z = manualStartPoint.z;
+      snapType = 'AXIS LOCK (Y)';
+    } else if (dx < 4.5 && dy < 4.5 && dz > 6.0) {
+      p.x = manualStartPoint.x;
+      p.y = manualStartPoint.y;
+      snapType = 'AXIS LOCK (Z)';
+    }
+  }
+
+  return { point: p, normal: n, snapType };
+}
+
 interface ViewportCanvasProps {
   isRightCollapsed?: boolean;
   isLeftCollapsed?: boolean;
@@ -217,6 +287,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
 
   // Cursor coordinates display & smooth fade-in/fade-out
   const [cursorPos, setCursorPos] = useState<Vector3D | null>(null);
+  const [activeSnapType, setActiveSnapType] = useState<string | null>(null);
   const [measuredDist, setMeasuredDist] = useState<number | null>(null);
   const [displayCoords, setDisplayCoords] = useState<Vector3D | null>(null);
   const [displayDist, setDisplayDist] = useState<number | null>(null);
@@ -990,8 +1061,10 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
 
     if (intersects.length > 0) {
       const hit = intersects[0];
-      const p = hit.point;
-      const n = hit.face ? hit.face.normal.clone().transformDirection(meshRef.current.matrixWorld) : new THREE.Vector3(0, 1, 0);
+      const snapped = getSnappedPoint(hit, manualStartPoint, seams, meshRef.current);
+      const p = snapped.point;
+      const n = snapped.normal;
+      setActiveSnapType(snapped.snapType);
 
       const hitCoord: Vector3D = {
         x: parseFloat(p.x.toFixed(2)),
@@ -1025,6 +1098,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
       setIsCoordsVisible(true);
     } else {
       setCursorPos(null);
+      setActiveSnapType(null);
       setMeasuredDist(null);
 
       // Smooth slow Fade-Out when cursor leaves or stops measuring
@@ -1048,11 +1122,12 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
       if (intersects.length === 0) return;
 
       const hit = intersects[0];
-      const normal = hit.face ? hit.face.normal.clone().transformDirection(meshRef.current.matrixWorld) : new THREE.Vector3(0, 1, 0);
+      const snapped = getSnappedPoint(hit, manualStartPoint, seams, meshRef.current);
+      const normal = snapped.normal;
       const pt: Vector3D = {
-        x: parseFloat(hit.point.x.toFixed(2)),
-        y: parseFloat(hit.point.y.toFixed(2)),
-        z: parseFloat(hit.point.z.toFixed(2)),
+        x: parseFloat(snapped.point.x.toFixed(2)),
+        y: parseFloat(snapped.point.y.toFixed(2)),
+        z: parseFloat(snapped.point.z.toFixed(2)),
       };
       const norm: Vector3D = {
         x: parseFloat(normal.x.toFixed(3)),
@@ -1177,6 +1252,11 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
                 ? `CLICK 2ND POINT TO FINALIZE SEAM (${measuredDist || 0} mm) — [ESC to Cancel]`
                 : 'CLICK 3D PART TO ANCHOR START POINT — [ESC to Cancel]'}
             </span>
+            {activeSnapType && (
+              <span className="px-2 py-0.5 rounded-full bg-[#22C55E]/20 text-[#4ADE80] border border-[#22C55E]/40 text-[10px] tracking-wider font-mono">
+                SNAP: {activeSnapType}
+              </span>
+            )}
           </div>
         </div>
       )}
