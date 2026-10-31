@@ -1161,7 +1161,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
       {mode === 'add_seam' && (
         <div className="absolute top-4 right-4 z-10 flex items-center gap-2 transition-all duration-300 ease-out">
           <div className="bg-[#e97f01] text-white font-mono text-xs px-4 py-2 rounded-lg shadow-xl backdrop-blur flex items-center gap-2.5 font-bold tracking-wide">
-            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+            <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
             <span>
               {manualStartPoint
                 ? `ANCHORED: CLICK 2ND POINT TO FINALIZE (${measuredDist || 0} mm) — [ESC or Right-Click to Cancel]`

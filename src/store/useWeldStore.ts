@@ -72,6 +72,7 @@ export interface WeldState {
   optimizeSeamSequence: () => void;
   reorderSeams: (newOrder: WeldSeam[]) => void;
   reverseSeamDirection: (id: string) => void;
+  renameSeam: (id: string, name: string) => void;
   undo: () => void;
   clearSeams: () => void;
 
@@ -233,6 +234,11 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   updateSeamParameters: (id, params) =>
     set((state) => ({
       seams: state.seams.map((s) => (s.id === id ? { ...s, parameters: { ...s.parameters, ...params } } : s)),
+    })),
+
+  renameSeam: (id, name) =>
+    set((state) => ({
+      seams: state.seams.map((s) => (s.id === id ? { ...s, name: name.trim() || s.name } : s)),
     })),
 
   selectSeam: (id) => set({ selectedSeamId: id }),

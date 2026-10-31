@@ -11,8 +11,9 @@ import {
   RotateCw,
   Box,
   ChevronLeft,
-  Zap,
+  SlidersHorizontal,
   CheckCircle,
+  Pencil,
 } from 'lucide-react';
 
 interface SidebarLeftProps {
@@ -34,6 +35,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     addSeam,
     removeSeam,
     reverseSeamDirection,
+    renameSeam,
     reorderSeams,
     clearSeams,
     undo,
@@ -42,6 +44,20 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
   } = useWeldStore();
 
   const [showOptimizedToast, setShowOptimizedToast] = useState(false);
+  const [editingSeamId, setEditingSeamId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState<string>('');
+
+  const handleStartRename = (seamId: string, currentName: string) => {
+    setEditingSeamId(seamId);
+    setEditingName(currentName);
+  };
+
+  const handleSaveRename = (seamId: string) => {
+    if (editingName.trim()) {
+      renameSeam(seamId, editingName.trim());
+    }
+    setEditingSeamId(null);
+  };
 
   const handleOptimize = () => {
     optimizeSeamSequence();
@@ -160,16 +176,16 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
           onClick={handleOptimize}
           disabled={seams.length <= 1}
           style={{ fontFamily: 'Onest, sans-serif' }}
-          className="w-full flex items-center justify-center gap-2 bg-[#101E17] hover:bg-[#162A1F] border border-[#203D2E] text-[#38BDF8] hover:text-white py-2 rounded text-xs font-bold transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#0F2015] to-[#142A1C] hover:from-[#152E1E] hover:to-[#1B3825] border border-[#23462D] text-[#86EFAC] hover:text-white py-2 rounded text-xs font-bold transition-all duration-200 active:scale-95 disabled:opacity-35 disabled:pointer-events-none shadow-sm"
           title="Reorders seams in an alternating skip pattern to distribute heat symmetrically and mitigate thermal warpage"
         >
-          <Zap className="w-3.5 h-3.5 text-[#38BDF8]" />
-          <span>AUTO-OPTIMIZE SEQUENCE (HEAT MITIGATION)</span>
+          <SlidersHorizontal className="w-3.5 h-3.5 text-[#4ADE80]" />
+          <span>AUTO-OPTIMIZE SEQUENCE</span>
         </button>
 
         {showOptimizedToast && (
-          <div className="flex items-center gap-1.5 p-2 rounded bg-[#10241A] border border-[#22C55E]/40 text-[#22C55E] text-[10px] font-mono leading-tight">
-            <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+          <div className="flex items-center gap-1.5 p-2 rounded bg-[#0E2015] border border-[#22C55E]/30 text-[#86EFAC] text-[10px] font-mono leading-tight">
+            <CheckCircle className="w-3.5 h-3.5 shrink-0 text-[#4ADE80]" />
             <span>Alternating heat-sink sequence applied. Thermal warpage minimized!</span>
           </div>
         )}
@@ -245,31 +261,69 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
               <div
                 key={seam.id}
                 onClick={() => selectSeam(isSelected ? null : seam.id)}
-                className={`p-2 rounded border transition cursor-pointer select-none text-xs ${
+                className={`p-2.5 rounded-lg border transition-all duration-150 cursor-pointer select-none text-xs ${
                   isSelected
-                    ? 'bg-[#182317] border-[#e97f01] shadow-sm'
+                    ? 'bg-[#121A12] border-[#e97f01]/45 shadow-[0_0_12px_rgba(233,127,1,0.06)]'
                     : isCompleted
-                    ? 'bg-[#101712] border-[#233827] opacity-90'
-                    : 'bg-[#0E140E] border-[#1C271B] hover:border-[#2C3E2A]'
+                    ? 'bg-[#0E150F] border-[#1F3323] opacity-90'
+                    : 'bg-[#0D120D] border-[#1B251A] hover:border-[#283827]'
                 }`}
               >
-                {/* Header row: Index, Human Name, Process, and Length */}
+                {/* Header row: Index, Inline-Renamable Name, Process, and Length */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold font-mono shrink-0 ${
+                      className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold font-mono shrink-0 transition-colors ${
                         isSelected
-                          ? 'bg-[#e97f01] text-white'
+                          ? 'bg-[#e97f01]/20 text-[#e97f01] border border-[#e97f01]/40'
                           : isCompleted
-                          ? 'bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/40'
-                          : 'bg-[#1C281B] text-[#8CA08B]'
+                          ? 'bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30'
+                          : 'bg-[#182217] text-[#7E937D] border border-[#223021]'
                       }`}
                     >
                       {idx + 1}
                     </span>
-                    <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-bold text-white tracking-wide">
-                      Seam {idx + 1}
-                    </span>
+
+                    {/* Figma-Style Inline Renaming */}
+                    {editingSeamId === seam.id ? (
+                      <input
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onBlur={() => handleSaveRename(seam.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveRename(seam.id);
+                          if (e.key === 'Escape') setEditingSeamId(null);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        autoFocus
+                        className="bg-[#0A0E0A] border border-[#e97f01]/70 px-1.5 py-0.5 rounded text-white text-xs font-bold outline-none font-mono w-28"
+                      />
+                    ) : (
+                      <div
+                        className="flex items-center gap-1 group/rename"
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          handleStartRename(seam.id, seam.name || `Seam ${idx + 1}`);
+                        }}
+                        title="Double-click to rename"
+                      >
+                        <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-bold text-white tracking-wide">
+                          {seam.name || `Seam ${idx + 1}`}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartRename(seam.id, seam.name || `Seam ${idx + 1}`);
+                          }}
+                          className="opacity-0 group-hover/rename:opacity-100 p-0.5 text-[#6E806D] hover:text-[#e97f01] transition-opacity"
+                          title="Rename seam"
+                        >
+                          <Pencil className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    )}
+
                     {isCompleted && (
                       <span className="text-[9px] px-1 py-0.2 rounded bg-[#132A1C] border border-[#22C55E]/40 text-[#22C55E] font-mono font-bold">
                         WELDED
@@ -295,17 +349,17 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                   <span>{seam.parameters.travelSpeed} mm/s</span>
                 </div>
 
-                {/* Contextual Action Toolbar: Expands ONLY on selected seam to keep list clean & uncluttered */}
+                {/* Contextual Action Toolbar: Figma-Style smooth micro-controls */}
                 {isSelected && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="flex items-center justify-between pt-2 mt-2 border-t border-[#273826] text-[10px] font-mono text-[#8FA28E]"
+                    className="flex items-center justify-between pt-2 mt-2 border-t border-[#1F2B1E] text-[10px] font-mono"
                   >
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleMoveUp(idx)}
                         disabled={idx === 0}
-                        className="px-1.5 py-0.5 bg-[#141E14] hover:bg-[#202E1E] disabled:opacity-25 rounded border border-[#283A26] text-[#A6BAA5] hover:text-white transition active:scale-95"
+                        className="px-2 py-1 bg-[#162016] hover:bg-[#202E20] disabled:opacity-25 rounded-md border border-[#273826] text-[#A6BAA5] hover:text-white transition-all duration-150 active:scale-95"
                         title="Move earlier in sequence (welds sooner)"
                       >
                         ▲ Up
@@ -313,14 +367,14 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                       <button
                         onClick={() => handleMoveDown(idx)}
                         disabled={idx === seams.length - 1}
-                        className="px-1.5 py-0.5 bg-[#141E14] hover:bg-[#202E1E] disabled:opacity-25 rounded border border-[#283A26] text-[#A6BAA5] hover:text-white transition active:scale-95"
+                        className="px-2 py-1 bg-[#162016] hover:bg-[#202E20] disabled:opacity-25 rounded-md border border-[#273826] text-[#A6BAA5] hover:text-white transition-all duration-150 active:scale-95"
                         title="Move later in sequence (welds later)"
                       >
                         ▼ Down
                       </button>
                       <button
                         onClick={() => reverseSeamDirection(seam.id)}
-                        className="px-1.5 py-0.5 bg-[#141E14] hover:bg-[#202E1E] rounded border border-[#283A26] text-[#38BDF8] hover:text-white transition active:scale-95 flex items-center gap-1"
+                        className="px-2 py-1 bg-[#12231C] hover:bg-[#1A3328] rounded-md border border-[#1E4334] text-[#6EE7B7] hover:text-white transition-all duration-150 active:scale-95 flex items-center gap-1 font-medium"
                         title="Flip start & end points (reverse travel direction of the snake torch)"
                       >
                         <span>⇄ Flip Path</span>
@@ -329,7 +383,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
 
                     <button
                       onClick={() => removeSeam(seam.id)}
-                      className="px-1.5 py-0.5 bg-[#2B1414] hover:bg-[#3D1A1A] rounded border border-[#522323] text-[#EF4444] hover:text-white transition active:scale-95"
+                      className="px-2 py-1 bg-[#231212] hover:bg-[#351616] rounded-md border border-[#441B1B] text-[#FCA5A5] hover:text-white transition-all duration-150 active:scale-95 font-medium"
                       title="Delete seam (or press Delete key)"
                     >
                       ✕ Delete

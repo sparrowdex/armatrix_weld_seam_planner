@@ -383,7 +383,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
 
         {/* Reachability Status Badge */}
         <div className="flex items-center gap-1.5 p-2 rounded bg-[#10241A] border border-[#22C55E]/40 text-[#22C55E] text-[10px] font-mono mb-2.5">
-          <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse shrink-0" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] shrink-0" />
           <span className="font-bold">100% REACHABLE — ZERO SINGULARITIES</span>
         </div>
 
