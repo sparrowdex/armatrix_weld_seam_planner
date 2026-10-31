@@ -30,6 +30,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
     toggleNormals,
     showBoundingBox,
     toggleBoundingBox,
+    showPlaten,
+    togglePlaten,
     showXRay,
     toggleXRay,
     setViewPreset,
@@ -161,11 +163,39 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
           <ChevronDown className="w-3.5 h-3.5 text-[#e97f01] absolute right-2 pointer-events-none" />
         </div>
 
-        {/* Clear Written Labels for Viewport Toggles (Single clean horizontal bar) */}
-        <div className="flex items-center bg-[#101710] border border-[#202B1E] rounded p-0.5 text-[11px] font-mono">
+        {/* Section 3: Display Layers & Workcell Modes */}
+        <div className="h-5 w-px bg-[#202B1E] mx-1" />
+        <div className="flex items-center bg-[#101710] border border-[#202B1E] rounded-lg p-0.5 text-[11px] font-mono shadow-inner">
+          <button
+            onClick={togglePlaten}
+            className={`px-2.5 py-1 rounded-md transition ${
+              showPlaten ? 'bg-[#22C55E]/20 text-[#86EFAC] border border-[#22C55E]/40 font-semibold' : 'text-[#7D8F7C] hover:text-white'
+            }`}
+            title="Toggle Industrial Steel Fixture Platen Table (Clamps camera orbit to table surface level)"
+          >
+            TABLE
+          </button>
+          <button
+            onClick={toggleXRay}
+            className={`px-2.5 py-1 rounded-md transition ${
+              showXRay ? 'bg-[#A855F7] text-white font-semibold shadow-sm' : 'text-[#7D8F7C] hover:text-white'
+            }`}
+            title="Toggle Translucent Ghost X-Ray to inspect internal floor and cavity seams"
+          >
+            X-RAY
+          </button>
+          <button
+            onClick={toggleNormals}
+            className={`px-2.5 py-1 rounded-md transition ${
+              showNormals ? 'bg-[#38BDF8] text-black font-semibold' : 'text-[#7D8F7C] hover:text-white'
+            }`}
+            title="Toggle Approach Clearance Vectors"
+          >
+            VECTORS
+          </button>
           <button
             onClick={toggleWireframe}
-            className={`px-2.5 py-1 rounded transition ${
+            className={`px-2.5 py-1 rounded-md transition ${
               showWireframe ? 'bg-[#e97f01] text-white font-semibold' : 'text-[#7D8F7C] hover:text-white'
             }`}
             title="Toggle Wireframe Mesh"
@@ -173,31 +203,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
             WIREFRAME
           </button>
           <button
-            onClick={toggleNormals}
-            className={`px-2.5 py-1 rounded transition ${
-              showNormals ? 'bg-[#38BDF8] text-black font-semibold' : 'text-[#7D8F7C] hover:text-white'
-            }`}
-            title="Toggle Approach Clearance Vectors"
-          >
-            APPROACH VECTORS
-          </button>
-          <button
             onClick={toggleBoundingBox}
-            className={`px-2.5 py-1 rounded transition ${
+            className={`px-2.5 py-1 rounded-md transition ${
               showBoundingBox ? 'bg-[#e97f01] text-black font-semibold' : 'text-[#7D8F7C] hover:text-white'
             }`}
             title="Toggle Part Bounding Dimensions Box"
           >
             BOUNDS
-          </button>
-          <button
-            onClick={toggleXRay}
-            className={`px-2.5 py-1 rounded transition ${
-              showXRay ? 'bg-[#A855F7] text-white font-semibold shadow-sm' : 'text-[#7D8F7C] hover:text-white'
-            }`}
-            title="Toggle Translucent Ghost X-Ray to inspect internal floor and cavity seams"
-          >
-            X-RAY
           </button>
         </div>
       </div>

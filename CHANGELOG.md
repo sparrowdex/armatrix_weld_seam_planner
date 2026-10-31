@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.5.0] - 2026-10-31
+
+### Added
+- **True 3D Hyperbolic Pipe Saddle Weld Trajectory**: Replaced the crude flat diamond placeholder on the Pipe T-Joint benchmark with a geometrically precise 8-segment hyperbolic 3D saddle curve ($R_{\text{branch}} = 18\text{ mm}$, $R_{\text{main}} = 25\text{ mm}$, crown $y = 61.0\text{ mm}$, flanks $y = 57.5\text{ mm}$, valleys $y = 53.4\text{ mm}$), wrapping flush around the intersecting cylinders with outward $45^\circ$ bisecting torch vectors.
+- **Ground-Clamped Camera Orbit**: Clamped `OrbitControls.maxPolarAngle` to $\sim 87.5^\circ$ when the welding platen table is mounted, physically preventing the camera from plunging underneath the steel fixture into the dark floor void.
+- **Welding Platen Table Toggle (`[TABLE]`)**: Added a 1-click toggle in the header allowing engineers to switch between the mounted steel fixture table (ground-clamped) and free floating inspection (360° unobstructed orbit).
+- **Tab Inactive / Standby Dimming Animation**: Integrated browser visibility and window focus listeners to smoothly transition the application into an idle standby state ($85\%$ opacity, dimmed saturation) when switching tabs, and instantly bloom back to $100\%$ vibrant brilliance upon return.
+
+### Changed
+- **Dynamic Seam Color Priority during Simulation**: Fixed seam color hierarchy so completed/simulated seams always remain shiny metallic steel (`#D4E2D4`), and actively welding seams do not show as static orange sticks. Seams now highlight in Armatrix Orange (`#e97f01`) only when idle and selected for parameter editing.
+- **Precision CAD Node Handles**: Scaled down oversized endpoint and waypoint spheres from $3.5\text{ mm}$ ($7\text{ mm}$ ball) to sleek $1.2\text{--}1.5\text{ mm}$ precision CAD pins, and waypoints to $0.8\text{ mm}$, eliminating corner occlusion.
+- **Refined Direction Arrow**: Resized the weld travel direction arrowhead (`headLength: 2.4, headWidth: 1.6`) into a subtle directional chevron flush along the seam.
+- **Streamlined CAD Header Sections**: Reorganized the top header into 4 clear CAD control zones (*Workpiece*, *Camera View*, *Display Modes*, *Actions*) with clean visual dividers.
+
+### Fixed
+- **Lockbox Lid Multi-Edge Crease Detection**: Lowered `minLength` from $12\text{ mm}$ to $5\text{ mm}$ and expanded the detection cap from 8 to 24 seams, successfully capturing all 12 perimeter edges (including short rim lines and back vertical corners) on thin-flanged lids and enclosures.
+
 ## [1.4.0] - 2026-10-31
 
 ### Added

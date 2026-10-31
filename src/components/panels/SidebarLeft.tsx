@@ -95,11 +95,16 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
       // 7. Right Outer Root Fillet (Outside right rib: x = 44 to 55 at z = -31, 4mm nozzle standoff)
       addSeam({ x: 44, y: 14, z: -31 }, { x: 55, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
     } else if (activeModelName === 'Pipe T-Joint') {
-      // 4 Quadrants of the 3D intersecting saddle weld seam
-      addSeam({ x: -18, y: 25, z: 0 }, { x: 0, y: 25, z: 18 }, { x: -0.5, y: 0.707, z: 0.5 }, 'detected', 'Saddle Quadrant 1');
-      addSeam({ x: 0, y: 25, z: 18 }, { x: 18, y: 25, z: 0 }, { x: 0.5, y: 0.707, z: 0.5 }, 'detected', 'Saddle Quadrant 2');
-      addSeam({ x: 18, y: 25, z: 0 }, { x: 0, y: 25, z: -18 }, { x: 0.5, y: 0.707, z: -0.5 }, 'detected', 'Saddle Quadrant 3');
-      addSeam({ x: 0, y: 25, z: -18 }, { x: -18, y: 25, z: 0 }, { x: -0.5, y: 0.707, z: -0.5 }, 'detected', 'Saddle Quadrant 4');
+      // 8-Segment 3D Circular Saddle Weld Seam around branch-to-header intersection
+      // Branch R = 18mm, Header R = 25mm centered at y = 36. Top crown at y = 61mm, sides dip to y = 53.4mm
+      addSeam({ x: 18, y: 61, z: 0 }, { x: 12.73, y: 57.52, z: 12.73 }, { x: 0.5, y: 0.707, z: 0.5 }, 'detected', 'Saddle Arc 1 (Crown-Flank)');
+      addSeam({ x: 12.73, y: 57.52, z: 12.73 }, { x: 0, y: 53.35, z: 18 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Saddle Arc 2 (Flank-Valley)');
+      addSeam({ x: 0, y: 53.35, z: 18 }, { x: -12.73, y: 57.52, z: 12.73 }, { x: -0.5, y: 0.707, z: 0.5 }, 'detected', 'Saddle Arc 3 (Valley-Flank)');
+      addSeam({ x: -12.73, y: 57.52, z: 12.73 }, { x: -18, y: 61, z: 0 }, { x: -0.707, y: 0.707, z: 0 }, 'detected', 'Saddle Arc 4 (Flank-Crown)');
+      addSeam({ x: -18, y: 61, z: 0 }, { x: -12.73, y: 57.52, z: -12.73 }, { x: -0.5, y: 0.707, z: -0.5 }, 'detected', 'Saddle Arc 5 (Crown-Flank)');
+      addSeam({ x: -12.73, y: 57.52, z: -12.73 }, { x: 0, y: 53.35, z: -18 }, { x: 0, y: 0.707, z: -0.707 }, 'detected', 'Saddle Arc 6 (Flank-Valley)');
+      addSeam({ x: 0, y: 53.35, z: -18 }, { x: 12.73, y: 57.52, z: -12.73 }, { x: 0.5, y: 0.707, z: -0.5 }, 'detected', 'Saddle Arc 7 (Valley-Flank)');
+      addSeam({ x: 12.73, y: 57.52, z: -12.73 }, { x: 18, y: 61, z: 0 }, { x: 0.707, y: 0.707, z: 0 }, 'detected', 'Saddle Arc 8 (Flank-Crown)');
     } else if (activeModelName === 'Confined Box Flange' || activeModelName === 'Box Flange') {
       // 4 Internal Floor Fillet Seams inside the deep confined ship cell / compartment
       addSeam({ x: -46, y: 14, z: -37 }, { x: 46, y: 14, z: -37 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Back Floor Fillet');
@@ -119,12 +124,12 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
           const bbox = geom.boundingBox!;
           geom.translate(0, -bbox.min.y, 0);
 
-          const candidateSeams = detectCandidateSeams(geom, 40, 12);
+          const candidateSeams = detectCandidateSeams(geom, 35, 5);
           if (candidateSeams.length > 0) {
-            candidateSeams.slice(0, 8).forEach((cs, i) => {
+            candidateSeams.slice(0, 24).forEach((cs, i) => {
               addSeam(cs.start, cs.end, cs.normal, 'detected', `Crease ${i + 1}`);
             });
-            setDetectionToast(`Detected ${Math.min(candidateSeams.length, 8)} true topological fillet creases.`);
+            setDetectionToast(`Detected ${Math.min(candidateSeams.length, 24)} true topological fillet creases.`);
             setTimeout(() => setDetectionToast(null), 3500);
             return;
           }

@@ -14,6 +14,7 @@ export interface WeldState {
   showNormals: boolean;
   showBoundingBox: boolean;
   showWaypoints: boolean;
+  showPlaten: boolean;
   viewPreset: 'iso' | 'top' | 'front' | 'right' | null;
 
   // Seam creation temporary state
@@ -57,6 +58,7 @@ export interface WeldState {
   toggleNormals: () => void;
   toggleBoundingBox: () => void;
   toggleWaypoints: () => void;
+  togglePlaten: () => void;
   showXRay: boolean;
   toggleXRay: () => void;
   setViewPreset: (preset: 'iso' | 'top' | 'front' | 'right' | null) => void;
@@ -125,6 +127,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   showNormals: true,
   showBoundingBox: false,
   showWaypoints: true,
+  showPlaten: true,
   showXRay: false,
   viewPreset: null,
 
@@ -175,6 +178,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   toggleNormals: () => set((s) => ({ showNormals: !s.showNormals })),
   toggleBoundingBox: () => set((s) => ({ showBoundingBox: !s.showBoundingBox })),
   toggleWaypoints: () => set((s) => ({ showWaypoints: !s.showWaypoints })),
+  togglePlaten: () => set((s) => ({ showPlaten: !s.showPlaten })),
   toggleXRay: () => set((s) => ({ showXRay: !s.showXRay })),
   setViewPreset: (preset) => set({ viewPreset: preset }),
   setNozzleType: (nozzle) => set({ nozzleType: nozzle }),

@@ -314,6 +314,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   const showNormals = useWeldStore((s) => s.showNormals);
   const showBoundingBox = useWeldStore((s) => s.showBoundingBox);
   const showWaypoints = useWeldStore((s) => s.showWaypoints);
+  const showPlaten = useWeldStore((s) => s.showPlaten);
   const showXRay = useWeldStore((s) => s.showXRay);
   const viewPreset = useWeldStore((s) => s.viewPreset);
   const setViewPreset = useWeldStore((s) => s.setViewPreset);
@@ -344,6 +345,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
+  const platenGroupRef = useRef<THREE.Group | null>(null);
   const modelGroupRef = useRef<THREE.Group>(new THREE.Group());
   const meshRef = useRef<THREE.Mesh | null>(null);
   const edgesRef = useRef<THREE.LineSegments | null>(null);
@@ -436,6 +438,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     });
 
     scene.add(platenGroup);
+    platenGroupRef.current = platenGroup;
+    platenGroup.visible = useWeldStore.getState().showPlaten;
 
     // CAD Grid Floor resting crisply on top of the steel platen
     const grid = new THREE.GridHelper(360, 36, '#385235', '#1F2E1E');
@@ -468,6 +472,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     controls.maxDistance = 1400;
     controls.minDistance = 20;
     controls.target.set(0, 35, 0);
+    // Ground-clamped orbit: prevents camera from dipping below the solid steel welding platen
+    controls.maxPolarAngle = useWeldStore.getState().showPlaten ? Math.PI / 2 - 0.04 : Math.PI;
     controls.mouseButtons = {
       LEFT: THREE.MOUSE.ROTATE,
       MIDDLE: THREE.MOUSE.DOLLY,
@@ -917,6 +923,17 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     }
   }, [showXRay]);
 
+  // Welding Table Platen visibility & Ground-Clamped Orbit
+  useEffect(() => {
+    if (platenGroupRef.current) {
+      platenGroupRef.current.visible = showPlaten;
+    }
+    if (controlsRef.current) {
+      // Clamps orbit to ~87.5° when table is visible, or allows full 360° free part inspection when hidden
+      controlsRef.current.maxPolarAngle = showPlaten ? Math.PI / 2 - 0.04 : Math.PI;
+    }
+  }, [showPlaten]);
+
   // Dynamically switch torch style (Robotic Gooseneck vs Sleek Pencil)
   useEffect(() => {
     if (!torchMeshGroupRef.current) return;
@@ -941,13 +958,14 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
       const seamContainer = new THREE.Group();
 
-      // STRICT ANTI-Z-FIGHTING 3-STATE SEAM RENDERING:
-      // 1. If IS SELECTED: Render vibrant Armatrix Orange (#e97f01). The metallic bead under it is NEVER rendered,
-      //    guaranteeing zero visual z-fighting or glitching!
-      // 2. If NOT SELECTED and HAS BEEN WELDED/SIMULATED: Render shiny metallic bead (#D4E2D4, metalness 0.92, roughness 0.18).
-      // 3. If NOT SELECTED and NOT WELDED: Render clean CAD planning green (#22C55E).
+      // DYNAMIC METALLIC vs SELECTED STATUS:
+      // 1. If hasAirGap: hazard amber
+      // 2. If isCompleted (has been welded): always render shiny metallic bead (#D4E2D4, metalness 0.92, roughness 0.18)
+      // 3. If isSelected and NOT currently running simulation: render vibrant Armatrix Orange (#e97f01) for parameter editing
+      // 4. Default: clean CAD planning green (#22C55E)
+      const isSelectedAndIdle = isSelected && !isSimulating;
       const wireScale = (seam.parameters.wireDiameter ?? 1.2) / 1.2;
-      const beadRadius = (isSelected ? 2.5 : isCompleted ? 2.3 : 1.7) * wireScale;
+      const beadRadius = (isSelectedAndIdle ? 2.2 : isCompleted ? 2.1 : 1.7) * wireScale;
       const cylinderGeom = new THREE.CylinderGeometry(beadRadius, beadRadius, length, 16);
       cylinderGeom.translate(0, length / 2, 0);
       cylinderGeom.rotateX(Math.PI / 2);
@@ -962,7 +980,15 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           roughness: 0.35,
           metalness: 0.4,
         });
-      } else if (isSelected) {
+      } else if (isCompleted) {
+        // Welded / Simulated: shiny metallic bead!
+        cylinderMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color('#D4E2D4'),
+          metalness: 0.92,
+          roughness: 0.18,
+        });
+      } else if (isSelectedAndIdle) {
+        // Selected for parameter editing when not simulating
         cylinderMat = new THREE.MeshStandardMaterial({
           color: new THREE.Color('#e97f01'),
           emissive: new THREE.Color('#e97f01'),
@@ -970,13 +996,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           roughness: 0.25,
           metalness: 0.5,
         });
-      } else if (isCompleted) {
-        cylinderMat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color('#D4E2D4'),
-          metalness: 0.92,
-          roughness: 0.18,
-        });
       } else {
+        // CAD planning green
         cylinderMat = new THREE.MeshStandardMaterial({
           color: new THREE.Color('#22C55E'),
           emissive: new THREE.Color('#15803D'),
@@ -992,15 +1013,16 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       beadMesh.userData = { seamId: seam.id };
       seamContainer.add(beadMesh);
 
+      // Sleek precision CAD pin handles (scaled down from 3.0mm to 1.3mm)
       const startSphere = new THREE.Mesh(
-        new THREE.SphereGeometry(isSelected ? 3.0 : 2.2, 16, 16),
+        new THREE.SphereGeometry(isSelectedAndIdle ? 1.5 : 1.2, 16, 16),
         new THREE.MeshStandardMaterial({ color: '#38BDF8', emissive: '#0284C7', emissiveIntensity: 0.6 })
       );
       startSphere.position.copy(p1);
       seamContainer.add(startSphere);
 
       const endSphere = new THREE.Mesh(
-        new THREE.SphereGeometry(isSelected ? 3.0 : 2.2, 16, 16),
+        new THREE.SphereGeometry(isSelectedAndIdle ? 1.5 : 1.2, 16, 16),
         new THREE.MeshStandardMaterial({ color: '#EF4444', emissive: '#B91C1C', emissiveIntensity: 0.6 })
       );
       endSphere.position.copy(p2);
@@ -1008,7 +1030,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
       const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
       const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
-      const arrowHelper = new THREE.ArrowHelper(dir, mid, Math.min(18, length * 0.45), isSelected ? 0xffffff : 0xe97f01, 4, 3);
+      const arrowHelper = new THREE.ArrowHelper(dir, mid, Math.min(12, length * 0.35), isSelectedAndIdle ? 0xffffff : 0xe97f01, 2.4, 1.6);
       seamContainer.add(arrowHelper);
 
       if (showNormals) {
@@ -1037,9 +1059,9 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         seamContainer.add(retLine);
 
         if (showWaypoints) {
-          const appSphere = new THREE.Mesh(new THREE.SphereGeometry(1.8, 10, 10), new THREE.MeshBasicMaterial({ color: '#60A5FA' }));
+          const appSphere = new THREE.Mesh(new THREE.SphereGeometry(0.8, 10, 10), new THREE.MeshBasicMaterial({ color: '#60A5FA' }));
           appSphere.position.copy(appPt);
-          const retSphere = new THREE.Mesh(new THREE.SphereGeometry(1.8, 10, 10), new THREE.MeshBasicMaterial({ color: '#F87171' }));
+          const retSphere = new THREE.Mesh(new THREE.SphereGeometry(0.8, 10, 10), new THREE.MeshBasicMaterial({ color: '#F87171' }));
           retSphere.position.copy(retPt);
           seamContainer.add(appSphere);
           seamContainer.add(retSphere);
@@ -1059,7 +1081,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       const p1 = new THREE.Vector3(manualStartPoint.x, manualStartPoint.y, manualStartPoint.z);
 
       const startMarker = new THREE.Mesh(
-        new THREE.SphereGeometry(3.5, 16, 16),
+        new THREE.SphereGeometry(1.2, 16, 16),
         new THREE.MeshStandardMaterial({ color: '#e97f01', emissive: '#e97f01', emissiveIntensity: 0.9 })
       );
       startMarker.position.copy(p1);
@@ -1071,13 +1093,13 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         const lineGeom = new THREE.BufferGeometry().setFromPoints([p1, p2]);
         const lineMat = new THREE.LineBasicMaterial({
           color: isAir ? '#F59E0B' : '#e97f01',
-          linewidth: 3,
+          linewidth: 2,
         });
         const line = new THREE.Line(lineGeom, lineMat);
         group.add(line);
 
         const endPreview = new THREE.Mesh(
-          new THREE.SphereGeometry(2.5, 12, 12),
+          new THREE.SphereGeometry(1.0, 12, 12),
           new THREE.MeshBasicMaterial({ color: isAir ? '#F59E0B' : '#38BDF8' })
         );
         endPreview.position.copy(p2);

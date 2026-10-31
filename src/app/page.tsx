@@ -15,6 +15,24 @@ export default function Home() {
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isTabActive, setIsTabActive] = useState(true);
+
+  // Smooth Tab Standby Fade when tab is inactive, blooming back to full brilliance on focus
+  useEffect(() => {
+    const handleVisibility = () => setIsTabActive(!document.hidden);
+    const handleFocus = () => setIsTabActive(true);
+    const handleBlur = () => setIsTabActive(false);
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
 
   // Global CAD Keyboard Shortcuts (Ctrl+Z, Delete/Backspace, Escape)
   useEffect(() => {
@@ -72,7 +90,11 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="flex flex-col h-screen w-screen overflow-hidden bg-[#0A0D0A] select-none text-[#F6F5EE]">
+    <main
+      className={`flex flex-col h-screen w-screen overflow-hidden bg-[#0A0D0A] select-none text-[#F6F5EE] transition-all duration-700 ease-out ${
+        isTabActive ? 'opacity-100 filter-none' : 'opacity-85 brightness-90 saturate-75'
+      }`}
+    >
       {/* Header */}
       <Header onOpenExport={() => setIsExportOpen(true)} />
 
