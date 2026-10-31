@@ -94,11 +94,11 @@ export default function Home() {
           <button
             onClick={() => setIsLeftCollapsed(false)}
             style={{ fontFamily: 'Onest, sans-serif' }}
-            className="absolute top-4 left-0 z-40 bg-[#121A12]/90 hover:bg-[#1C271B] border-r-2 border-y border-[#e97f01] pl-2.5 pr-3 py-1.5 rounded-r-md text-white font-bold text-[11px] transition shadow-2xl flex items-center gap-1.5 group active:scale-95"
+            className="absolute top-4 left-0 z-40 bg-[#0C120C]/90 hover:bg-[#162216] border-r-2 border-y border-[#e97f01]/70 hover:border-[#e97f01] pl-3 pr-3.5 py-2 rounded-r-lg text-white font-bold text-xs transition-all duration-200 shadow-2xl flex items-center gap-2 group active:scale-95 backdrop-blur-md"
             title="Expand Seams Panel"
           >
             <ChevronRight className="w-3.5 h-3.5 text-[#e97f01] group-hover:translate-x-0.5 transition-transform" />
-            <span>SEAMS</span>
+            <span className="tracking-wide">SEAMS</span>
           </button>
         )}
 
@@ -113,10 +113,10 @@ export default function Home() {
           <button
             onClick={() => setIsRightCollapsed(false)}
             style={{ fontFamily: 'Onest, sans-serif' }}
-            className="absolute top-4 right-0 z-40 bg-[#121A12]/90 hover:bg-[#1C271B] border-l-2 border-y border-[#e97f01] pr-2.5 pl-3 py-1.5 rounded-l-md text-white font-bold text-[11px] transition shadow-2xl flex items-center gap-1.5 group active:scale-95"
+            className="absolute top-4 right-0 z-40 bg-[#0C120C]/90 hover:bg-[#162216] border-l-2 border-y border-[#e97f01]/70 hover:border-[#e97f01] pr-3 pl-3.5 py-2 rounded-l-lg text-white font-bold text-xs transition-all duration-200 shadow-2xl flex items-center gap-2 group active:scale-95 backdrop-blur-md"
             title="Expand Parameters Panel"
           >
-            <span>PARAMS</span>
+            <span className="tracking-wide">PARAMS</span>
             <ChevronLeft className="w-3.5 h-3.5 text-[#e97f01] group-hover:-translate-x-0.5 transition-transform" />
           </button>
         )}

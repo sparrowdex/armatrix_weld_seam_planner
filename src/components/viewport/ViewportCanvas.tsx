@@ -1157,15 +1157,18 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({ isRightCollapsed
         </div>
       </div>
 
-      {/* Smooth Mode Instruction & Reticle Banner */}
+      {/* Centered Reticle Targeting Banner (Never collides with sidebars or collapsed tabs) */}
       {mode === 'add_seam' && (
-        <div className="absolute top-4 right-4 z-10 flex items-center gap-2 transition-all duration-300 ease-out">
-          <div className="bg-[#e97f01] text-white font-mono text-xs px-4 py-2 rounded-lg shadow-xl backdrop-blur flex items-center gap-2.5 font-bold tracking-wide">
-            <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
-            <span>
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 transition-all duration-300 ease-out whitespace-nowrap pointer-events-none">
+          <div className="bg-[#0C120C]/95 border border-[#e97f01]/60 text-white font-mono text-xs px-4 py-2 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2.5 font-bold tracking-wide">
+            <span className="w-2 h-2 rounded-full bg-[#e97f01] shrink-0" />
+            <span className="text-[#e97f01]">
+              {manualStartPoint ? 'STEP 2:' : 'CLICK-TO-WELD:'}
+            </span>
+            <span className="text-[#E2ECE1]">
               {manualStartPoint
-                ? `ANCHORED: CLICK 2ND POINT TO FINALIZE (${measuredDist || 0} mm) — [ESC or Right-Click to Cancel]`
-                : 'SURFACE TARGETING: CLICK MESH TO ANCHOR START POINT — [ESC to Cancel]'}
+                ? `CLICK 2ND POINT TO FINALIZE SEAM (${measuredDist || 0} mm) — [ESC to Cancel]`
+                : 'CLICK 3D PART TO ANCHOR START POINT — [ESC to Cancel]'}
             </span>
           </div>
         </div>
