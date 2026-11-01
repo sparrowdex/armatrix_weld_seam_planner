@@ -38,3 +38,6 @@ KNOWLEDGE.md
 .vscode/
 .idea/
 
+
+# Next.js generated type references (rewritten by next dev / next build)
+next-env.d.ts
