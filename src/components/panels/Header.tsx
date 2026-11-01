@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import Link from 'next/link';
 import { useWeldStore } from '@/store/useWeldStore';
 import { Upload, Download, ChevronDown, Keyboard } from 'lucide-react';
@@ -41,11 +41,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
     setViewPreset,
     logoWiggleKey,
     setShortcutsOpen,
+    activeView,
   } = useWeldStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Visual highlight only; the camera preset itself lives in the store.
-  const [activeView, setActiveView] = useState<ViewKey>('iso');
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -171,7 +170,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
               key={v.key}
               data-active={activeView === v.key}
               onClick={() => {
-                setActiveView(v.key);
                 setViewPreset(v.key);
               }}
               title={`Snap camera to ${v.label} view`}

@@ -10,6 +10,7 @@ import { validatePathSubstrate } from '@/utils/substrateValidator';
 import { analyzeMeshIntegrity } from '@/utils/meshIntegrity';
 import { getEffectiveTorchVector, orientTorch } from '@/utils/torchKinematics';
 import { getSnappedPoint } from '@/utils/snapping';
+import { isTypingTarget, isSliderFocused } from '@/utils/keyboard';
 import { buildRoboticTorch } from './torchModel';
 import { ViewportOverlays } from './ViewportOverlays';
 import {
@@ -221,6 +222,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     // Instant manual break-out: if user drags or orbits manually, cancel automated camera lerp immediately
     controls.addEventListener('start', () => {
       isCameraTransitioning.current = false;
+      // A manual orbit leaves any preset view, so the header highlight clears
+      useWeldStore.getState().setActiveView(null);
     });
     controlsRef.current = controls;
 
@@ -667,8 +670,17 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       // STL files triangulate flat faces arbitrarily, so a raw WireframeGeometry draws meaningless
       // diagonals across flat plates; this keeps true facets (cylinders, chamfers) and leaves flat faces clean.
       const wireframeGeom = new THREE.EdgesGeometry(geometry, 1);
-      const wireframeMat = new THREE.LineBasicMaterial({ color: '#4A6648', opacity: 0.45, transparent: true });
+      // Light blue and drawn over everything (hidden edges included), like a CAD wireframe view,
+      // so it reads clearly against the green part and in ghost mode
+      const wireframeMat = new THREE.LineBasicMaterial({
+        color: '#7DD3FC',
+        opacity: 0.85,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+      });
       const wireframe = new THREE.LineSegments(wireframeGeom, wireframeMat);
+      wireframe.renderOrder = 5;
       wireframe.visible = showWireframe;
       modelGroup.add(wireframe);
       wireframeRef.current = wireframe;
@@ -988,7 +1000,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const el = document.activeElement as HTMLElement | null;
-      if (el && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)) return;
+      if (isTypingTarget(el)) return;
       if (useWeldStore.getState().shortcutsOpen) return;
       const cam = cameraRef.current;
       const ctr = controlsRef.current;
@@ -1006,6 +1018,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         isCameraTransitioning.current && targetControlsTarget.current ? targetControlsTarget.current.clone() : ctr.target.clone();
 
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        if (isSliderFocused(el)) return; // a focused slider uses its own arrow keys
         e.preventDefault();
         const target = currentTarget();
         const sph = new THREE.Spherical().setFromVector3(currentGoal().sub(target));
@@ -1015,6 +1028,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         if (e.key === 'ArrowUp') sph.phi -= step;
         if (e.key === 'ArrowDown') sph.phi += step;
         sph.phi = THREE.MathUtils.clamp(sph.phi, 0.05, ctr.maxPolarAngle);
+        useWeldStore.getState().setActiveView(null);
         glideTo(target.clone().add(new THREE.Vector3().setFromSpherical(sph)), target);
         return;
       }
@@ -1034,6 +1048,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         const sel = st.seams.find((sm) => sm.id === st.selectedSeamId);
         if (sel) {
           e.preventDefault();
+          useWeldStore.getState().setActiveView(null);
           focusOnSeam(sel);
           invalidate();
         }
@@ -1581,6 +1596,10 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Clicking the 3D view hands keyboard focus back to it (like CAD tools), so a slider or field
+    // touched earlier no longer captures hotkeys
+    const focused = document.activeElement as HTMLElement | null;
+    if (focused && focused !== document.body) focused.blur();
     if (e.button !== 0) return;
 
     if (mode === 'add_seam') {

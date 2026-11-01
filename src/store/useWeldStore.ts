@@ -19,6 +19,9 @@ export interface WeldState {
   showWaypoints: boolean;
   showPlaten: boolean;
   viewPreset: 'iso' | 'top' | 'front' | 'right' | null;
+  /** Camera preset the view currently matches (header highlight); null once the user orbits away. */
+  activeView: 'iso' | 'top' | 'front' | 'right' | null;
+  setActiveView: (view: 'iso' | 'top' | 'front' | 'right' | null) => void;
 
   // Seam creation temporary state
   manualStartPoint: Vector3D | null;
@@ -143,6 +146,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   showPlaten: true,
   showXRay: false,
   viewPreset: null,
+  activeView: 'iso',
 
   manualStartPoint: null,
   manualStartNormal: null,
@@ -198,7 +202,8 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   toggleWaypoints: () => set((s) => ({ showWaypoints: !s.showWaypoints })),
   togglePlaten: () => set((s) => ({ showPlaten: !s.showPlaten })),
   toggleXRay: () => set((s) => ({ showXRay: !s.showXRay })),
-  setViewPreset: (preset) => set({ viewPreset: preset }),
+  setViewPreset: (preset) => set(preset ? { viewPreset: preset, activeView: preset } : { viewPreset: null }),
+  setActiveView: (view) => set({ activeView: view }),
   setNozzleType: (nozzle) => set({ nozzleType: nozzle }),
 
   setManualStartPoint: (point, normal) => set({ manualStartPoint: point, manualStartNormal: normal }),

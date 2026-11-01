@@ -8,6 +8,7 @@ import { ViewportCanvas } from '@/components/viewport/ViewportCanvas';
 import { SimulationHUD } from '@/components/panels/SimulationHUD';
 import { ExportModal } from '@/components/panels/ExportModal';
 import { ShortcutsPanel } from '@/components/panels/ShortcutsPanel';
+import { isTypingTarget } from '@/utils/keyboard';
 import { useWeldStore } from '@/store/useWeldStore';
 import { ChevronRight, ChevronLeft, Undo2 } from 'lucide-react';
 
@@ -53,11 +54,8 @@ export default function PlannerPage() {
   // Global CAD Keyboard Shortcuts (Ctrl+Z, Delete/Backspace, Escape)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Do not trigger hotkeys if user is focused inside a text input or select
-      const activeEl = document.activeElement as HTMLElement | null;
-      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) {
-        return;
-      }
+      // Stay out of the way while the user is typing (sliders and buttons do not block hotkeys)
+      if (isTypingTarget(document.activeElement)) return;
 
       // "?" toggles the controls reference; Esc closes it before doing anything else
       if (e.key === '?' || (e.shiftKey && e.code === 'Slash')) {

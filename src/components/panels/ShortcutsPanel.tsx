@@ -34,16 +34,16 @@ function Key({ label }: { label: string }) {
   );
 }
 
-function Rows({ title, rows }: { title: string; rows: { keys: string[]; what: string }[] }) {
+function Rows({ title, rows, asText = false }: { title: string; rows: { keys: string[]; what: string }[]; asText?: boolean }) {
   return (
     <div>
       <span className="ax-label">{title}</span>
       <dl className="mt-3 border-t border-[#1D271C]">
         {rows.map((r) => (
-          <div key={r.what} className="grid grid-cols-[150px_1fr] gap-4 items-center py-2.5 border-b border-[#1D271C]">
+          <div key={r.what} className="grid grid-cols-[112px_1fr] gap-3 items-center py-2 border-b border-[#1D271C]">
             <dt className="flex flex-wrap items-center gap-1">
               {r.keys.map((k) =>
-                k.includes(' ') ? (
+                asText || k.includes(' ') ? (
                   <span key={k} className="text-[12px] text-[#F6F5EE]">
                     {k}
                   </span>
@@ -52,7 +52,7 @@ function Rows({ title, rows }: { title: string; rows: { keys: string[]; what: st
                 )
               )}
             </dt>
-            <dd className="text-[12.5px] text-[#B4C2B3]">{r.what}</dd>
+            <dd className="text-[12px] leading-[1.45] text-[#B4C2B3]">{r.what}</dd>
           </div>
         ))}
       </dl>
@@ -76,7 +76,7 @@ export function ShortcutsPanel() {
         aria-modal="true"
         aria-label="Keyboard and mouse shortcuts"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[560px] bg-[#0A0D0A]/90 backdrop-blur-xl border border-[#253224] rounded-[6px]"
+        className="w-full max-w-[880px] max-h-[calc(100vh-32px)] overflow-y-auto bg-[#0A0D0A]/90 backdrop-blur-xl border border-[#253224] rounded-[6px]"
       >
         <div className="flex items-center justify-between h-11 px-5 border-b border-[#1D271C]">
           <span className="ax-label !text-[#F6F5EE]">Controls</span>
@@ -84,8 +84,8 @@ export function ShortcutsPanel() {
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="p-5 grid gap-6">
-          <Rows title="Mouse" rows={MOUSE} />
+        <div className="p-5 grid md:grid-cols-2 gap-6 md:gap-8 items-start">
+          <Rows title="Mouse" rows={MOUSE} asText />
           <Rows title="Keyboard" rows={KEYS} />
         </div>
       </div>
