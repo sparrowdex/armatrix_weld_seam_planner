@@ -252,7 +252,7 @@ export default function HomePage() {
           <div className="rounded-[6px] border border-[#1D271C] bg-[#0A0E0A] overflow-hidden">
             <div className="h-10 px-4 flex items-center justify-between border-b border-[#1D271C]">
               <span className="ax-label">weld_job.json</span>
-              <span className="ax-label">Schema 1.3.0</span>
+              <span className="ax-label">Schema 1.4.0</span>
             </div>
             <pre className="p-5 text-[12.5px] leading-[1.7] overflow-x-auto text-[#B4C2B3] font-[ui-monospace,SFMono-Regular,Menlo,monospace]">
               {JSON_SAMPLE}

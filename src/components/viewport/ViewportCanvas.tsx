@@ -11,6 +11,7 @@ import { analyzeMeshIntegrity } from '@/utils/meshIntegrity';
 import { getEffectiveTorchVector, orientTorch } from '@/utils/torchKinematics';
 import { getSnappedPoint } from '@/utils/snapping';
 import { gizmoScaleForRadius } from '@/utils/partScale';
+import { applyPartRotation } from '@/utils/partOrientation';
 import { isTypingTarget, isSliderFocused } from '@/utils/keyboard';
 import { buildRoboticTorch } from './torchModel';
 import { ViewportOverlays } from './ViewportOverlays';
@@ -49,6 +50,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   const showBoundingBox = useWeldStore((s) => s.showBoundingBox);
   const showWaypoints = useWeldStore((s) => s.showWaypoints);
   const showPlaten = useWeldStore((s) => s.showPlaten);
+  const partRotX = useWeldStore((s) => s.partRotation.x);
+  const partRotZ = useWeldStore((s) => s.partRotation.z);
   const showXRay = useWeldStore((s) => s.showXRay);
   const viewPreset = useWeldStore((s) => s.viewPreset);
   const setViewPreset = useWeldStore((s) => s.setViewPreset);
@@ -78,6 +81,10 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   const meshRef = useRef<THREE.Mesh | null>(null);
   const edgesRef = useRef<THREE.LineSegments | null>(null);
   const wireframeRef = useRef<THREE.LineSegments | null>(null);
+  // Geometry of the loaded part, kept so the wireframe can be built lazily on first use
+  const wireframeSourceRef = useRef<THREE.BufferGeometry | null>(null);
+  // Incremented on every part load so deferred work for an older part is dropped
+  const loadTokenRef = useRef(0);
   const boundingBoxRef = useRef<THREE.BoxHelper | null>(null);
   const seamsGroupRef = useRef<THREE.Group>(new THREE.Group());
   const dynamicBeadGroupRef = useRef<THREE.Group>(new THREE.Group());
@@ -648,6 +655,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         if ((child as any).geometry) (child as any).geometry.dispose();
       }
 
+      // Uploaded parts can be turned upright (quarter turns) before centring and seating
+      applyPartRotation(geometry, { x: partRotX, z: partRotZ });
       geometry.computeVertexNormals();
       geometry.center();
       geometry.computeBoundingBox();
@@ -720,31 +729,35 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       modelGroup.add(mesh);
       meshRef.current = mesh;
 
-      // Clean CAD feature edges (threshold 35° avoids dense black triangle grids on curved cylinders)
-      const edgeGeometry = new THREE.EdgesGeometry(geometry, 35);
-      const edgeMaterial = new THREE.LineBasicMaterial({ color: '#243523', linewidth: 1.2 });
-      const edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
-      modelGroup.add(edgeLines);
-      edgesRef.current = edgeLines;
+      // Show the part first; outline edges, the mesh check (and the wireframe if it is on) follow a frame
+      // later, so dense meshes never freeze the page while loading
+      const loadToken = ++loadTokenRef.current;
+      edgesRef.current = null;
+      wireframeRef.current = null;
+      wireframeSourceRef.current = geometry;
+      setTimeout(() => {
+        if (loadTokenRef.current !== loadToken) return; // a newer part has been loaded since
 
-      // Facet wireframe: every edge between triangles that are not coplanar (1° threshold).
-      // STL files triangulate flat faces arbitrarily, so a raw WireframeGeometry draws meaningless
-      // diagonals across flat plates; this keeps true facets (cylinders, chamfers) and leaves flat faces clean.
-      const wireframeGeom = new THREE.EdgesGeometry(geometry, 1);
-      // Light blue and drawn over everything (hidden edges included), like a CAD wireframe view,
-      // so it reads clearly against the green part and in ghost mode
-      const wireframeMat = new THREE.LineBasicMaterial({
-        color: '#7DD3FC',
-        opacity: 0.85,
-        transparent: true,
-        depthTest: false,
-        depthWrite: false,
-      });
-      const wireframe = new THREE.LineSegments(wireframeGeom, wireframeMat);
-      wireframe.renderOrder = 5;
-      wireframe.visible = showWireframe;
-      modelGroup.add(wireframe);
-      wireframeRef.current = wireframe;
+        // Clean CAD feature edges (threshold 35° avoids dense line grids on curved cylinders)
+        const edgeLines = new THREE.LineSegments(
+          new THREE.EdgesGeometry(geometry, 35),
+          new THREE.LineBasicMaterial({ color: '#243523', linewidth: 1.2 })
+        );
+        if (useWeldStore.getState().showXRay) {
+          const m = edgeLines.material as THREE.LineBasicMaterial;
+          m.color.set('#F6F5EE');
+          m.transparent = true;
+          m.opacity = 0.55;
+        }
+        modelGroup.add(edgeLines);
+        edgesRef.current = edgeLines;
+
+        if (useWeldStore.getState().showWireframe) ensureWireframe();
+
+        const current = useWeldStore.getState().part;
+        if (current) setPart({ ...current, integrity: analyzeMeshIntegrity(geometry) });
+        invalidate();
+      }, 60);
 
       const boxHelper = new THREE.BoxHelper(mesh, new THREE.Color('#e97f01'));
       boxHelper.visible = showBoundingBox;
@@ -753,7 +766,6 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
       setPart({
         name: activeModelName,
-        integrity: analyzeMeshIntegrity(geometry),
         triangleCount: geometry.attributes.position.count / 3,
         vertexCount: geometry.attributes.position.count,
         dimensions: { width, height, depth },
@@ -772,7 +784,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         const geometry = loader.parse(custom.buffer);
         applyGeometry(geometry);
       } catch (err) {
-        console.error('Failed to parse custom STL:', err);
+        console.warn('Could not read custom STL:', err);
       }
     } else {
       let modelUrl = `/models/bracket.stl`;
@@ -788,16 +800,34 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         },
         undefined,
         (err) => {
-          console.error('Failed to load standard model:', err);
+          console.warn('Could not load benchmark model:', err);
           setPartLoading(false);
         }
       );
     }
-  }, [activeModelName, customModels, setPart, setPartLoading]);
+  }, [activeModelName, customModels, setPart, setPartLoading, partRotX, partRotZ]);
+
+  // Facet wireframe, built only the first time it is switched on for a part (it is expensive on dense meshes).
+  // Every edge between non-coplanar triangles (0.1°): STL triangulates flat faces arbitrarily, so their
+  // diagonals (exactly 0°) stay hidden while finely faceted curves still show.
+  const ensureWireframe = () => {
+    const geom = wireframeSourceRef.current;
+    if (wireframeRef.current || !geom) return;
+    const wireframe = new THREE.LineSegments(
+      new THREE.EdgesGeometry(geom, 0.1),
+      // Light blue, drawn over everything (hidden edges included) like a CAD wireframe view
+      new THREE.LineBasicMaterial({ color: '#7DD3FC', opacity: 0.85, transparent: true, depthTest: false, depthWrite: false })
+    );
+    wireframe.renderOrder = 5;
+    modelGroupRef.current.add(wireframe);
+    wireframeRef.current = wireframe;
+  };
 
   // Wireframe & Bounding Box toggles
   useEffect(() => {
+    if (showWireframe) ensureWireframe();
     if (wireframeRef.current) wireframeRef.current.visible = showWireframe;
+    invalidate();
   }, [showWireframe]);
 
   useEffect(() => {

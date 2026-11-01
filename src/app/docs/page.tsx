@@ -20,11 +20,12 @@ const FIELD_GROUPS: { title: string; fields: Field[] }[] = [
   {
     title: 'Job and part',
     fields: [
-      { name: 'schema_version', type: 'string', desc: 'Schema version, currently "1.3.0".' },
+      { name: 'schema_version', type: 'string', desc: 'Schema version, currently "1.4.0".' },
       { name: 'generator · created_at', type: 'string', desc: 'Tool that produced the job and an ISO-8601 timestamp.' },
       { name: 'job_id', type: 'string', desc: 'Unique job identifier, e.g. "ARMX-WELD-MH82J9X".' },
       { name: 'part.filename · part.units', type: 'string', desc: 'Source part name; units are always "mm".' },
       { name: 'part.bounding_dimensions_mm', type: '{ x, y, z }', desc: 'Workpiece envelope, used for fixturing and reach checks.' },
+      { name: 'part.import_rotation_deg', type: '{ x, z }', desc: 'Quarter-turn rotation applied to an uploaded STL to stand it upright. Coordinates are after this rotation.' },
       { name: 'part.coordinate_frame', type: 'object', desc: 'Declares the frame every coordinate in the file uses (see Coordinate frame).' },
       { name: 'part.mesh_integrity', type: 'object | null', desc: 'watertight flag and open_edges count from the STL edge check.' },
     ],
@@ -175,7 +176,7 @@ export default function DocsPage() {
         <main className="min-w-0 pt-14 pb-24">
           {/* Title */}
           <div className="pb-14 border-b border-[#1D271C]">
-            <span className="ax-label">Weld job specification · Schema 1.3.0</span>
+            <span className="ax-label">Weld job specification · Schema 1.4.0</span>
             <h1
               style={{ fontFamily: 'Onest, sans-serif' }}
               className="mt-5 text-[38px] sm:text-[56px] leading-[0.98] tracking-[-0.02em] font-normal max-w-[760px]"
@@ -251,7 +252,7 @@ export default function DocsPage() {
               </div>
               <pre style={{ fontFamily: MONO }} className="p-5 text-[12.5px] leading-[1.8] overflow-x-auto text-[#B4C2B3]">
 {`{
-  "schema_version": "1.3.0",
+  "schema_version": "1.4.0",
   "job_id": "ARMX-WELD-…",
   `}<span className="text-[#F6F5EE]">&quot;part&quot;</span>{`: { filename, units, bounding_dimensions_mm, coordinate_frame, mesh_integrity },
   `}<span className="text-[#F6F5EE]">&quot;robot_controller_profile&quot;</span>{`: { kinematics, reach_envelope_max_mm, rapid_traverse_speed_mm_s, … },

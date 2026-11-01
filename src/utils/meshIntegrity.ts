@@ -23,14 +23,29 @@ export function analyzeMeshIntegrity(geometry: THREE.BufferGeometry): MeshIntegr
   const index = geometry.getIndex();
   const triCount = index ? index.count / 3 : pos.count / 3;
 
-  const weldIds = new Map<string, number>();
+  // Weld vertices by quantised position (1 µm) using a numeric spatial hash with exact bucket
+  // comparison: much faster than string keys on dense meshes (hundreds of thousands of triangles)
+  const buckets = new Map<number, number[]>(); // hash -> list of welded ids
+  const qx: number[] = [];
+  const qy: number[] = [];
+  const qz: number[] = [];
   const vertexId = (i: number) => {
-    const key = `${Math.round(pos.getX(i) * 1000)},${Math.round(pos.getY(i) * 1000)},${Math.round(pos.getZ(i) * 1000)}`;
-    let id = weldIds.get(key);
-    if (id === undefined) {
-      id = weldIds.size;
-      weldIds.set(key, id);
+    const x = Math.round(pos.getX(i) * 1000);
+    const y = Math.round(pos.getY(i) * 1000);
+    const z = Math.round(pos.getZ(i) * 1000);
+    const h = (Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791)) >>> 0;
+    let list = buckets.get(h);
+    if (list) {
+      for (const id of list) if (qx[id] === x && qy[id] === y && qz[id] === z) return id;
+    } else {
+      list = [];
+      buckets.set(h, list);
     }
+    const id = qx.length;
+    qx.push(x);
+    qy.push(y);
+    qz.push(z);
+    list.push(id);
     return id;
   };
 
@@ -39,7 +54,7 @@ export function analyzeMeshIntegrity(geometry: THREE.BufferGeometry): MeshIntegr
     ids[t] = vertexId(index ? index.getX(t) : t);
   }
 
-  const n = weldIds.size;
+  const n = qx.length;
   const edgeUse = new Map<number, number>();
   const addEdge = (a: number, b: number) => {
     if (a === b) return; // degenerate sliver edge

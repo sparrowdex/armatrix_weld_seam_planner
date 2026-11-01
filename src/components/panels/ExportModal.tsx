@@ -57,7 +57,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
                   EXPORT ROBOTIC WELD JOB JSON
                 </h2>
                 <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-[#172616] text-[#22C55E] border border-[#233D22]">
-                  v1.3.0 Schema
+                  v1.4.0 Schema
                 </span>
               </div>
               <p className="text-[11px] text-[#7E8F7D] mt-0.5">

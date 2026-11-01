@@ -48,6 +48,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = ''; // allow picking the same file again
     if (!file) return;
 
     setPartLoading(true);
@@ -84,8 +85,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
           },
         });
       } catch (err) {
-        console.error('Failed to parse uploaded STL:', err);
-        alert('Invalid STL file format. Please upload a valid .stl file.');
+        // Handled in-app: a quiet warning instead of a browser alert or a red console error
+        console.warn('Could not read uploaded STL:', err);
+        useWeldStore
+          .getState()
+          .showFunToast(
+            `${file.name} couldn’t be read as an STL. Check that it is a binary or ASCII STL export, and not empty.`,
+            'warn'
+          );
       } finally {
         setPartLoading(false);
       }

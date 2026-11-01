@@ -99,7 +99,7 @@ export interface WeldSeamExport {
 }
 
 export interface WeldJobExport {
-  schema_version: '1.3.0';
+  schema_version: '1.4.0';
   generator: 'Armatrix Autonomous Seam Planner v1.0';
   job_id: string;
   created_at: string;
@@ -111,6 +111,8 @@ export interface WeldJobExport {
       y: number;
       z: number;
     };
+    /** Quarter-turn rotation applied to the uploaded STL before planning (degrees). */
+    import_rotation_deg: { x: number; z: number };
     /** How every coordinate in this file is expressed. */
     coordinate_frame: {
       handedness: 'right-handed';

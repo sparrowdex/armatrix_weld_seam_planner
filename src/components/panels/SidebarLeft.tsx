@@ -22,6 +22,7 @@ import {
 import { STLLoader } from 'three-stdlib';
 import { detectCandidateSeams } from '@/utils/seamDetector';
 import { minCreaseLengthMm } from '@/utils/partScale';
+import { applyPartRotation } from '@/utils/partOrientation';
 
 const RENAME_HINTS = ['bacon', 'sparky', 'pink'];
 
@@ -157,6 +158,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
         try {
           const loader = new STLLoader();
           const geom = loader.parse(activeCustom.buffer);
+          applyPartRotation(geom, useWeldStore.getState().partRotation);
           geom.computeVertexNormals();
           geom.center();
           geom.computeBoundingBox();
@@ -178,7 +180,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
             return;
           }
         } catch (e) {
-          console.error('Failed topological crease detection on custom STL:', e);
+          console.warn('Crease detection failed on this STL:', e);
         }
       }
       const none = 'No weld joints found. Welds sit where two parts meet, so a single solid has none. Use manual click-to-weld to place seams yourself.';
@@ -280,6 +282,36 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
               </span>
             ))}
         </div>
+        {part && customModels.some((m) => m.name === activeModelName) && (
+          <div className="flex items-center justify-between mt-2.5">
+            <span className="text-[11px] text-[#7D8F7C]" title="STL has no 'up'. Turn an uploaded part upright if it arrives on its side.">
+              Orientation
+            </span>
+            <div className="flex items-center gap-1 -mr-1.5">
+              {(['x', 'z'] as const).map((axis) => (
+                <button
+                  key={axis}
+                  onClick={(e) => {
+                    const dir = e.shiftKey ? -1 : 1;
+                    const hadSeams = useWeldStore.getState().seams.length > 0;
+                    useWeldStore.getState().rotatePart(axis, dir);
+                    // Only explain when something was actually cleared
+                    if (hadSeams) {
+                      useWeldStore
+                        .getState()
+                        .showFunToast('Seams were cleared because their positions no longer match the rotated part.');
+                    }
+                  }}
+                  className="ax-btn ax-btn-ghost !h-6 !px-2 !text-[11px]"
+                  title={`Turn the part 90° about ${axis.toUpperCase()} (Shift+click turns the other way)`}
+                >
+                  <RotateCw className="w-3 h-3" />
+                  <span>{axis.toUpperCase()} 90°</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {part ? (
           <div className="flex items-baseline justify-between mt-2.5">
             <span

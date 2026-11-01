@@ -66,6 +66,9 @@ export interface WeldState {
   setPart: (part: PartMetadata | null) => void;
   setPartLoading: (loading: boolean) => void;
   setActiveModelName: (name: string) => void;
+  /** Quarter turns applied to the active uploaded part (reset when the part changes). */
+  partRotation: { x: number; z: number };
+  rotatePart: (axis: 'x' | 'z', direction?: 1 | -1) => void;
   addCustomModel: (name: string, buffer: ArrayBuffer) => void;
   setMode: (mode: ViewportMode) => void;
   toggleWireframe: () => void;
@@ -187,13 +190,25 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   setPart: (part) => set({ part }),
   setPartLoading: (loading) => set({ partLoading: loading }),
   // When switching models, atomically clear old seams so they never stack up or float in space!
-  setActiveModelName: (name) => set({ activeModelName: name, seams: [], seamHistory: [], selectedSeamId: null, completedSeamIds: [] }),
+  setActiveModelName: (name) =>
+    set({ activeModelName: name, partRotation: { x: 0, z: 0 }, seams: [], seamHistory: [], selectedSeamId: null, completedSeamIds: [] }),
+  partRotation: { x: 0, z: 0 },
+  // Rotating invalidates every seam coordinate, so seams are cleared
+  rotatePart: (axis, direction = 1) =>
+    set((state) => ({
+      partRotation: { ...state.partRotation, [axis]: (state.partRotation[axis] + direction + 4) % 4 },
+      seams: [],
+      seamHistory: [],
+      selectedSeamId: null,
+      completedSeamIds: [],
+    })),
   addCustomModel: (name, buffer) =>
     set((state) => {
       const filtered = state.customModels.filter((m) => m.name !== name);
       return {
         customModels: [...filtered, { name, buffer }],
         activeModelName: name,
+        partRotation: { x: 0, z: 0 },
         seams: [],
         seamHistory: [],
         selectedSeamId: null,
@@ -576,7 +591,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
     const totalCycleTime = totalWeldTime + totalTraverseTime + totalCooling;
 
     const jobExport: WeldJobExport = {
-      schema_version: '1.3.0',
+      schema_version: '1.4.0',
       generator: 'Armatrix Autonomous Seam Planner v1.0',
       job_id: `ARMX-WELD-${Date.now().toString(36).toUpperCase()}`,
       created_at: new Date().toISOString(),
@@ -588,6 +603,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
           y: s.part?.dimensions.height ?? 0,
           z: s.part?.dimensions.depth ?? 0,
         },
+        import_rotation_deg: { x: s.partRotation.x * 90, z: s.partRotation.z * 90 },
         coordinate_frame: {
           handedness: 'right-handed',
           up_axis: '+Y',
