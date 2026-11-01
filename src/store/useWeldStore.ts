@@ -1,3 +1,4 @@
+import { REACH_ENVELOPE_MM } from '@/utils/reach';
 import { create } from 'zustand';
 import { PartMetadata, Vector3D, WeldParameters, WeldSeam, ViewportMode, WeldJobExport, WeldSeamExport, TorchNozzleType } from '@/types/weld';
 
@@ -45,7 +46,8 @@ export interface WeldState {
   simProgress: number; // 0 to 1
   simCurrentSeamIndex: number;
   simTargetSeamId: string | null;
-  simPhase: 'idle' | 'rapid_traverse' | 'approach' | 'welding' | 'retract' | 'cooling';
+  simPhase: 'idle' | 'rapid_traverse' | 'approach' | 'welding' | 'retract' | 'cooling' | 'dry_run';
+  simNotice: string | null;
   playbackSpeed: number;
 
   // Actions
@@ -93,6 +95,7 @@ export interface WeldState {
   setSimProgress: (progress: number) => void;
   setSimPhase: (phase: WeldState['simPhase']) => void;
   setSimCurrentSeamIndex: (index: number) => void;
+  setSimNotice: (notice: string | null) => void;
   setPlaybackSpeed: (speed: number) => void;
 
   // Exporters
@@ -155,6 +158,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   simCurrentSeamIndex: 0,
   simTargetSeamId: null,
   simPhase: 'idle',
+  simNotice: null,
   playbackSpeed: 1,
 
   setPart: (part) => set({ part }),
@@ -385,20 +389,25 @@ export const useWeldStore = create<WeldState>((set, get) => ({
         const found = state.seams.findIndex((s) => s.id === state.selectedSeamId);
         if (found !== -1) startIndex = found;
       } else {
-        const uncompletedIdx = state.seams.findIndex((s) => !state.completedSeamIds.includes(s.id));
+        // Non-manufacturable (air-gap) seams are never welded, so they never count as pending work
+        const uncompletedIdx = state.seams.findIndex((s) => !s.hasAirGap && !state.completedSeamIds.includes(s.id));
         if (uncompletedIdx !== -1 && uncompletedIdx < state.seams.length) {
           startIndex = uncompletedIdx;
         }
       }
 
+      const weldable = state.seams.filter((s) => !s.hasAirGap);
+      const allWelded = weldable.length > 0 && weldable.every((s) => state.completedSeamIds.includes(s.id));
+
       return {
         isSimulating: true,
+        simNotice: null,
         mode: 'simulate',
         simTargetSeamId: targetSeamId,
         simCurrentSeamIndex: startIndex,
         selectedSeamId: targetSeamId ? targetSeamId : null,
         completedSeamIds:
-          state.completedSeamIds.length === state.seams.length && !targetSeamId
+          allWelded && !targetSeamId
             ? []
             : state.completedSeamIds,
       };
@@ -411,11 +420,13 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       simCurrentSeamIndex: 0,
       simTargetSeamId: null,
       simPhase: 'idle',
+      simNotice: null,
       completedSeamIds: [],
     }),
   setSimProgress: (progress) => set({ simProgress: progress }),
   setSimPhase: (phase) => set({ simPhase: phase }),
   setSimCurrentSeamIndex: (index) => set({ simCurrentSeamIndex: index }),
+  setSimNotice: (notice) => set({ simNotice: notice }),
   setPlaybackSpeed: (speed) => set({ playbackSpeed: speed }),
 
   exportJobJSON: () => {
@@ -512,7 +523,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       },
       robot_controller_profile: {
         kinematics: 'Armatrix-Continuum-Snake-Arm',
-        reach_envelope_max_mm: 3500,
+        reach_envelope_max_mm: REACH_ENVELOPE_MM,
         rapid_traverse_speed_mm_s: s.rapidTraverseSpeed,
         safe_plane_z_clearance_mm: s.safePlaneZClearance,
         tool_effector: {

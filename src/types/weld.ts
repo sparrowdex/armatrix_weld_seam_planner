@@ -54,6 +54,12 @@ export interface PartMetadata {
     min: Vector3D;
     max: Vector3D;
   };
+  /** Edge-manifold check result (computed when the mesh is loaded into the viewport). */
+  integrity?: {
+    openEdges: number;
+    nonManifoldEdges: number;
+    isWatertight: boolean;
+  };
 }
 
 export interface WeldSeamExport {
