@@ -59,7 +59,7 @@ This application provides an end-to-end, browser-based workflow fulfilling these
 * Reverse travel direction (swap Start ⇄ End coordinates) with a single click.
 
 ### 5. High-Fidelity 3D Simulation Engine & 4-Waypoint Trajectory Pipeline
-* Realistic 3D model of **Armatrix's modular welding end-effector** (dark graphite casing with safety red collar and copper nozzle).
+* Binzel-style robotic gooseneck MIG torch (chrome gas nozzle, copper contact tip and wire stick-out at the arc point), scaled about 1:3 to fit the benchmark parts' gusset bays.
 * **The 4-Stage Collision-Free Trajectory Pipeline**:
 
 ```mermaid
@@ -144,7 +144,7 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
 
 ```json
 {
-  "schema_version": "1.2.0",
+  "schema_version": "1.3.0",
   "generator": "Armatrix Autonomous Seam Planner v1.0",
   "job_id": "ARMX-WELD-MH82J9X",
   "created_at": "2026-10-30T14:15:00.000Z",
@@ -155,7 +155,13 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
       "x": 100.0,
       "y": 82.0,
       "z": 60.0
-    }
+    },
+    "coordinate_frame": {
+      "handedness": "right-handed",
+      "up_axis": "+Y",
+      "origin": "Part bounding-box centre in X and Z, at the part's lowest point in Y (the fixture table surface)"
+    },
+    "mesh_integrity": { "watertight": true, "open_edges": 0 }
   },
   "robot_controller_profile": {
     "kinematics": "Armatrix-Continuum-Snake-Arm",
@@ -169,6 +175,8 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
   },
   "job_summary": {
     "total_seams": 3,
+    "executable_seams": 3,
+    "skipped_seam_ids": [],
     "total_weld_length_mm": 218.4,
     "estimated_active_weld_time_sec": 18.2,
     "estimated_traverse_time_sec": 2.4,
@@ -188,6 +196,9 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
       "surface_normal": [0.0, 0.707, 0.707],
       "approach_point": [-45.0, 29.675, -0.325],
       "retract_point": [45.0, 33.21, 3.21],
+      "torch_axis": [0.0, 0.7071, 0.7071],
+      "travel_direction": [1.0, 0.0, 0.0],
+      "executable": true,
       "torch_orientation": {
         "lead_angle_deg": 10.0,
         "tilt_angle_deg": 45.0,
@@ -223,9 +234,11 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
 | `job_id` | String | Unique tracking ID generated for the manufacturing session. |
 | `part.bounding_dimensions_mm` | Object | Overall `X, Y, Z` envelope to verify part fits inside the fixture. |
 | `part.filename` / `part.units` | String | Source part name and unit system (always `mm`). |
+| `part.coordinate_frame` | Object | Right-handed, `+Y` up; origin at the part bounding-box centre in X/Z on the table surface (lowest Y). Every coordinate in the file is in this frame. |
+| `part.mesh_integrity` | Object \| null | `watertight` flag and `open_edges` count from the STL edge-manifold check. |
 | `robot_controller_profile` | Object | Continuum snake-arm parameters (3500mm reach, rapid speed, safe clearance plane). |
 | `robot_controller_profile.tool_effector` | Object | Torch model and nozzle configuration the job was planned for. |
-| `job_summary` | Object | Total weld length, arc-on time, non-welding traverse time, cooling delays, and total cycle duration. |
+| `job_summary` | Object | `total_seams`, `executable_seams` and `skipped_seam_ids`, then, for executable seams only: weld length, arc-on time, rapid traverse time (retract → next approach), interpass cooling (between passes, none after the final pass) and total cycle time. |
 | `seam_id` & `sequence_order` | String / Int | Unique identifier and execution order index for thermal distortion management. |
 | `name` / `length_mm` | String / Float | User-editable seam name and straight-line seam length in mm. |
 | `process` | Enum | `MIG`, `TIG`, or `LASER`. Directs the power source mode and wire feeder. |
@@ -234,6 +247,9 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
 | `surface_normal` | Float[3] | Unit vector pointing outward from the joint; dictates the torch bisector angle. |
 | `approach_point` | Float[3] | Safe 3D coordinate at `start_coordinate + torch_axis * approach_distance`, where `torch_axis` is the surface normal rotated by the joint work-angle offset (about the seam) and the lead angle (along travel), exactly as simulated. The snake arm positions here prior to striking the arc to prevent collisions. |
 | `retract_point` | Float[3] | Safe 3D coordinate at `end_coordinate + torch_axis * retract_distance` (same torch axis). The torch pulls out here after extinguishing the arc before traversing. |
+| `torch_axis` | Float[3] | Unit tool-axis vector (from the weld point up the torch body) after tilt and lead are applied: the exact orientation the simulator uses, so the controller does not need to re-derive it from angles. |
+| `travel_direction` | Float[3] | Unit vector from `start_coordinate` to `end_coordinate`. Together with `torch_axis` it fully defines the tool frame. |
+| `executable` | Boolean | `false` for non-manufacturable seams; the controller must not run them. |
 | `torch_orientation` | Object | Lead (push/drag) and tilt angles in degrees relative to the seam vector, plus `nozzle_type` (`conical`, `narrow` or `laser`). |
 | `weld_parameters` | Object | Travel speed, amperage, voltage, wire feed speed, shielding gas flow, interpass cooling time and wire diameter (`wire_diameter_mm`, AWS ER70S-6). |
 | `air_gap_detected` | Boolean | `true` when the seam bridges open space with no metal underneath. The controller must reject these seams; the planner never welds them in simulation. |

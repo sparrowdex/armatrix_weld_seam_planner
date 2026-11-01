@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.7.0] - 2026-11-01
+
+### Added
+- **Unified planner UI**: shared style primitives following armatrix.com type (Onest labels and numbers, 42dot Sans body, orange as signal only); transparent header command bar; numbered, compact side panels; translucent seam-in-focus card; restyled simulation dock.
+- **Mesh integrity check**: watertight / open-mesh badge from an STL edge count.
+- **Computed reach**: part diagonal vs the 3500 mm snake-arm envelope.
+- **Weld visuals**: rippled "stack of dimes" bead, deposit-revealed bead with cooling glow, fading heat-affected-zone temper tint, realistic arc light and ballistic spatter by process.
+- **Arc sound** (Web Audio, muted by default): MIG crackle, TIG buzz with HF start, muffled laser; ducks when the tab loses focus.
+- **Redesigned homepage and docs page** in the Armatrix brand style.
+- A few hidden easter eggs.
+
+### Changed
+- **Export schema 1.3.0**: `part.coordinate_frame`, `part.mesh_integrity`, per-seam `torch_axis`, `travel_direction` and `executable`, `job_summary.executable_seams` and `skipped_seam_ids`. Totals cover executable seams only; interpass cooling is counted between passes only.
+- Approach and retract points follow the simulated torch axis (tilt and lead applied).
+- Air-gap seams are skipped in Run All and dry-run (arc off, no bead) when simulated alone.
+- Pipe T-joint saddle detection: 12 segments on the analytic intersection curve with per-segment bisector normals.
+- L-bracket detection: free seam ends run the full joint; only wall-bound ends keep nozzle clearance.
+- Facet wireframe (no diagonals across flat faces); off-white ghost X-ray edges.
+- On-demand rendering: the 3D view only redraws while something changes.
+- `lint` script (relied on the removed `next lint`) replaced by `typecheck`.
+
+### Removed
+- Unused emblem model, unused second torch style, tracked build artefacts (`tsconfig.tsbuildinfo`, `next-env.d.ts`).
+
 ## [1.6.0] - 2026-10-31
 
 ### Added
