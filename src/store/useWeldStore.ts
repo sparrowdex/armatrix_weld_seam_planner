@@ -1,4 +1,6 @@
+import * as THREE from 'three';
 import { REACH_ENVELOPE_MM } from '@/utils/reach';
+import { getEffectiveTorchVector } from '@/utils/torchKinematics';
 import { create } from 'zustand';
 import { PartMetadata, Vector3D, WeldParameters, WeldSeam, ViewportMode, WeldJobExport, WeldSeamExport, TorchNozzleType } from '@/types/weld';
 
@@ -455,15 +457,25 @@ export const useWeldStore = create<WeldState>((set, get) => ({
 
       const appDist = seam.parameters.approachDistance;
       const retDist = seam.parameters.retractDistance;
+      // Approach/retract follow the same effective torch axis the simulation uses
+      // (surface normal rotated by the joint work-angle offset and the travel lead angle).
+      const torchAxis = getEffectiveTorchVector(
+        new THREE.Vector3(seam.startPoint.x, seam.startPoint.y, seam.startPoint.z),
+        new THREE.Vector3(seam.endPoint.x, seam.endPoint.y, seam.endPoint.z),
+        new THREE.Vector3(seam.normal.x, seam.normal.y, seam.normal.z),
+        seam.parameters.torchTiltAngle,
+        seam.parameters.torchLeadAngle,
+        seam.parameters.jointType
+      );
       const approachPoint: [number, number, number] = [
-        parseFloat((seam.startPoint.x + seam.normal.x * appDist).toFixed(3)),
-        parseFloat((seam.startPoint.y + seam.normal.y * appDist).toFixed(3)),
-        parseFloat((seam.startPoint.z + seam.normal.z * appDist).toFixed(3)),
+        parseFloat((seam.startPoint.x + torchAxis.x * appDist).toFixed(3)),
+        parseFloat((seam.startPoint.y + torchAxis.y * appDist).toFixed(3)),
+        parseFloat((seam.startPoint.z + torchAxis.z * appDist).toFixed(3)),
       ];
       const retractPoint: [number, number, number] = [
-        parseFloat((seam.endPoint.x + seam.normal.x * retDist).toFixed(3)),
-        parseFloat((seam.endPoint.y + seam.normal.y * retDist).toFixed(3)),
-        parseFloat((seam.endPoint.z + seam.normal.z * retDist).toFixed(3)),
+        parseFloat((seam.endPoint.x + torchAxis.x * retDist).toFixed(3)),
+        parseFloat((seam.endPoint.y + torchAxis.y * retDist).toFixed(3)),
+        parseFloat((seam.endPoint.z + torchAxis.z * retDist).toFixed(3)),
       ];
 
       return {

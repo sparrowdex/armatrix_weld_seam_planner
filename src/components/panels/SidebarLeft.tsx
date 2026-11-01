@@ -79,20 +79,25 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     clearSeams();
 
     if (activeModelName === 'Structural L-Bracket') {
-      // 1. Center Bay 90° Root Fillet (Flush in root corner at z = -31, 4mm nozzle standoff)
+      // Geometry (after load centering): plate X −60..60, upright front face Z = −31, base top Y = 14,
+      // gussets X −40..−30 and 30..40, gusset foot Z −31..24, gusset top Y = 74.
+      // Rule: a seam end that runs into a wall (3-way corner) stops 4 mm short so the 3.2 mm-radius nozzle
+      // clears the wall; a free end (plate edge, gusset toe, gusset top) runs the full joint, inset 0.5 mm
+      // so the end point stays on metal.
+      // 1. Center bay root fillet: walled by both gussets
       addSeam({ x: -26, y: 14, z: -31 }, { x: 26, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Center Root Fillet');
-      // 2. Left Gusset - Base Plate Fillet (Center bay side: z = -27 to +20, 4mm nozzle standoff)
-      addSeam({ x: -30, y: 14, z: -27 }, { x: -30, y: 14, z: 20 }, { x: 0.707, y: 0.707, z: 0 }, 'detected', 'Left Gusset Base');
-      // 3. Left Gusset - Vertical Upright Fillet (Center bay side: y = 18 to 70 at z = -31, 4mm nozzle standoff)
-      addSeam({ x: -30, y: 18, z: -31 }, { x: -30, y: 70, z: -31 }, { x: 0.707, y: 0, z: 0.707 }, 'detected', 'Left Gusset Vertical');
-      // 4. Right Gusset - Base Plate Fillet (Center bay side: z = -27 to +20, 4mm nozzle standoff)
-      addSeam({ x: 30, y: 14, z: -27 }, { x: 30, y: 14, z: 20 }, { x: -0.707, y: 0.707, z: 0 }, 'detected', 'Right Gusset Base');
-      // 5. Right Gusset - Vertical Upright Fillet (Center bay side: y = 18 to 70 at z = -31, 4mm nozzle standoff)
-      addSeam({ x: 30, y: 18, z: -31 }, { x: 30, y: 70, z: -31 }, { x: -0.707, y: 0, z: 0.707 }, 'detected', 'Right Gusset Vertical');
-      // 6. Left Outer Root Fillet (Outside left rib: x = -55 to -44 at z = -31, 4mm nozzle standoff)
-      addSeam({ x: -55, y: 14, z: -31 }, { x: -44, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Left Outer Root');
-      // 7. Right Outer Root Fillet (Outside right rib: x = 44 to 55 at z = -31, 4mm nozzle standoff)
-      addSeam({ x: 44, y: 14, z: -31 }, { x: 55, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
+      // 2. Left gusset to base plate: corner end clearance, runs out to the gusset toe
+      addSeam({ x: -30, y: 14, z: -27 }, { x: -30, y: 14, z: 23.5 }, { x: 0.707, y: 0.707, z: 0 }, 'detected', 'Left Gusset Base');
+      // 3. Left gusset to upright: corner end clearance, runs up to the gusset top
+      addSeam({ x: -30, y: 18, z: -31 }, { x: -30, y: 73.5, z: -31 }, { x: 0.707, y: 0, z: 0.707 }, 'detected', 'Left Gusset Vertical');
+      // 4. Right gusset to base plate
+      addSeam({ x: 30, y: 14, z: -27 }, { x: 30, y: 14, z: 23.5 }, { x: -0.707, y: 0.707, z: 0 }, 'detected', 'Right Gusset Base');
+      // 5. Right gusset to upright
+      addSeam({ x: 30, y: 18, z: -31 }, { x: 30, y: 73.5, z: -31 }, { x: -0.707, y: 0, z: 0.707 }, 'detected', 'Right Gusset Vertical');
+      // 6. Left outer root: from the plate edge to the left gusset's outer face
+      addSeam({ x: -59.5, y: 14, z: -31 }, { x: -44, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Left Outer Root');
+      // 7. Right outer root: from the right gusset's outer face to the plate edge
+      addSeam({ x: 44, y: 14, z: -31 }, { x: 59.5, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
     } else if (activeModelName === 'Pipe T-Joint') {
       // 12-segment saddle seam on the true branch-to-header intersection curve.
       // Branch R = 18 mm (vertical axis), header R = 25 mm (axis along X at y = 36).
@@ -185,16 +190,16 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
   const handleSplitAroundGussets = (seamId: string) => {
     removeSeam(seamId);
     // Replaces the colliding continuous pass with 3 collision-free segmented passes with 4mm setback from gussets
-    addSeam({ x: -58, y: 14, z: -31 }, { x: -40, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Left Outer Root');
+    addSeam({ x: -59.5, y: 14, z: -31 }, { x: -44, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Left Outer Root');
     addSeam({ x: -26, y: 14, z: -31 }, { x: 26, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Center Root Fillet');
-    addSeam({ x: 40, y: 14, z: -31 }, { x: 58, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
+    addSeam({ x: 44, y: 14, z: -31 }, { x: 59.5, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
   };
 
   const handleFullRootPass = () => {
     clearSeams();
     addSeam(
-      { x: -58, y: 14, z: -31 },
-      { x: 58, y: 14, z: -31 },
+      { x: -59.5, y: 14, z: -31 },
+      { x: 59.5, y: 14, z: -31 },
       { x: 0, y: 0.707, z: 0.707 },
       'detected',
       'Stage 1 Continuous Root (Pre-Gusset)'

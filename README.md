@@ -232,8 +232,8 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
 | `joint_type` | Enum | Joint classification (`FILLET`, `BUTT`, `LAP`, etc.) for adaptive weaving. |
 | `start_coordinate` / `end_coordinate` | Float[3] | 3D Cartesian coordinates in the part coordinate frame (`[X, Y, Z]` mm). |
 | `surface_normal` | Float[3] | Unit vector pointing outward from the joint; dictates the torch bisector angle. |
-| `approach_point` | Float[3] | Safe 3D coordinate calculated at `start_coordinate + normal * approach_distance`. The snake arm positions here prior to striking the arc to prevent collisions. |
-| `retract_point` | Float[3] | Safe 3D coordinate calculated at `end_coordinate + normal * retract_distance`. The torch pulls out here after extinguishing the arc before traversing. |
+| `approach_point` | Float[3] | Safe 3D coordinate at `start_coordinate + torch_axis * approach_distance`, where `torch_axis` is the surface normal rotated by the joint work-angle offset (about the seam) and the lead angle (along travel), exactly as simulated. The snake arm positions here prior to striking the arc to prevent collisions. |
+| `retract_point` | Float[3] | Safe 3D coordinate at `end_coordinate + torch_axis * retract_distance` (same torch axis). The torch pulls out here after extinguishing the arc before traversing. |
 | `torch_orientation` | Object | Lead (push/drag) and tilt angles in degrees relative to the seam vector, plus `nozzle_type` (`conical`, `narrow` or `laser`). |
 | `weld_parameters` | Object | Travel speed, amperage, voltage, wire feed speed, shielding gas flow, interpass cooling time and wire diameter (`wire_diameter_mm`, AWS ER70S-6). |
 | `air_gap_detected` | Boolean | `true` when the seam bridges open space with no metal underneath. The controller must reject these seams; the planner never welds them in simulation. |
