@@ -22,6 +22,8 @@ import {
 import { STLLoader } from 'three-stdlib';
 import { detectCandidateSeams } from '@/utils/seamDetector';
 
+const RENAME_HINTS = ['bacon', 'sparky', 'pink'];
+
 interface SidebarLeftProps {
   onToggleCollapse?: () => void;
   isCollapsed?: boolean;
@@ -30,7 +32,6 @@ interface SidebarLeftProps {
 export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) => {
   const {
     part,
-    partLoading,
     mode,
     setMode,
     seams,
@@ -56,10 +57,14 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
   const [detectionToast, setDetectionToast] = useState<string | null>(null);
   const [editingSeamId, setEditingSeamId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>('');
+  // Rename hint rotates through a few playful names; each one has a hidden effect in the simulator
+  const [hintIndex, setHintIndex] = useState(0);
 
-  const handleStartRename = (seamId: string, currentName: string) => {
+  // Opens with an empty field so the placeholder hint shows; leaving it empty keeps the current name
+  const handleStartRename = (seamId: string, _currentName: string) => {
     setEditingSeamId(seamId);
-    setEditingName(currentName);
+    setEditingName('');
+    setHintIndex((i) => i + 1);
   };
 
   const handleSaveRename = (seamId: string) => {
@@ -239,9 +244,9 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
         )}
       </div>
 
-      {/* /01 Workpiece */}
-      <div className="ax-section shrink-0">
-        <div className="flex items-center justify-between mb-3">
+      {/* 01 Workpiece: one compact readout line */}
+      <div className="px-4 py-3 border-b border-[#182118] shrink-0">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="ax-index">01</span>
             <span className="ax-label">Workpiece</span>
@@ -267,45 +272,40 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
               </span>
             ))}
         </div>
-
         {part ? (
-          <>
-            <div
-              className="grid grid-cols-3 border border-[#182118] rounded-[4px] divide-x divide-[#182118]"
-              title="Workpiece 3D bounding envelope (Width × Height × Depth in mm). Used for machine clamping & robot reach checks."
+          <div className="flex items-baseline justify-between mt-2.5">
+            <span
+              className="ax-num text-[13px] text-[#F6F5EE]"
+              title="Workpiece bounding envelope, width × height × depth (mm). Used for clamping and reach checks."
             >
-              {[
-                { k: 'W', v: part.dimensions.width },
-                { k: 'H', v: part.dimensions.height },
-                { k: 'D', v: part.dimensions.depth },
-              ].map((d) => (
-                <div key={d.k} className="px-2.5 py-2">
-                  <div className="ax-label !text-[10px] mb-1.5">{d.k}</div>
-                  <div className="ax-num text-[13px] font-medium text-[#F6F5EE]">
-                    {d.v}
-                    <span className="text-[10px] text-[#7D8F7C] ml-0.5">mm</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div
-              className="flex items-center justify-between mt-2 text-[11px] text-[#7D8F7C]"
-              title="Total triangular polygon facets in the ingested STL mesh."
-            >
-              <span>Mesh facets</span>
-              <span className="ax-num text-[#B4C2B3]">{part.triangleCount.toLocaleString()} triangles</span>
-            </div>
-          </>
+              {part.dimensions.width} × {part.dimensions.height} × {part.dimensions.depth}
+              <span className="text-[11px] text-[#7D8F7C] ml-1">mm</span>
+            </span>
+            <span className="ax-num text-[11px] text-[#7D8F7C]" title="Triangle facets in the STL mesh">
+              {part.triangleCount.toLocaleString()} triangles
+            </span>
+          </div>
         ) : (
-          <div className="text-[12px] text-[#7D8F7C] py-1">Processing CAD geometry…</div>
+          <div className="text-[12px] text-[#7D8F7C] mt-2">Processing CAD geometry…</div>
         )}
       </div>
 
-      {/* /02 Seam tools */}
-      <div className="ax-section shrink-0 flex flex-col gap-2">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="ax-index">02</span>
-          <span className="ax-label">Seam Tools</span>
+      {/* 02 Seam tools: two rows */}
+      <div className="px-4 py-3 border-b border-[#182118] shrink-0 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="ax-index">02</span>
+            <span className="ax-label">Seam Tools</span>
+          </div>
+          {activeModelName === 'Structural L-Bracket' && (
+            <button
+              onClick={handleFullRootPass}
+              className="ax-btn ax-btn-ghost !h-6 !px-2 !text-[11px] -mr-1.5"
+              title="Plan single continuous 120mm root seam for Stage-1 subassembly (before gusset stiffeners are installed)"
+            >
+              120 mm root
+            </button>
+          )}
         </div>
 
         <button
@@ -317,35 +317,36 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
           <span>{mode === 'add_seam' ? 'Cancel click-to-weld' : 'Manual click-to-weld'}</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={handleAutoDetect}
-            className="ax-btn flex-1"
+            className="ax-btn"
             title="Auto-detects all 7 finished assembly seams with gusset collision clearance"
           >
             <Target className="w-3.5 h-3.5 text-[#e97f01]" />
-            <span>Auto-detect creases</span>
+            <span>Auto-detect</span>
           </button>
-          {activeModelName === 'Structural L-Bracket' && (
-            <button
-              onClick={handleFullRootPass}
-              className="ax-btn"
-              title="Plan single continuous 120mm root seam for Stage-1 subassembly (before gusset stiffeners are installed)"
-            >
-              120 mm root
-            </button>
-          )}
+          <button
+            onClick={handleOptimize}
+            disabled={seams.length <= 1}
+            className="ax-btn"
+            title="Reorders seams in an alternating skip pattern to distribute heat symmetrically and mitigate thermal warpage"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[#7D8F7C]" />
+            <span>Optimize order</span>
+          </button>
         </div>
 
-        <button
-          onClick={handleOptimize}
-          disabled={seams.length <= 1}
-          className="ax-btn w-full"
-          title="Reorders seams in an alternating skip pattern to distribute heat symmetrically and mitigate thermal warpage"
-        >
-          <SlidersHorizontal className="w-3.5 h-3.5 text-[#7D8F7C]" />
-          <span>Auto-optimize sequence</span>
-        </button>
+        {detectionToast && (
+          <div className={`ax-notice ${detectionToast.startsWith('Detected') ? 'ax-notice-ok' : 'ax-notice-warn'}`}>
+            {detectionToast.startsWith('Detected') ? (
+              <CheckCircle className="w-3.5 h-3.5 shrink-0 mt-px text-[#4ADE80]" />
+            ) : (
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px text-[#F59E0B]" />
+            )}
+            <span>{detectionToast}</span>
+          </div>
+        )}
 
         {showOptimizedToast && (
           <div className="ax-notice ax-notice-ok">
@@ -356,7 +357,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
       </div>
 
       {/* /03 Weld sequence */}
-      <div className="px-4 pt-3.5 pb-2.5 border-b border-[#182118] shrink-0">
+      <div className="px-4 pt-3 pb-2 border-b border-[#182118] shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="ax-index">03</span>
@@ -378,7 +379,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
           </div>
         </div>
         {seams.length > 0 && (
-          <div className="flex items-center justify-between mt-2.5 text-[11px] text-[#7D8F7C]">
+          <div className="flex items-center justify-between mt-2 text-[11px] text-[#7D8F7C]">
             <span>
               Total <span className="ax-num text-[#F6F5EE] ml-1">{totalLength} mm</span>
             </span>
@@ -407,7 +408,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
               <div
                 key={seam.id}
                 onClick={() => selectSeam(isSelected ? null : seam.id)}
-                className={`px-2.5 py-2.5 rounded-[4px] border transition-colors duration-150 cursor-pointer select-none ${
+                className={`px-2.5 py-2 rounded-[4px] border transition-colors duration-150 cursor-pointer select-none ${
                   isSelected
                     ? 'bg-[#111711] border-[#e97f01]/40'
                     : 'border-transparent hover:bg-[#0F140F] hover:border-[#182118]'
@@ -415,7 +416,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
               >
                 {/* Index, name, length, process */}
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <span
                       className={`ax-num w-5 h-5 rounded-[3px] flex items-center justify-center text-[10.5px] font-semibold shrink-0 ${
                         isSelected
@@ -440,7 +441,8 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                         }}
                         onClick={(e) => e.stopPropagation()}
                         autoFocus
-                        className="ax-input !h-6 !w-32 !border-[#e97f01]"
+                        placeholder={`Name it ${RENAME_HINTS[hintIndex % RENAME_HINTS.length]}`}
+                        className="ax-input !h-6 flex-1 min-w-0 !border-[#e97f01] placeholder:text-[#7D8F7C]"
                       />
                     ) : (
                       <div
@@ -468,22 +470,29 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                       </div>
                     )}
 
-                    {isCompleted && <span className="ax-chip ax-chip-ok !h-4 !text-[9px] shrink-0">Welded</span>}
+                    {isCompleted && editingSeamId !== seam.id && (
+                      <span className="ax-chip ax-chip-ok !h-4 !text-[9px] shrink-0">Welded</span>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="ax-num text-[11.5px] text-[#B4C2B3]">{seam.length} mm</span>
-                    <span className="ax-chip ax-chip-signal !h-4 !text-[9.5px]">{seam.parameters.process}</span>
-                  </div>
+                  {/* Hidden while renaming so the name field gets the whole row */}
+                  {editingSeamId !== seam.id && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="ax-num text-[11.5px] text-[#B4C2B3]">{seam.length} mm</span>
+                      <span className="ax-chip ax-chip-signal !h-4 !text-[9.5px]">{seam.parameters.process}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Joint type, tilt, travel speed */}
+                {/* Joint type, tilt, travel speed: only on the selected seam to keep the list compact */}
+                {isSelected && (
                 <div className="flex items-center justify-between text-[11px] text-[#7D8F7C] mt-1.5 pl-[30px]">
                   <span className="ax-num">
                     {seam.parameters.jointType.charAt(0) + seam.parameters.jointType.slice(1).toLowerCase()} · {seam.parameters.torchTiltAngle}° tilt
                   </span>
                   <span className="ax-num">{seam.parameters.travelSpeed} mm/s</span>
                 </div>
+                )}
 
                 {/* Air gap warning */}
                 {seam.hasAirGap && (

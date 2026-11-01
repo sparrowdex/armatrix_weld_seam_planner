@@ -221,7 +221,13 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
                 min={80}
                 max={350}
                 step={5}
-                onChange={(v) => updateSeamParameters(selectedSeam.id, { current: parseInt(v) })}
+                onChange={(v) => {
+                  const amps = parseInt(v);
+                  if (amps >= 350 && selectedSeam.parameters.current < 350) {
+                    useWeldStore.getState().showFunToast('Easy there. The neighbours’ lights just dimmed.');
+                  }
+                  updateSeamParameters(selectedSeam.id, { current: amps });
+                }}
               />
               <SliderRow
                 label="Voltage"
@@ -230,7 +236,13 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
                 min={14}
                 max={36}
                 step={0.5}
-                onChange={(v) => updateSeamParameters(selectedSeam.id, { voltage: parseFloat(v) })}
+                onChange={(v) => {
+                  const volts = parseFloat(v);
+                  if (volts >= 36 && selectedSeam.parameters.voltage < 36) {
+                    useWeldStore.getState().showFunToast('Easy there. The neighbours’ lights just dimmed.');
+                  }
+                  updateSeamParameters(selectedSeam.id, { voltage: volts });
+                }}
               />
               <SliderRow
                 label="Wire feed speed"

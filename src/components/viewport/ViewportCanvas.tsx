@@ -5,53 +5,29 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { STLLoader } from 'three-stdlib';
 import { useWeldStore } from '@/store/useWeldStore';
-import { Vector3D, TorchNozzleType, WeldSeam, WeldJointType } from '@/types/weld';
-import { Play, X, Sliders, Target, Crosshair, AlertTriangle } from 'lucide-react';
+import { Vector3D, WeldSeam } from '@/types/weld';
+import { Play, X, Sliders, Target, AlertTriangle } from 'lucide-react';
 import { validatePathSubstrate } from '@/utils/substrateValidator';
 import { analyzeMeshIntegrity } from '@/utils/meshIntegrity';
 import { getEffectiveTorchVector } from '@/utils/torchKinematics';
+import {
+  heatClock,
+  BEAD_COOL_TAU,
+  ripplePitchMm,
+  createRippledBeadGeometry,
+  beadCrownAngle,
+  createHotBeadMaterial,
+  createHazUniforms,
+  setHazSegments,
+  HAZ_FADE_END_SEC,
+  applyHazTint,
+} from '@/utils/weldVisuals';
+import { arcAudio } from '@/utils/arcAudio';
 import { getReachSummary, REACH_ENVELOPE_MM } from '@/utils/reach';
 
 // Authentic Robotic Welding Torch & Sleek Pencil Industrial End-Effectors
-function buildRoboticTorch(style: 'robotic_gooseneck' | 'sleek_pencil' = 'robotic_gooseneck'): THREE.Group {
+function buildRoboticTorch(): THREE.Group {
   const group = new THREE.Group();
-
-  if (style === 'sleek_pencil') {
-    // Sleek Tapered Industrial Tool (Pencil profile)
-    const flangeGeom = new THREE.CylinderGeometry(4.8, 4.8, 4, 24);
-    const flangeMat = new THREE.MeshStandardMaterial({ color: '#1B211B', metalness: 0.85, roughness: 0.3 });
-    const flange = new THREE.Mesh(flangeGeom, flangeMat);
-    flange.position.y = 36;
-    group.add(flange);
-
-    const bodyGeom = new THREE.CylinderGeometry(3.6, 3.6, 22, 24);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: '#222822', metalness: 0.8, roughness: 0.25 });
-    const body = new THREE.Mesh(bodyGeom, bodyMat);
-    body.position.y = 23;
-    group.add(body);
-
-    const ringGeom = new THREE.CylinderGeometry(4.0, 4.0, 5, 24);
-    const ringMat = new THREE.MeshStandardMaterial({ color: '#e97f01', metalness: 0.6, roughness: 0.25 });
-    const ring = new THREE.Mesh(ringGeom, ringMat);
-    ring.position.y = 12.5;
-    group.add(ring);
-
-    const nozzleGeom = new THREE.ConeGeometry(3.2, 10, 24);
-    const nozzleMat = new THREE.MeshStandardMaterial({ color: '#C87D40', metalness: 0.92, roughness: 0.15 });
-    const nozzle = new THREE.Mesh(nozzleGeom, nozzleMat);
-    nozzle.rotation.x = Math.PI;
-    nozzle.position.y = 5.0;
-    group.add(nozzle);
-
-    const wireGeom = new THREE.CylinderGeometry(0.35, 0.35, 4, 12);
-    const wireMat = new THREE.MeshStandardMaterial({ color: '#E2E8F0', metalness: 0.95, roughness: 0.1 });
-    const wire = new THREE.Mesh(wireGeom, wireMat);
-    wire.name = 'torch_wire';
-    wire.position.y = 1.0;
-    group.add(wire);
-
-    return group;
-  }
 
   // Authentic Industrial Binzel-style Robotic Welding Torch (from reference photo)
   // 1. Protruding Copper Contact Tip & Welding Wire (Origin at 0, 0, 0 where arc strikes)
@@ -144,19 +120,6 @@ function buildRoboticTorch(style: 'robotic_gooseneck' | 'sleek_pencil' = 'roboti
   return group;
 }
 
-// Helper to position and orient a cylinder precisely between two 3D points
-function positionCylinderBetweenPoints(mesh: THREE.Mesh, p1: THREE.Vector3, p2: THREE.Vector3, radius: number) {
-  const dir = new THREE.Vector3().subVectors(p2, p1);
-  const len = dir.length();
-  if (len < 0.05) {
-    mesh.visible = false;
-    return;
-  }
-  mesh.visible = true;
-  mesh.scale.set(radius, len, radius);
-  mesh.position.copy(p1).addScaledVector(dir, 0.5);
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
-}
 
 
 // Robust 6-DOF Orthonormal Torch Pose Calculator
@@ -290,7 +253,6 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   const seams = useWeldStore((s) => s.seams);
   const selectedSeamId = useWeldStore((s) => s.selectedSeamId);
   const completedSeamIds = useWeldStore((s) => s.completedSeamIds);
-  const torchStyle = useWeldStore((s) => s.torchStyle);
   const selectSeam = useWeldStore((s) => s.selectSeam);
   const isSimulating = useWeldStore((s) => s.isSimulating);
   const startSimulation = useWeldStore((s) => s.startSimulation);
@@ -303,6 +265,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   const selectedSeam = seams.find((s) => s.id === selectedSeamId) || null;
   const jobSummary = exportJobJSON().job_summary;
   const partReach = getReachSummary(useWeldStore((st) => st.part));
+  const funToast = useWeldStore((st) => st.funToast);
+  const funToastKey = useWeldStore((st) => st.funToastKey);
 
   // Internal Three.js refs
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -332,6 +296,18 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   const targetCameraPos = useRef<THREE.Vector3 | null>(null);
   const targetControlsTarget = useRef<THREE.Vector3 | null>(null);
   const isCameraTransitioning = useRef<boolean>(false);
+  // On-demand rendering: the WebGL frame is only redrawn while something is changing.
+  // Any store update, camera move, resize or pointer move extends the render window briefly.
+  const renderUntilRef = useRef<number>(0);
+  // Weld heat: per-seam deposit timing (real seconds) so finished beads keep cooling after rebuilds,
+  // the time until which something is still glowing, and the plate's temper-tint (HAZ) uniforms.
+  const weldTimesRef = useRef<Map<string, { start: number; speed: number }>>(new Map());
+  const hotUntilRef = useRef<number>(0);
+  const hazUniformsRef = useRef(createHazUniforms());
+  const hazBaseCountRef = useRef(0);
+  const invalidate = () => {
+    renderUntilRef.current = performance.now() + 400;
+  };
   const lastSelectedSeamIdRef = useRef<string | null>(null);
 
   // Cursor coordinates display & smooth fade-in/fade-out
@@ -502,7 +478,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     const torchContainer = new THREE.Group();
     const torchMeshGroup = torchMeshGroupRef.current;
     torchMeshGroup.clear();
-    torchMeshGroup.add(buildRoboticTorch(useWeldStore.getState().torchStyle));
+    torchMeshGroup.add(buildRoboticTorch());
     torchContainer.add(torchMeshGroup);
 
     // Arc lighting: a blue-white core (the arc column itself) plus a warm orange fill from the molten pool.
@@ -549,7 +525,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     arcGlowRef.current = arcGlow;
 
     // Spatter: world-space ballistic particles (spawn at the arc, fly off along the torch axis, fall under gravity, cool and fade)
-    const sparkCount = 90;
+    const sparkCount = 220; // headroom for the "sparky" easter egg
     const sparkGeom = new THREE.BufferGeometry();
     sparkGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(sparkCount * 3), 3));
     sparkGeom.setAttribute('color', new THREE.BufferAttribute(new Float32Array(sparkCount * 3), 3));
@@ -615,6 +591,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
       // Smooth Dynamic Canvas Gliding while drawing seams ('add_seam' mode with anchored start point)
       const state = useWeldStore.getState();
+      let glided = false;
       if (state.mode === 'add_seam' && state.manualStartPoint && !isCameraTransitioning.current) {
         const mx = mouseRef.current.x; // [-1, 1]
         const my = mouseRef.current.y; // [-1, 1], +1 top, -1 bottom
@@ -625,11 +602,13 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           const factor = Math.min(1.0, (-0.62 - my) / 0.32);
           controls.target.y -= glideSpeed * factor;
           camera.position.y -= glideSpeed * factor;
+          glided = true;
         } else if (my > 0.62) {
           // Upward panning when cursor approaches top margin (my > 0.62)
           const factor = Math.min(1.0, (my - 0.62) / 0.32);
           controls.target.y += glideSpeed * factor;
           camera.position.y += glideSpeed * factor;
+          glided = true;
         }
 
         // Horizontal panning relative to camera orientation
@@ -640,6 +619,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           if (right.lengthSq() > 0.001) right.normalize();
           controls.target.addScaledVector(right, -glideSpeed * factor);
           camera.position.addScaledVector(right, -glideSpeed * factor);
+          glided = true;
         } else if (mx > 0.72) {
           const factor = Math.min(1.0, (mx - 0.72) / 0.22);
           const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
@@ -647,12 +627,27 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           if (right.lengthSq() > 0.001) right.normalize();
           controls.target.addScaledVector(right, glideSpeed * factor);
           camera.position.addScaledVector(right, glideSpeed * factor);
+          glided = true;
         }
       }
 
-      controls.update();
-      renderer.render(scene, camera);
+      // three-stdlib types update() as void, but it returns true while the camera is still moving (orbit or damping)
+      const controlsMoved = controls.update() as unknown as boolean;
+      heatClock.value = performance.now() / 1000;
+      if (
+        controlsMoved ||
+        glided ||
+        isCameraTransitioning.current ||
+        state.isSimulating ||
+        performance.now() < renderUntilRef.current ||
+        performance.now() < hotUntilRef.current
+      ) {
+        renderer.render(scene, camera);
+      }
     };
+    invalidate();
+    const unsubscribeStore = useWeldStore.subscribe(invalidate);
+    controls.addEventListener('change', invalidate);
     animate();
 
     const handleResize = () => {
@@ -663,6 +658,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      invalidate();
     };
 
     window.addEventListener('resize', handleResize);
@@ -675,6 +671,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
     return () => {
       cancelAnimationFrame(animId);
+      unsubscribeStore();
       window.removeEventListener('resize', handleResize);
       resizeObserver.disconnect();
       renderer.dispose();
@@ -695,6 +692,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       cameraRef.current.aspect = w / h;
       cameraRef.current.updateProjectionMatrix();
       rendererRef.current.setSize(w, h);
+      invalidate();
     };
 
     updateSize();
@@ -854,6 +852,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         depthWrite: !isXRayActive,
       });
 
+      applyHazTint(material, hazUniformsRef.current);
       const mesh = new THREE.Mesh(geometry, material);
       mesh.castShadow = false;
       mesh.receiveShadow = false;
@@ -979,13 +978,6 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     }
   }, [showPlaten]);
 
-  // Dynamically switch torch style (Robotic Gooseneck vs Sleek Pencil)
-  useEffect(() => {
-    if (!torchMeshGroupRef.current) return;
-    torchMeshGroupRef.current.clear();
-    torchMeshGroupRef.current.add(buildRoboticTorch(torchStyle));
-  }, [torchStyle]);
-
   // Render Planned Weld Seams
   useEffect(() => {
     const group = seamsGroupRef.current;
@@ -1011,7 +1003,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       const isSelectedAndIdle = isSelected && !isSimulating;
       const wireScale = (seam.parameters.wireDiameter ?? 1.2) / 1.2;
       const beadRadius = (isSelectedAndIdle ? 2.2 : isCompleted ? 2.1 : 1.7) * wireScale;
-      const cylinderGeom = new THREE.CylinderGeometry(beadRadius, beadRadius, length, 16);
+      let cylinderGeom: THREE.BufferGeometry = new THREE.CylinderGeometry(beadRadius, beadRadius, length, 16);
       cylinderGeom.translate(0, length / 2, 0);
       cylinderGeom.rotateX(Math.PI / 2);
 
@@ -1026,12 +1018,16 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           metalness: 0.4,
         });
       } else if (isCompleted) {
-        // Welded / Simulated: shiny metallic bead!
-        cylinderMat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color('#D4E2D4'),
-          metalness: 0.92,
-          roughness: 0.18,
-        });
+        // Welded: rippled "stack of dimes" bead that keeps cooling from when it was deposited
+        cylinderGeom.dispose();
+        cylinderGeom = createRippledBeadGeometry(
+          length,
+          2.1 * wireScale,
+          ripplePitchMm(seam.parameters.travelSpeed),
+          beadCrownAngle(p1, p2, normal)
+        );
+        const timing = weldTimesRef.current.get(seam.id);
+        cylinderMat = createHotBeadMaterial(timing ? timing.start : -1e6, timing ? timing.speed : 1);
       } else if (isSelectedAndIdle) {
         // Selected for parameter editing when not simulating
         cylinderMat = new THREE.MeshStandardMaterial({
@@ -1168,6 +1164,26 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     }
   }, [mode, manualStartPoint, cursorPos, liveAirGap]);
 
+  // Heat-affected zone: every welded seam leaves temper colours on the plate around it
+  useEffect(() => {
+    // Each segment carries the time it finished heating; without timing (welded long ago) it is already cold
+    const segs: Array<[THREE.Vector3, THREE.Vector3, number]> = seams
+      .filter((sm) => completedSeamIds.includes(sm.id) && !sm.hasAirGap)
+      .map((sm) => {
+        const timing = weldTimesRef.current.get(sm.id);
+        const endTime = timing ? timing.start + sm.length / timing.speed : -1e6;
+        return [
+          new THREE.Vector3(sm.startPoint.x, sm.startPoint.y, sm.startPoint.z),
+          new THREE.Vector3(sm.endPoint.x, sm.endPoint.y, sm.endPoint.z),
+          endTime,
+        ];
+      });
+    setHazSegments(hazUniformsRef.current, segs);
+    hazBaseCountRef.current = hazUniformsRef.current.uHazCount.value;
+    if (completedSeamIds.length === 0) weldTimesRef.current.clear();
+    invalidate();
+  }, [seams, completedSeamIds]);
+
   // Interactive Snapping Reticle visibility & Dynamic 3D Surface Normal Orientation
   useEffect(() => {
     if (!reticleRef.current) return;
@@ -1198,6 +1214,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       if (arcLightRef.current) arcLightRef.current.intensity = 0;
       if (puddleLightRef.current) puddleLightRef.current.intensity = 0;
       if (arcGlowRef.current) arcGlowRef.current.visible = false;
+      arcAudio.silence();
       if (arcSparksRef.current) {
         arcSparksRef.current.visible = false;
         (arcSparksRef.current.userData.life as Float32Array).fill(0);
@@ -1211,16 +1228,29 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     dynamicGroup.clear();
     torch.visible = true;
 
-    // Active Deposited Bead Segment (Unit cylinder scaled precisely between pStart and currentPos)
-    const activeBeadGeom = new THREE.CylinderGeometry(1, 1, 1, 16);
-    const activeBeadMat = new THREE.MeshStandardMaterial({
-      color: '#D4E2D4',
-      metalness: 0.92,
-      roughness: 0.18,
-    });
-    const activeBeadMesh = new THREE.Mesh(activeBeadGeom, activeBeadMat);
-    activeBeadMesh.visible = false;
-    dynamicGroup.add(activeBeadMesh);
+    // Active bead: full rippled seam geometry whose material reveals metal as it is deposited
+    // (fragments ahead of the torch are discarded) and glows hot behind the arc.
+    let activeBead: THREE.Mesh | null = null;
+    const removeActiveBead = () => {
+      if (!activeBead) return;
+      dynamicGroup.remove(activeBead);
+      activeBead.geometry.dispose();
+      (activeBead.material as THREE.Material).dispose();
+      activeBead = null;
+    };
+    const startActiveBead = (sm: WeldSeam, a: THREE.Vector3, b: THREE.Vector3, n: THREE.Vector3, weldSeconds: number) => {
+      removeActiveBead();
+      const startSec = performance.now() / 1000;
+      const speed = sm.length / Math.max(0.001, weldSeconds);
+      weldTimesRef.current.set(sm.id, { start: startSec, speed });
+      const wScale = (sm.parameters.wireDiameter ?? 1.2) / 1.2;
+      const len = a.distanceTo(b);
+      const geom = createRippledBeadGeometry(len, 2.1 * wScale, ripplePitchMm(sm.parameters.travelSpeed), beadCrownAngle(a, b, n));
+      activeBead = new THREE.Mesh(geom, createHotBeadMaterial(startSec, speed));
+      activeBead.position.copy(a);
+      activeBead.lookAt(b);
+      dynamicGroup.add(activeBead);
+    };
 
     // Glowing Molten Weld Puddle right at torch tip
     const moltenPuddleGeom = new THREE.SphereGeometry(3.0, 14, 14);
@@ -1237,7 +1267,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     const storeState = useWeldStore.getState();
     let currentSeamIdx = Math.min(Math.max(0, storeState.simCurrentSeamIndex), seams.length - 1);
     const targetSeamId = storeState.simTargetSeamId;
-    let phase: 'approach' | 'welding' | 'retract' | 'traverse' = 'approach';
+    let phase: 'approach' | 'welding' | 'retract' | 'traverse' | 'bow' = 'approach';
     let progress = 0;
     let lastTime = performance.now();
     let currentReportedPhase = '';
@@ -1279,12 +1309,33 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     updatePhase('approach');
     useWeldStore.getState().setSimCurrentSeamIndex(currentSeamIdx);
 
+    // Easter egg: a seam named "... pink ..." gives the torch body a pink finish while it works that seam.
+    // The arc, sparks and bead stay realistic so the actual weld is never misrepresented.
+    const PINK = new THREE.Color('#FF6FB5');
+    let torchIsPink: boolean | null = null; // null forces a reset on the first frame of every run
+    const setTorchPink = (on: boolean) => {
+      if (on === torchIsPink) return;
+      torchIsPink = on;
+      torch.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh || mesh.name === 'torch_wire') return;
+        const mat = mesh.material as THREE.MeshStandardMaterial;
+        if (!mat?.color) return;
+        if (!mat.userData.baseColor) mat.userData.baseColor = mat.color.clone();
+        mat.color.copy(mat.userData.baseColor as THREE.Color);
+        if (on) mat.color.lerp(PINK, 0.6);
+      });
+    };
+
     // Arc state, written by the welding phase and consumed by tickArc once per frame
     const arcPos = new THREE.Vector3();
     const arcAxis = new THREE.Vector3(0, 1, 0);
     let arcEmitting = false;
     let arcProcess: string = 'MIG';
     let arcWireScale = 1;
+    let arcCurrent = 180;
+    let arcBacon = false;
+    let arcFlavor: 'sparky' | 'pink' | null = null;
     let arcLevel = 0; // smoothed 0..1: ramps up on arc strike, fades on crater fill / retract
     const puddleLight = puddleLightRef.current;
     const arcGlow = arcGlowRef.current;
@@ -1294,10 +1345,12 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
     const tickArc = (dt: number, now: number) => {
       arcLevel = THREE.MathUtils.lerp(arcLevel, arcEmitting ? 1 : 0, arcEmitting ? 0.3 : 0.18);
+      arcAudio.update(arcLevel, arcProcess, arcCurrent, useWeldStore.getState().soundEnabled, arcBacon);
       const t = now / 1000;
       // Layered low-frequency flicker instead of per-frame random strobing
       const flicker = 0.82 + 0.1 * Math.sin(t * 41) + 0.05 * Math.sin(t * 113 + 1.7) + 0.05 * Math.random();
-      const tint = arcProcess === 'TIG' ? '#BFDDFF' : arcProcess === 'LASER' ? '#FFF2E0' : '#DCEEFF';
+      const tint =
+        arcProcess === 'TIG' ? '#BFDDFF' : arcProcess === 'LASER' ? '#FFF2E0' : '#DCEEFF';
 
       if (arcLight) {
         arcLight.color.set(tint);
@@ -1319,7 +1372,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         const posArr = (sparks.geometry.getAttribute('position') as THREE.BufferAttribute).array as Float32Array;
         const colArr = (sparks.geometry.getAttribute('color') as THREE.BufferAttribute).array as Float32Array;
         // MIG throws the most spatter, laser some, TIG almost none
-        const rate = arcProcess === 'TIG' ? 12 : arcProcess === 'LASER' ? 90 : 240;
+        const baseRate = arcProcess === 'TIG' ? 12 : arcProcess === 'LASER' ? 90 : 240;
+        const rate = arcFlavor === 'sparky' ? Math.max(baseRate, 240) * 3 : baseRate;
         let budget = arcEmitting ? Math.round(dt * rate + Math.random()) : 0;
         let alive = 0;
 
@@ -1333,7 +1387,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
             budget--;
             sparkDir.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1).normalize();
             sparkDir.addScaledVector(arcAxis, 1.2).normalize();
-            const speed = 70 + Math.random() * 140;
+            const speed = (70 + Math.random() * 140) * (arcFlavor === 'sparky' ? 1.5 : 1);
             vel[i3] = sparkDir.x * speed;
             vel[i3 + 1] = sparkDir.y * speed;
             vel[i3 + 2] = sparkDir.z * speed;
@@ -1373,6 +1427,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         useWeldStore.getState().pauseSimulation();
         return;
       }
+
+      setTorchPink(/\bpink\b/i.test(seam.name || ''));
 
       // Synchronize torch wire diameter scale to active seam parameters
       const wireScale = (seam.parameters.wireDiameter ?? 1.2) / 1.2;
@@ -1416,13 +1472,30 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         const currentPos = new THREE.Vector3().lerpVectors(pApproach, pStart, Math.min(1, progress));
         torch.position.copy(currentPos);
         safeQuaternion(effectiveTorchAxis);
-        activeBeadMesh.visible = false;
         moltenPuddleMesh.visible = false;
         updatePhase('approach');
 
         if (progress >= 1) {
           progress = 0;
           phase = 'welding';
+          if (!seam.hasAirGap) startActiveBead(seam, pStart, pEnd, normal, weldDuration);
+          // Easter egg: a dry run over open air gets a deadpan remark
+          if (seam.hasAirGap) {
+            const quips = [
+              'Welding thin air. Bold strategy.',
+              'We’re just doing anything now, huh.',
+              'The arc has questions.',
+              'That’s not a joint, that’s a vibe.',
+            ];
+            useWeldStore.getState().showFunToast(quips[Math.floor(Math.random() * quips.length)]);
+          }
+          // Easter egg: MIG really does sound like frying bacon
+          if (!seam.hasAirGap) {
+            const nm = seam.name || '';
+            if (/\bbacon\b/i.test(nm)) useWeldStore.getState().showFunToast('Smells about right.');
+            else if (/\bsparky\b/i.test(nm)) useWeldStore.getState().showFunToast('Living up to the name.');
+            else if (/\bpink\b/i.test(nm)) useWeldStore.getState().showFunToast('Pretty in pink, strong as steel.');
+          }
         }
       } else if (phase === 'welding') {
         progress += dt / weldDuration;
@@ -1432,13 +1505,18 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
         if (seam.hasAirGap) {
           // Dry run: trace the path with the arc OFF. No bead, no pool, no spatter, never marked as welded.
-          activeBeadMesh.visible = false;
           moltenPuddleMesh.visible = false;
           updatePhase('dry_run');
         } else {
-          // Progressive Metallic Weld Bead Deposition behind torch tip (scaled dynamically to wire diameter)
-          const activeBeadRadius = 2.35 * wireScale;
-          positionCylinderBetweenPoints(activeBeadMesh, pStart, currentPos, activeBeadRadius);
+          // Heat-affected zone grows with the deposited length
+          const haz = hazUniformsRef.current;
+          const slot = Math.min(hazBaseCountRef.current, haz.uHazA.value.length - 1);
+          haz.uHazA.value[slot].copy(pStart);
+          haz.uHazB.value[slot].copy(currentPos);
+          haz.uHazT.value[slot] = performance.now() / 1000; // still being heated
+          haz.uHazCount.value = slot + 1;
+          // Keep drawing until both the bead glow and the temper tint have faded
+          hotUntilRef.current = performance.now() + (Math.max(4 * BEAD_COOL_TAU, HAZ_FADE_END_SEC) + 0.5) * 1000;
 
           // Active glowing molten puddle at contact point (scaled dynamically to wire diameter)
           moltenPuddleMesh.scale.setScalar(wireScale);
@@ -1450,12 +1528,14 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           arcAxis.copy(effectiveTorchAxis);
           arcProcess = seam.parameters.process;
           arcWireScale = wireScale;
+          arcCurrent = seam.parameters.current;
+          arcBacon = /\bbacon\b/i.test(seam.name || '');
+          arcFlavor = /\bsparky\b/i.test(seam.name || '') ? 'sparky' : /\bpink\b/i.test(seam.name || '') ? 'pink' : null;
           updatePhase('welding');
         }
 
         if (progress >= 1) {
           if (!seam.hasAirGap) useWeldStore.getState().markSeamCompleted(seam.id);
-          activeBeadMesh.visible = false;
           moltenPuddleMesh.visible = false;
           progress = 0;
           phase = 'retract';
@@ -1465,12 +1545,12 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         const currentPos = new THREE.Vector3().lerpVectors(pEnd, pRetract, Math.min(1, progress));
         torch.position.copy(currentPos);
         safeQuaternion(effectiveTorchAxis);
-        activeBeadMesh.visible = false;
         moltenPuddleMesh.visible = false;
         updatePhase('retract');
 
         if (progress >= 1) {
           progress = 0;
+          removeActiveBead();
           if (targetSeamId) {
             // Targeted single-seam preview complete! Retract cleanly and stop.
             useWeldStore.getState().pauseSimulation();
@@ -1481,9 +1561,27 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           if (nextSeamIdx < seams.length) {
             phase = 'traverse';
           } else {
-            useWeldStore.getState().pauseSimulation();
-            return;
+            // Easter egg: after a perfect Run All (every seam welded, nothing skipped) the torch takes a bow
+            const done = useWeldStore.getState().completedSeamIds;
+            const perfect = skippedNames.length === 0 && seams.every((sm) => done.includes(sm.id));
+            if (perfect) {
+              phase = 'bow';
+            } else {
+              useWeldStore.getState().pauseSimulation();
+              return;
+            }
           }
+        }
+      } else if (phase === 'bow') {
+        // A small, polite nod at the retract point: dip forward and come back up
+        progress += dt / 1.1;
+        torch.position.copy(pRetract);
+        safeQuaternion(effectiveTorchAxis);
+        torch.rotateX(Math.sin(Math.min(1, progress) * Math.PI) * 0.45);
+        if (progress >= 1) {
+          safeQuaternion(effectiveTorchAxis);
+          useWeldStore.getState().pauseSimulation();
+          return;
         }
       } else if (phase === 'traverse') {
         progress += dt / traverseDuration;
@@ -1507,7 +1605,6 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         torch.position.copy(currentPos);
         const interpAxis = new THREE.Vector3().lerpVectors(effectiveTorchAxis, nextTorchAxis, progress).normalize();
         safeQuaternion(interpAxis);
-        activeBeadMesh.visible = false;
         moltenPuddleMesh.visible = false;
         updatePhase('rapid_traverse');
 
@@ -1529,6 +1626,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       if (arcLightRef.current) arcLightRef.current.intensity = 0;
       if (puddleLightRef.current) puddleLightRef.current.intensity = 0;
       if (arcGlowRef.current) arcGlowRef.current.visible = false;
+      arcAudio.silence();
       if (arcSparksRef.current) {
         arcSparksRef.current.visible = false;
         (arcSparksRef.current.userData.life as Float32Array).fill(0);
@@ -1538,6 +1636,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
   // Pointer Movement & Raycast Snapping
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    invalidate();
     if (!canvasMountRef.current || !cameraRef.current || !meshRef.current) return;
     const rect = canvasMountRef.current.getBoundingClientRect();
     mouseRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1668,6 +1767,19 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         }}
         className="w-full h-full cursor-crosshair"
       />
+
+      {/* Easter egg message: plain white text in the middle of the canvas, no container */}
+      {funToast && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none select-none px-6 pb-20">
+          <p
+            key={funToastKey}
+            style={{ fontFamily: 'Onest, sans-serif', textShadow: '0 1px 3px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.6)' }}
+            className="ax-fun-float text-center text-[17px] font-medium text-white"
+          >
+            {funToast}
+          </p>
+        </div>
+      )}
 
       {/* Part name and live cursor coordinates (bottom-left) */}
       <div className="absolute bottom-5 left-5 z-10 pointer-events-none flex flex-col gap-1.5 select-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]">

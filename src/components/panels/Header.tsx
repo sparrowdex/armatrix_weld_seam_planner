@@ -39,6 +39,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
     showXRay,
     toggleXRay,
     setViewPreset,
+    logoWiggleKey,
   } = useWeldStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,7 +110,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
         className="flex items-center gap-3 shrink-0 group"
         title="Return to Armatrix homepage"
       >
-        <ArmatrixLogo className="w-6 h-6 shrink-0 transition-transform group-hover:scale-105" color="#e97f01" />
+        {/* key change restarts the wiggle animation */}
+        <span key={logoWiggleKey} className={`shrink-0 ${logoWiggleKey > 0 ? 'ax-snake-wiggle' : ''}`}>
+          <ArmatrixLogo className="w-6 h-6 shrink-0 transition-transform group-hover:scale-105" color="#e97f01" />
+        </span>
         <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-semibold tracking-[0.14em] text-[12px] text-[#F6F5EE]">
           ARMATRIX
         </span>

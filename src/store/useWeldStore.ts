@@ -31,7 +31,6 @@ export interface WeldState {
   seamHistory: WeldSeam[][];
   selectedSeamId: string | null;
   completedSeamIds: string[];
-  torchStyle: 'robotic_gooseneck' | 'sleek_pencil';
 
   // Robot / Planner Config
   rapidTraverseSpeed: number; // mm/s
@@ -50,6 +49,11 @@ export interface WeldState {
   simTargetSeamId: string | null;
   simPhase: 'idle' | 'rapid_traverse' | 'approach' | 'welding' | 'retract' | 'cooling' | 'dry_run';
   simNotice: string | null;
+  soundEnabled: boolean;
+  // Easter eggs
+  funToast: string | null;
+  funToastKey: number;
+  logoWiggleKey: number;
   playbackSpeed: number;
 
   // Actions
@@ -67,7 +71,6 @@ export interface WeldState {
   toggleXRay: () => void;
   setViewPreset: (preset: 'iso' | 'top' | 'front' | 'right' | null) => void;
   setNozzleType: (nozzle: TorchNozzleType) => void;
-  setTorchStyle: (style: 'robotic_gooseneck' | 'sleek_pencil') => void;
 
   setManualStartPoint: (point: Vector3D | null, normal: Vector3D | null) => void;
   setManualCandidatePoint: (point: Vector3D | null, normal: Vector3D | null) => void;
@@ -98,6 +101,9 @@ export interface WeldState {
   setSimPhase: (phase: WeldState['simPhase']) => void;
   setSimCurrentSeamIndex: (index: number) => void;
   setSimNotice: (notice: string | null) => void;
+  toggleSound: () => void;
+  showFunToast: (message: string) => void;
+  wiggleLogo: () => void;
   setPlaybackSpeed: (speed: number) => void;
 
   // Exporters
@@ -145,7 +151,6 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   seamHistory: [],
   selectedSeamId: null,
   completedSeamIds: [],
-  torchStyle: 'robotic_gooseneck',
 
   rapidTraverseSpeed: 120, // mm/s
   approachClearance: 25,
@@ -161,6 +166,10 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   simTargetSeamId: null,
   simPhase: 'idle',
   simNotice: null,
+  soundEnabled: false,
+  funToast: null,
+  funToastKey: 0,
+  logoWiggleKey: 0,
   playbackSpeed: 1,
 
   setPart: (part) => set({ part }),
@@ -188,7 +197,6 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   toggleXRay: () => set((s) => ({ showXRay: !s.showXRay })),
   setViewPreset: (preset) => set({ viewPreset: preset }),
   setNozzleType: (nozzle) => set({ nozzleType: nozzle }),
-  setTorchStyle: (style) => set({ torchStyle: style }),
 
   setManualStartPoint: (point, normal) => set({ manualStartPoint: point, manualStartNormal: normal }),
   setManualCandidatePoint: (point, normal) => set({ manualCandidatePoint: point, manualCandidateNormal: normal }),
@@ -203,6 +211,11 @@ export const useWeldStore = create<WeldState>((set, get) => ({
     if (length < 2.0) {
       set({ manualStartPoint: null, manualCandidatePoint: null });
       return null as any;
+    }
+
+    // Easter egg: a hand-drawn seam of (about) 42 mm
+    if (createdVia === 'manual' && Math.abs(length - 42) < 0.25) {
+      get().showFunToast('The answer to everything, fused.');
     }
 
     const seams = get().seams;
@@ -429,6 +442,14 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   setSimPhase: (phase) => set({ simPhase: phase }),
   setSimCurrentSeamIndex: (index) => set({ simCurrentSeamIndex: index }),
   setSimNotice: (notice) => set({ simNotice: notice }),
+  toggleSound: () => set((state) => ({ soundEnabled: !state.soundEnabled })),
+  showFunToast: (message) => {
+    set((state) => ({ funToast: message, funToastKey: state.funToastKey + 1 }));
+    setTimeout(() => {
+      if (get().funToast === message) set({ funToast: null });
+    }, 3200);
+  },
+  wiggleLogo: () => set((state) => ({ logoWiggleKey: state.logoWiggleKey + 1 })),
   setPlaybackSpeed: (speed) => set({ playbackSpeed: speed }),
 
   exportJobJSON: () => {
@@ -438,12 +459,17 @@ export const useWeldStore = create<WeldState>((set, get) => ({
     let totalLength = 0;
     let totalWeldTime = 0;
     let totalCooling = 0;
+    const executableSeams = seams.filter((seam) => !seam.hasAirGap);
+    const lastExecutableId = executableSeams.length ? executableSeams[executableSeams.length - 1].id : null;
 
     const exportedSeams: WeldSeamExport[] = seams.map((seam) => {
-      totalLength += seam.length;
-      const activeTime = seam.length / seam.parameters.travelSpeed;
-      totalWeldTime += activeTime;
-      totalCooling += seam.parameters.interpassDelay;
+      // Totals cover executable seams only, matching the simulation (air-gap seams are never welded).
+      if (!seam.hasAirGap) {
+        totalLength += seam.length;
+        totalWeldTime += seam.length / seam.parameters.travelSpeed;
+        // Interpass cooling happens between passes, so the final pass adds none.
+        if (seam.id !== lastExecutableId) totalCooling += seam.parameters.interpassDelay;
+      }
 
       const steps = Math.max(2, Math.ceil(seam.length / 5));
       const waypoints: Array<[number, number, number]> = [];
@@ -490,6 +516,15 @@ export const useWeldStore = create<WeldState>((set, get) => ({
         surface_normal: [seam.normal.x, seam.normal.y, seam.normal.z],
         approach_point: approachPoint,
         retract_point: retractPoint,
+        torch_axis: [+torchAxis.x.toFixed(4), +torchAxis.y.toFixed(4), +torchAxis.z.toFixed(4)],
+        travel_direction: (() => {
+          const dx = seam.endPoint.x - seam.startPoint.x;
+          const dy = seam.endPoint.y - seam.startPoint.y;
+          const dz = seam.endPoint.z - seam.startPoint.z;
+          const len = Math.hypot(dx, dy, dz) || 1;
+          return [+(dx / len).toFixed(4), +(dy / len).toFixed(4), +(dz / len).toFixed(4)] as [number, number, number];
+        })(),
+        executable: !seam.hasAirGap,
         torch_orientation: {
           lead_angle_deg: seam.parameters.torchLeadAngle,
           tilt_angle_deg: seam.parameters.torchTiltAngle,
@@ -509,10 +544,12 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       };
     });
 
+    // Rapid traverse runs retract -> next approach between consecutive executable seams
+    const runSeams = exportedSeams.filter((es) => es.executable);
     let totalTraverseDist = 0;
-    for (let i = 0; i < exportedSeams.length - 1; i++) {
-      const p1 = exportedSeams[i].retract_point;
-      const p2 = exportedSeams[i + 1].approach_point;
+    for (let i = 0; i < runSeams.length - 1; i++) {
+      const p1 = runSeams[i].retract_point;
+      const p2 = runSeams[i + 1].approach_point;
       const dist = Math.sqrt(Math.pow(p2[0] - p1[0], 2) + Math.pow(p2[1] - p1[1], 2) + Math.pow(p2[2] - p1[2], 2));
       totalTraverseDist += dist;
     }
@@ -520,7 +557,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
     const totalCycleTime = totalWeldTime + totalTraverseTime + totalCooling;
 
     const jobExport: WeldJobExport = {
-      schema_version: '1.2.0',
+      schema_version: '1.3.0',
       generator: 'Armatrix Autonomous Seam Planner v1.0',
       job_id: `ARMX-WELD-${Date.now().toString(36).toUpperCase()}`,
       created_at: new Date().toISOString(),
@@ -532,6 +569,14 @@ export const useWeldStore = create<WeldState>((set, get) => ({
           y: s.part?.dimensions.height ?? 0,
           z: s.part?.dimensions.depth ?? 0,
         },
+        coordinate_frame: {
+          handedness: 'right-handed',
+          up_axis: '+Y',
+          origin: 'Part bounding-box centre in X and Z, at the part\'s lowest point in Y (the fixture table surface)',
+        },
+        mesh_integrity: s.part?.integrity
+          ? { watertight: s.part.integrity.isWatertight, open_edges: s.part.integrity.openEdges }
+          : null,
       },
       robot_controller_profile: {
         kinematics: 'Armatrix-Continuum-Snake-Arm',
@@ -545,6 +590,8 @@ export const useWeldStore = create<WeldState>((set, get) => ({
       },
       job_summary: {
         total_seams: seams.length,
+        executable_seams: executableSeams.length,
+        skipped_seam_ids: seams.filter((seam) => seam.hasAirGap).map((seam) => seam.id),
         total_weld_length_mm: parseFloat(totalLength.toFixed(2)),
         estimated_active_weld_time_sec: parseFloat(totalWeldTime.toFixed(2)),
         estimated_traverse_time_sec: parseFloat(totalTraverseTime.toFixed(2)),

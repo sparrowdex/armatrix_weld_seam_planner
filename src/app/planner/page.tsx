@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Header } from '@/components/panels/Header';
 import { SidebarLeft } from '@/components/panels/SidebarLeft';
 import { SidebarRight } from '@/components/panels/SidebarRight';
@@ -16,6 +16,7 @@ export default function PlannerPage() {
   const [isRightCollapsed, setIsRightCollapsed] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isTabActive, setIsTabActive] = useState(true);
+  const snakeBufferRef = useRef('');
 
   // Smooth Tab Standby Fade when tab is inactive, blooming back to full brilliance on focus
   useEffect(() => {
@@ -41,6 +42,15 @@ export default function PlannerPage() {
       const activeEl = document.activeElement as HTMLElement | null;
       if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) {
         return;
+      }
+
+      // Easter egg: typing "snake" wiggles the logo
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        snakeBufferRef.current = (snakeBufferRef.current + e.key.toLowerCase()).slice(-5);
+        if (snakeBufferRef.current === 'snake') {
+          snakeBufferRef.current = '';
+          useWeldStore.getState().wiggleLogo();
+        }
       }
 
       // 1. Ctrl + Z (or Cmd + Z) -> Undo

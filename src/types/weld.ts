@@ -88,12 +88,18 @@ export interface WeldSeamExport {
     interpass_delay_sec: number;
     wire_diameter_mm?: number;
   };
+  /** Unit vector from the weld point up the torch body (tool Z axis), after tilt and lead are applied. */
+  torch_axis: [number, number, number];
+  /** Unit vector from start_coordinate to end_coordinate. */
+  travel_direction: [number, number, number];
+  /** False for non-manufacturable seams; the controller must not run them. */
+  executable: boolean;
   air_gap_detected?: boolean;
   waypoints: Array<[number, number, number]>;
 }
 
 export interface WeldJobExport {
-  schema_version: '1.2.0';
+  schema_version: '1.3.0';
   generator: 'Armatrix Autonomous Seam Planner v1.0';
   job_id: string;
   created_at: string;
@@ -105,6 +111,16 @@ export interface WeldJobExport {
       y: number;
       z: number;
     };
+    /** How every coordinate in this file is expressed. */
+    coordinate_frame: {
+      handedness: 'right-handed';
+      up_axis: '+Y';
+      origin: string;
+    };
+    mesh_integrity: {
+      watertight: boolean;
+      open_edges: number;
+    } | null;
   };
   robot_controller_profile: {
     kinematics: 'Armatrix-Continuum-Snake-Arm';
@@ -118,6 +134,10 @@ export interface WeldJobExport {
   };
   job_summary: {
     total_seams: number;
+    /** Seams the controller should execute (excludes non-manufacturable air-gap seams). */
+    executable_seams: number;
+    /** seam_ids excluded from execution and from every total below. */
+    skipped_seam_ids: string[];
     total_weld_length_mm: number;
     estimated_active_weld_time_sec: number;
     estimated_traverse_time_sec: number;

@@ -9,6 +9,8 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 
 export const SimulationHUD: React.FC = () => {
@@ -26,6 +28,8 @@ export const SimulationHUD: React.FC = () => {
     playbackSpeed,
     setPlaybackSpeed,
     simNotice,
+    soundEnabled,
+    toggleSound,
   } = useWeldStore();
 
   if (seams.length === 0) return null;
@@ -81,6 +85,16 @@ export const SimulationHUD: React.FC = () => {
 
         <button onClick={resetSimulation} className="ax-icon-btn shrink-0" title="Reset simulation" aria-label="Reset simulation">
           <RotateCcw className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={toggleSound}
+          className={`ax-icon-btn shrink-0 ${soundEnabled ? '!text-[#e97f01]' : ''}`}
+          title={soundEnabled ? 'Mute arc sound' : 'Play arc sound'}
+          aria-label={soundEnabled ? 'Mute arc sound' : 'Play arc sound'}
+          aria-pressed={soundEnabled}
+        >
+          {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
         </button>
 
         <span className="h-5 w-px bg-[#253224] shrink-0" />
