@@ -2,6 +2,8 @@
 
 An industrial CAD/CAM web platform engineered for **autonomous robotic weld seam planning**, tailored specifically to the operational constraints of **Armatrix's hyper-redundant continuum snake-arm robots**.
 
+Built by **Sreeja Das**.
+
 ---
 
 ## 1. Project Overview & Operational Context
@@ -89,7 +91,7 @@ flowchart LR
 * Collapsible side panels with edge tabs. When the parameters panel is collapsed, a translucent *seam in focus* card keeps the selected seam's settings visible.
 
 ### 7. Planner Controls
-Press `?` in the planner (or use the keyboard button next to Export) to see these in the app.
+The keyboard button next to Export shows these in the app. A short guided tour runs on the first visit and can be replayed from there.
 
 | Input | Action |
 | :--- | :--- |
@@ -105,7 +107,6 @@ Press `?` in the planner (or use the keyboard button next to Export) to see thes
 | `F` | Frame the selected seam |
 | `Home` | Reset to the ISO view |
 | `Space` | Play or pause the simulation |
-| `?` | Show or hide the controls reference |
 
 ---
 
@@ -316,3 +317,24 @@ pnpm run start
 2. **Thermal Distortion Optimization**: Thin structural plates warp if adjacent welds are performed continuously. Our planner provides instant sequence reordering and configurable interpass cooling delays.
 3. **Deterministic Waypoint Discretization**: Industrial robot controllers often experience kinematic singularities if given only sparse endpoints. We compute interpolated 5mm waypoint splines so the trajectory planner maintains constant travel speed along the seam.
 
+---
+
+## 7. Future Work
+
+Deliberately left out of this version to stay within the brief, but natural next steps:
+
+* **Accounts and saved projects**: sign-in, a project library per user, and saved planning sessions (part, seams, parameters) so work can be resumed or shared with a cell operator.
+* **Job versioning**: keep a history of exported weld jobs per part, with diffs between versions, so a controller can always be traced back to the plan it ran.
+* **Units and orientation on import**: detect or ask for units (mm, m, inch) and up axis (Z-up vs Y-up) when an STL is uploaded.
+* **Curved seam paths**: true polyline/spline seams instead of chained straight segments, for saddles and contoured joints.
+* **Arm-aware reach**: place the snake-arm base and entry point, then check reach and approach clearance per seam rather than against the part envelope.
+* **Collision checking for the whole torch path**, including approach, retract and traverse moves, not just the seam itself.
+* **Direct controller hand-off**: push a job to the arm controller (for example over a ROS 2 action) instead of downloading a file.
+
+---
+
+## License
+
+© 2026 Sreeja Das. All rights reserved.
+
+This repository is shared for evaluation purposes. No part of the code may be copied, modified, or redistributed without written permission from the author.

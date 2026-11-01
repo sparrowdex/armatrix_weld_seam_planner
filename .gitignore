@@ -41,3 +41,9 @@ KNOWLEDGE.md
 
 # Next.js generated type references (rewritten by next dev / next build)
 next-env.d.ts
+
+# Personal demo video script
+VIDEO_SCRIPT.md
+
+# Local test STL files (generated, not part of the app)
+test-stls/
