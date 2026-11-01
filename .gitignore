@@ -45,5 +45,5 @@ next-env.d.ts
 # Personal demo video script
 VIDEO_SCRIPT.md
 
-# Local test STL files (generated, not part of the app)
-test-stls/
+# Dense test mesh (20 MB): regenerate with `python scripts/generate_test_stls.py`
+test-stls/10_dense_sphere_400k.stl

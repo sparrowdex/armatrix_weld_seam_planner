@@ -319,6 +319,25 @@ pnpm run start
 2. **Thermal Distortion Optimization**: Thin structural plates warp if adjacent welds are performed continuously. Our planner provides instant sequence reordering and configurable interpass cooling delays.
 3. **Deterministic Waypoint Discretization**: Industrial robot controllers often experience kinematic singularities if given only sparse endpoints. We compute interpolated 5mm waypoint splines so the trajectory planner maintains constant travel speed along the seam.
 
+### Robustness Test Set
+
+Beyond the three benchmark parts, the planner was exercised with deliberately awkward uploads. They live in [`test-stls/`](test-stls/) and can be uploaded with **Upload STL**; `python scripts/generate_test_stls.py` regenerates all of them, including the 20 MB dense sphere that is not committed.
+
+| File | What it tests | Result |
+| :--- | :--- | :--- |
+| `01_cube_corner_ascii.stl` | ASCII STL in unit-less coordinates (loads as 1.7 mm) | Loads and frames; amber units hint; auto-detect reports no joints (single solid) |
+| `02_bracket_binary.stl` | Binary STL, two separate bodies touching | Watertight; auto-detect finds the contact joints (root line where the upright meets the base) |
+| `03_open_tray_no_lid.stl` | Open surface with holes | Amber **Open mesh** badge with the open-edge count |
+| `04_flat_plate.stl` | Nothing to weld | "No weld joints found" message |
+| `05_tiny_4mm_cube.stl` | Very small part | Camera, snapping and drawing aids scale to the part; torch and bead stay real size |
+| `06_huge_5m_beam.stl` | Part beyond the arm's reach | **Exceeds reach**; fixture table and grid grow; drawing aids scale up |
+| `07_bracket_in_metres.stl` | Wrong export units | Units hint (part is 0.17 mm across) |
+| `08_bracket_z_up.stl` | Z-up export lying on its side | **Shift+click X 90°** stands it up; detection runs on the rotated part; rotation recorded in the export |
+| `09_sphere_curved.stl` | Curved single solid | No joints; a straight seam across the surface cuts through the part and is flagged as an air gap (dry run, no bead) |
+| `10_dense_sphere_400k.stl` *(generated)* | 400k triangles, 20 MB | Part appears immediately; outline and mesh check follow (about 0.6 s); wireframe built on demand |
+| `11_not_really_an_stl.stl` | Text file renamed to `.stl` | In-app "couldn't be read as an STL" message; app keeps running |
+| `12_empty.stl` | Empty file | Same in-app message |
+
 ---
 
 ## 7. Future Work
