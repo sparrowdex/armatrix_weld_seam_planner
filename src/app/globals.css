@@ -42,3 +42,220 @@ h1, h2, h3, .font-heading {
 ::-webkit-scrollbar-thumb:hover {
   background: #e97f01;
 }
+
+/* ============================================================
+   Planner UI primitives (look only).
+   Type follows armatrix.com: Onest = command (labels, values),
+   42dot Sans = transmit (body). Orange is a signal, not decoration.
+   ============================================================ */
+:root {
+  --ax-panel: #0A0D0A;
+  --ax-surface: #0F140F;
+  --ax-surface-hi: #151C15;
+  --ax-line: #182118;
+  --ax-line-hi: #253224;
+  --ax-text: #F6F5EE;
+  --ax-text-2: #B4C2B3;
+  --ax-text-3: #7D8F7C;
+  --ax-ok: #4ADE80;
+  --ax-warn: #F59E0B;
+}
+
+.ax-label {
+  font-family: 'Onest', sans-serif;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ax-text-3);
+  line-height: 1;
+}
+
+.ax-index {
+  font-family: 'Onest', sans-serif;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: #e97f01;
+  font-variant-numeric: tabular-nums;
+}
+
+.ax-num {
+  font-family: 'Onest', sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.ax-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--ax-line);
+}
+
+.ax-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 4px;
+  border: 1px solid var(--ax-line-hi);
+  background: var(--ax-surface);
+  color: var(--ax-text-2);
+  font-family: 'Onest', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 120ms cubic-bezier(0.16, 0.84, 0.32, 1), border-color 120ms, color 120ms;
+}
+.ax-btn:hover { background: var(--ax-surface-hi); border-color: #33432F; color: var(--ax-text); }
+.ax-btn:active { transform: translateY(0.5px); }
+.ax-btn:disabled { opacity: 0.35; pointer-events: none; }
+.ax-btn:focus-visible, .ax-icon-btn:focus-visible, .ax-seg button:focus-visible { outline: 1px solid #e97f01; outline-offset: 1px; }
+
+.ax-btn-primary {
+  background: #e97f01;
+  border-color: #e97f01;
+  color: #0A0D0A;
+  font-weight: 600;
+}
+.ax-btn-primary:hover { background: #f38b0e; border-color: #f38b0e; color: #0A0D0A; }
+
+.ax-btn-ghost { background: transparent; border-color: transparent; }
+.ax-btn-ghost:hover { background: var(--ax-surface-hi); border-color: transparent; }
+
+.ax-btn-danger:hover { color: #FCA5A5; border-color: #4A2020; background: #1A0F0F; }
+
+.ax-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  color: var(--ax-text-3);
+  transition: background-color 120ms, color 120ms;
+}
+.ax-icon-btn:hover { background: var(--ax-surface-hi); color: var(--ax-text); }
+.ax-icon-btn:disabled { opacity: 0.25; pointer-events: none; }
+
+.ax-input {
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 4px;
+  border: 1px solid var(--ax-line-hi);
+  background: var(--ax-surface);
+  color: var(--ax-text);
+  font-family: 'Onest', sans-serif;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  transition: border-color 120ms;
+}
+.ax-input:hover { border-color: #33432F; }
+.ax-input:focus { border-color: #e97f01; }
+select.ax-input { appearance: none; cursor: pointer; padding-right: 26px; }
+select.ax-input option, select.ax-input optgroup { background: #0E140E; color: var(--ax-text); }
+
+/* Segmented control: one shared active style across the app */
+.ax-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 5px;
+  border: 1px solid var(--ax-line-hi);
+  background: rgba(10, 13, 10, 0.6);
+}
+.ax-seg button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 3px;
+  font-family: 'Onest', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--ax-text-3);
+  transition: background-color 120ms, color 120ms;
+}
+.ax-seg button:hover { color: var(--ax-text); }
+.ax-seg button[data-active='true'] { background: rgba(233, 127, 1, 0.14); color: var(--ax-text); }
+.ax-seg button:disabled { opacity: 0.3; pointer-events: none; }
+
+.ax-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 3px;
+  font-family: 'Onest', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid var(--ax-line-hi);
+  color: var(--ax-text-2);
+}
+.ax-chip-ok { background: #2B381F; border-color: #3D4F2C; color: #B9D79C; }
+.ax-chip-signal { border-color: rgba(233, 127, 1, 0.4); color: #e97f01; }
+
+.ax-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.ax-notice-warn { background: rgba(245, 158, 11, 0.07); border: 1px solid rgba(245, 158, 11, 0.35); color: #FDE68A; }
+.ax-notice-ok { background: rgba(74, 222, 128, 0.06); border: 1px solid rgba(74, 222, 128, 0.28); color: #BBF7D0; }
+
+/* Range slider: 2px hairline track, orange fill via --fill, square thumb */
+.ax-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 16px;
+  background: transparent;
+  cursor: pointer;
+  --fill: 50%;
+}
+.ax-range::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to right, #e97f01 0%, #e97f01 var(--fill), #253224 var(--fill), #253224 100%);
+}
+.ax-range::-moz-range-track { height: 2px; border-radius: 1px; background: #253224; }
+.ax-range::-moz-range-progress { height: 2px; border-radius: 1px; background: #e97f01; }
+.ax-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -5px;
+  border-radius: 3px;
+  background: #F6F5EE;
+  border: 2px solid #e97f01;
+  transition: transform 120ms;
+}
+.ax-range::-moz-range-thumb {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: #F6F5EE;
+  border: 2px solid #e97f01;
+}
+.ax-range:hover::-webkit-slider-thumb { transform: scale(1.12); }
+.ax-range:focus-visible { outline: none; }
+.ax-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(233, 127, 1, 0.3); }
+
+/* Hide number spinners for a cleaner CAD readout */
+.ax-input[type='number']::-webkit-inner-spin-button,
+.ax-input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.ax-input[type='number'] { -moz-appearance: textfield; }

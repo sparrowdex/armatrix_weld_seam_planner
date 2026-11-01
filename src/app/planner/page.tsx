@@ -8,7 +8,7 @@ import { ViewportCanvas } from '@/components/viewport/ViewportCanvas';
 import { SimulationHUD } from '@/components/panels/SimulationHUD';
 import { ExportModal } from '@/components/panels/ExportModal';
 import { useWeldStore } from '@/store/useWeldStore';
-import { Sliders, ListOrdered, ChevronRight, ChevronLeft, Undo2 } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Undo2 } from 'lucide-react';
 
 export default function PlannerPage() {
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -114,13 +114,16 @@ export default function PlannerPage() {
         {/* Collapsed Left Floating Show Tab */}
         {isLeftCollapsed && (
           <button
-            onClick={() => setIsLeftCollapsed(false)}
-            style={{ fontFamily: 'Onest, sans-serif' }}
-            className="absolute top-4 left-0 z-40 bg-[#0C120C]/90 hover:bg-[#162216] border-r-2 border-y border-[#e97f01]/70 hover:border-[#e97f01] pl-3 pr-3.5 py-2 rounded-r-lg text-white font-bold text-xs transition-all duration-200 shadow-2xl flex items-center gap-2 group active:scale-95 backdrop-blur-md"
-            title="Expand Seams Panel"
+            onClick={() => {
+              setIsLeftCollapsed(false);
+              // Narrow screens only fit one panel beside the viewport
+              if (window.innerWidth < 768) setIsRightCollapsed(true);
+            }}
+            className="absolute top-4 left-0 z-40 ax-btn !h-8 !rounded-l-none !border-l-0 !bg-[#0A0D0A]/85 backdrop-blur-md"
+            title="Expand seams panel"
           >
-            <ChevronRight className="w-3.5 h-3.5 text-[#e97f01] group-hover:translate-x-0.5 transition-transform" />
-            <span className="tracking-wide">SEAMS</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#e97f01]" />
+            <span className="tracking-[0.08em]">SEAMS</span>
           </button>
         )}
 
@@ -137,13 +140,15 @@ export default function PlannerPage() {
         {/* Collapsed Right Floating Show Tab */}
         {isRightCollapsed && (
           <button
-            onClick={() => setIsRightCollapsed(false)}
-            style={{ fontFamily: 'Onest, sans-serif' }}
-            className="absolute top-4 right-0 z-40 bg-[#0C120C]/90 hover:bg-[#162216] border-l-2 border-y border-[#e97f01]/70 hover:border-[#e97f01] pr-3 pl-3.5 py-2 rounded-l-lg text-white font-bold text-xs transition-all duration-200 shadow-2xl flex items-center gap-2 group active:scale-95 backdrop-blur-md"
-            title="Expand Parameters Panel"
+            onClick={() => {
+              setIsRightCollapsed(false);
+              if (window.innerWidth < 768) setIsLeftCollapsed(true);
+            }}
+            className="absolute top-4 right-0 z-40 ax-btn !h-8 !rounded-r-none !border-r-0 !bg-[#0A0D0A]/85 backdrop-blur-md"
+            title="Expand parameters panel"
           >
-            <span className="tracking-wide">PARAMS</span>
-            <ChevronLeft className="w-3.5 h-3.5 text-[#e97f01] group-hover:-translate-x-0.5 transition-transform" />
+            <span className="tracking-[0.08em]">PARAMS</span>
+            <ChevronLeft className="w-3.5 h-3.5 text-[#e97f01]" />
           </button>
         )}
 
@@ -157,48 +162,14 @@ export default function PlannerPage() {
             <SidebarRight onToggleCollapse={() => setIsRightCollapsed(true)} isCollapsed={isRightCollapsed} />
           </div>
         </div>
-
-        {/* Tablet / Mobile Floating Bar */}
-        <div className="md:hidden absolute bottom-3 right-4 z-40 flex items-center gap-2 bg-[#101710]/95 backdrop-blur border border-[#233121] p-1.5 rounded-lg shadow-xl">
-          <button
-            onClick={() => {
-              setIsLeftCollapsed(!isLeftCollapsed);
-              if (isLeftCollapsed) setIsRightCollapsed(true);
-            }}
-            style={{ fontFamily: 'Onest, sans-serif' }}
-            className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all ${
-              !isLeftCollapsed
-                ? 'bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white shadow-sm'
-                : 'text-[#889988] hover:text-white'
-            }`}
-          >
-            <ListOrdered className="w-3.5 h-3.5" />
-            <span>Seams</span>
-          </button>
-          <button
-            onClick={() => {
-              setIsRightCollapsed(!isRightCollapsed);
-              if (isRightCollapsed) setIsLeftCollapsed(true);
-            }}
-            style={{ fontFamily: 'Onest, sans-serif' }}
-            className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all ${
-              !isRightCollapsed
-                ? 'bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white shadow-sm'
-                : 'text-[#889988] hover:text-white'
-            }`}
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>Params</span>
-          </button>
-        </div>
       </div>
 
       {/* Floating Keyboard Shortcut Notification Toast */}
       {toastMessage && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-200">
-          <div className="bg-[#121E14]/95 border border-[#22C55E]/40 text-[#22C55E] px-4 py-2 rounded-full font-mono text-xs shadow-2xl flex items-center gap-2 backdrop-blur">
+          <div className="bg-[#0A0D0A]/90 border border-[#253224] text-[#B4C2B3] px-3.5 h-8 rounded-[4px] text-[12px] flex items-center gap-2 backdrop-blur">
             <Undo2 className="w-3.5 h-3.5 text-[#e97f01]" />
-            <span>{toastMessage}</span>
+            <span className="ax-num">{toastMessage}</span>
           </div>
         </div>
       )}
@@ -208,3 +179,4 @@ export default function PlannerPage() {
     </main>
   );
 }
+

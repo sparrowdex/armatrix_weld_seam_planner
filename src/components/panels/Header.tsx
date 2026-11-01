@@ -1,21 +1,24 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useWeldStore } from '@/store/useWeldStore';
-import {
-  Upload,
-  Download,
-  Play,
-  Pause,
-  ChevronDown,
-} from 'lucide-react';
+import { Upload, Download, ChevronDown } from 'lucide-react';
 import { STLLoader } from 'three-stdlib';
 import { ArmatrixLogo } from '@/components/ui/ArmatrixLogo';
 
 interface HeaderProps {
   onOpenExport: () => void;
 }
+
+type ViewKey = 'iso' | 'top' | 'front' | 'right';
+
+const VIEWS: { key: ViewKey; label: string }[] = [
+  { key: 'iso', label: 'ISO' },
+  { key: 'top', label: 'TOP' },
+  { key: 'front', label: 'FRONT' },
+  { key: 'right', label: 'SIDE' },
+];
 
 export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
   const {
@@ -36,13 +39,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
     showXRay,
     toggleXRay,
     setViewPreset,
-    isSimulating,
-    startSimulation,
-    pauseSimulation,
-    seams,
   } = useWeldStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Visual highlight only; the camera preset itself lives in the store.
+  const [activeView, setActiveView] = useState<ViewKey>('iso');
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,149 +93,106 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
     reader.readAsArrayBuffer(file);
   };
 
+  const layers = [
+    { label: 'Table', active: showPlaten, onClick: togglePlaten, title: 'Fixture platen table (clamps camera orbit to table surface)' },
+    { label: 'X-Ray', active: showXRay, onClick: toggleXRay, title: 'Translucent ghost view to inspect internal and cavity seams' },
+    { label: 'Vectors', active: showNormals, onClick: toggleNormals, title: 'Approach and retract clearance vectors' },
+    { label: 'Wireframe', active: showWireframe, onClick: toggleWireframe, title: 'Wireframe mesh overlay' },
+    { label: 'Bounds', active: showBoundingBox, onClick: toggleBoundingBox, title: 'Part bounding dimensions box' },
+  ];
+
   return (
-    <header className="h-12 bg-transparent px-6 sm:px-8 flex items-center justify-between z-20 select-none pointer-events-auto">
-      {/* Brand: Standalone Armatrix logo + refined logotype with link to Homepage */}
+    <header className="h-14 bg-transparent px-5 flex items-center justify-between gap-4 z-20 select-none pointer-events-auto">
+      {/* Brand */}
       <Link
         href="/"
-        className="flex items-center gap-3 shrink-0 group hover:opacity-90 transition active:scale-95 cursor-pointer"
-        title="Return to Armatrix Homepage"
+        className="flex items-center gap-3 shrink-0 group"
+        title="Return to Armatrix homepage"
       >
-        <ArmatrixLogo className="w-6 h-6 shrink-0 group-hover:scale-105 transition-transform" color="#e97f01" />
-        <div className="flex items-center gap-2">
-          <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-extrabold tracking-wider text-xs text-white">
-            ARMATRIX
-          </span>
-          <span className="text-[10px] font-mono text-[#7D8F7C] border border-[#202B1E] px-1.5 py-0.5 rounded bg-[#101710] hidden sm:inline-block">
-            PLANNER
-          </span>
-        </div>
+        <ArmatrixLogo className="w-6 h-6 shrink-0 transition-transform group-hover:scale-105" color="#e97f01" />
+        <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-semibold tracking-[0.14em] text-[12px] text-[#F6F5EE]">
+          ARMATRIX
+        </span>
+        <span className="hidden xl:block h-4 w-px bg-[#253224]" />
+        <span className="hidden xl:block ax-label">Weld Seam Planner</span>
       </Link>
 
-      {/* Center Controls: Seamless Dropdowns & Feature Toggles */}
-      <div className="flex items-center gap-2">
-        {/* CAD Part Selector: Seamless Dropdown with Standard Parts & Custom Uploads */}
-        <div className="relative flex items-center">
-          <select
-            value={activeModelName}
-            onChange={(e) => setActiveModelName(e.target.value)}
-            className="bg-[#121912] hover:bg-[#1A231A] text-xs font-mono text-[#DCE6DB] pl-3 pr-7 py-1.5 rounded border border-[#283626] focus:outline-none focus:border-[#e97f01] transition cursor-pointer appearance-none max-w-[210px] truncate"
-            title="Switch CAD Workpiece"
-          >
-            <optgroup label="Standard CAD Parts" className="bg-[#0E140E] text-[#8EA28D]">
-              <option value="Structural L-Bracket" className="text-white">Structural L-Bracket</option>
-              <option value="Pipe T-Joint" className="text-white">Pipe T-Joint</option>
-              <option value="Confined Box Flange" className="text-white">Confined Box Flange</option>
-            </optgroup>
-            {customModels.length > 0 && (
-              <optgroup label="Uploaded Custom STLs" className="bg-[#0E140E] text-[#e97f01]">
-                {customModels.map((m) => (
-                  <option key={m.name} value={m.name} className="text-white">
-                    {m.name}
-                  </option>
-                ))}
+      {/* Command bar */}
+      <div className="flex items-center gap-3 min-w-0 overflow-x-auto">
+        {/* Workpiece */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="relative flex items-center">
+            <select
+              value={activeModelName}
+              onChange={(e) => setActiveModelName(e.target.value)}
+              className="ax-input !h-7 !text-[12px] max-w-[200px] truncate !bg-[#0A0D0A]/60"
+              title="Switch CAD workpiece"
+            >
+              <optgroup label="Standard parts">
+                <option value="Structural L-Bracket">Structural L-Bracket</option>
+                <option value="Pipe T-Joint">Pipe T-Joint</option>
+                <option value="Confined Box Flange">Confined Box Flange</option>
               </optgroup>
-            )}
-          </select>
-          <ChevronDown className="w-3.5 h-3.5 text-[#e97f01] absolute right-2 pointer-events-none" />
+              {customModels.length > 0 && (
+                <optgroup label="Uploaded STLs">
+                  {customModels.map((m) => (
+                    <option key={m.name} value={m.name}>
+                      {m.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-[#7D8F7C] absolute right-2 pointer-events-none" />
+          </div>
+
+          <input ref={fileInputRef} type="file" accept=".stl" onChange={handleFileUpload} className="hidden" />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="ax-btn !h-7 !bg-[#0A0D0A]/60"
+            title="Upload custom .stl CAD part"
+          >
+            <Upload className="w-3.5 h-3.5 text-[#e97f01]" />
+            <span>Upload STL</span>
+          </button>
         </div>
 
-        {/* Upload Custom STL Button */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".stl"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 bg-[#172016] hover:bg-[#202C1F] text-xs font-mono text-[#C2D1C1] px-3 py-1.5 rounded border border-[#2B3B29] transition active:scale-95"
-          title="Upload custom .stl CAD part"
-        >
-          <Upload className="w-3.5 h-3.5 text-[#e97f01]" />
-          <span>Upload .STL</span>
-        </button>
+        <span className="h-4 w-px bg-[#253224] shrink-0" />
 
-        {/* Unified Camera View Dropdown: Compiles ISO, TOP, FRONT, SIDE into one seamless control */}
-        <div className="h-5 w-px bg-[#202B1E] mx-1" />
-        <div className="relative flex items-center">
-          <select
-            onChange={(e) => setViewPreset(e.target.value as any)}
-            defaultValue="iso"
-            className="bg-[#121912] hover:bg-[#1A231A] text-xs font-mono text-[#DCE6DB] pl-2.5 pr-6 py-1.5 rounded border border-[#283626] focus:outline-none focus:border-[#e97f01] transition cursor-pointer appearance-none"
-            title="Camera Perspective Presets"
-          >
-            <option value="iso">VIEW: ISO</option>
-            <option value="top">VIEW: TOP</option>
-            <option value="front">VIEW: FRONT</option>
-            <option value="right">VIEW: SIDE</option>
-          </select>
-          <ChevronDown className="w-3.5 h-3.5 text-[#e97f01] absolute right-2 pointer-events-none" />
+        {/* Camera presets */}
+        <div className="ax-seg shrink-0" role="group" aria-label="Camera view">
+          {VIEWS.map((v) => (
+            <button
+              key={v.key}
+              data-active={activeView === v.key}
+              onClick={() => {
+                setActiveView(v.key);
+                setViewPreset(v.key);
+              }}
+              title={`Snap camera to ${v.label} view`}
+            >
+              {v.label}
+            </button>
+          ))}
         </div>
 
-        {/* Section 3: Display Layers & Workcell Modes */}
-        <div className="h-5 w-px bg-[#202B1E] mx-1" />
-        <div className="flex items-center bg-[#101710] border border-[#202B1E] rounded-lg p-0.5 text-[11px] font-mono shadow-inner">
-          <button
-            onClick={togglePlaten}
-            className={`px-2.5 py-1 rounded-md transition ${
-              showPlaten ? 'bg-[#22C55E]/20 text-[#86EFAC] border border-[#22C55E]/40 font-semibold' : 'text-[#7D8F7C] hover:text-white'
-            }`}
-            title="Toggle Industrial Steel Fixture Platen Table (Clamps camera orbit to table surface level)"
-          >
-            TABLE
-          </button>
-          <button
-            onClick={toggleXRay}
-            className={`px-2.5 py-1 rounded-md transition ${
-              showXRay ? 'bg-[#A855F7] text-white font-semibold shadow-sm' : 'text-[#7D8F7C] hover:text-white'
-            }`}
-            title="Toggle Translucent Ghost X-Ray to inspect internal floor and cavity seams"
-          >
-            X-RAY
-          </button>
-          <button
-            onClick={toggleNormals}
-            className={`px-2.5 py-1 rounded-md transition ${
-              showNormals ? 'bg-[#38BDF8] text-black font-semibold' : 'text-[#7D8F7C] hover:text-white'
-            }`}
-            title="Toggle Approach Clearance Vectors"
-          >
-            VECTORS
-          </button>
-          <button
-            onClick={toggleWireframe}
-            className={`px-2.5 py-1 rounded-md transition ${
-              showWireframe ? 'bg-[#e97f01] text-white font-semibold' : 'text-[#7D8F7C] hover:text-white'
-            }`}
-            title="Toggle Wireframe Mesh"
-          >
-            WIREFRAME
-          </button>
-          <button
-            onClick={toggleBoundingBox}
-            className={`px-2.5 py-1 rounded-md transition ${
-              showBoundingBox ? 'bg-[#e97f01] text-black font-semibold' : 'text-[#7D8F7C] hover:text-white'
-            }`}
-            title="Toggle Part Bounding Dimensions Box"
-          >
-            BOUNDS
-          </button>
+        <span className="h-4 w-px bg-[#253224] shrink-0" />
+
+        {/* Display layers */}
+        <div className="ax-seg shrink-0" role="group" aria-label="Display layers">
+          {layers.map((l) => (
+            <button key={l.label} data-active={l.active} aria-pressed={l.active} onClick={l.onClick} title={l.title}>
+              <span>{l.label.toUpperCase()}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Right Actions: Primary Export & Docs */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onOpenExport}
-          style={{ fontFamily: 'Onest, sans-serif' }}
-          className="flex items-center gap-2 bg-gradient-to-r from-[#e97f01] via-[#d46a00] to-[#b35400] hover:from-[#f38b0e] hover:to-[#c25e00] text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95 shadow-lg border border-[#f59e0b]/40"
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span>EXPORT WELD JOB</span>
-        </button>
-      </div>
+      {/* Primary action */}
+      <button onClick={onOpenExport} className="ax-btn ax-btn-primary shrink-0 !h-8 !px-3.5">
+        <Download className="w-3.5 h-3.5" />
+        <span className="tracking-[0.06em]">EXPORT WELD JOB</span>
+      </button>
     </header>
   );
 };

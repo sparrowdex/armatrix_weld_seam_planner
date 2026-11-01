@@ -7,18 +7,17 @@ import {
   Plus,
   Trash2,
   RotateCw,
-  Box,
   ChevronLeft,
   SlidersHorizontal,
   CheckCircle,
   Pencil,
   Play,
-  Layers,
   ArrowUp,
   ArrowDown,
   ArrowLeftRight,
   AlertTriangle,
   Split,
+  Undo2,
 } from 'lucide-react';
 import { STLLoader } from 'three-stdlib';
 import { detectCandidateSeams } from '@/utils/seamDetector';
@@ -95,16 +94,45 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
       // 7. Right Outer Root Fillet (Outside right rib: x = 44 to 55 at z = -31, 4mm nozzle standoff)
       addSeam({ x: 44, y: 14, z: -31 }, { x: 55, y: 14, z: -31 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Right Outer Root');
     } else if (activeModelName === 'Pipe T-Joint') {
-      // 8-Segment 3D Circular Saddle Weld Seam around branch-to-header intersection
-      // Branch R = 18mm, Header R = 25mm centered at y = 36. Top crown at y = 61mm, sides dip to y = 53.4mm
-      addSeam({ x: 18, y: 61, z: 0 }, { x: 12.73, y: 57.52, z: 12.73 }, { x: 0.5, y: 0.707, z: 0.5 }, 'detected', 'Saddle Arc 1 (Crown-Flank)');
-      addSeam({ x: 12.73, y: 57.52, z: 12.73 }, { x: 0, y: 53.35, z: 18 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Saddle Arc 2 (Flank-Valley)');
-      addSeam({ x: 0, y: 53.35, z: 18 }, { x: -12.73, y: 57.52, z: 12.73 }, { x: -0.5, y: 0.707, z: 0.5 }, 'detected', 'Saddle Arc 3 (Valley-Flank)');
-      addSeam({ x: -12.73, y: 57.52, z: 12.73 }, { x: -18, y: 61, z: 0 }, { x: -0.707, y: 0.707, z: 0 }, 'detected', 'Saddle Arc 4 (Flank-Crown)');
-      addSeam({ x: -18, y: 61, z: 0 }, { x: -12.73, y: 57.52, z: -12.73 }, { x: -0.5, y: 0.707, z: -0.5 }, 'detected', 'Saddle Arc 5 (Crown-Flank)');
-      addSeam({ x: -12.73, y: 57.52, z: -12.73 }, { x: 0, y: 53.35, z: -18 }, { x: 0, y: 0.707, z: -0.707 }, 'detected', 'Saddle Arc 6 (Flank-Valley)');
-      addSeam({ x: 0, y: 53.35, z: -18 }, { x: 12.73, y: 57.52, z: -12.73 }, { x: 0.5, y: 0.707, z: -0.5 }, 'detected', 'Saddle Arc 7 (Valley-Flank)');
-      addSeam({ x: 12.73, y: 57.52, z: -12.73 }, { x: 18, y: 61, z: 0 }, { x: 0.707, y: 0.707, z: 0 }, 'detected', 'Saddle Arc 8 (Flank-Crown)');
+      // 12-segment saddle seam on the true branch-to-header intersection curve.
+      // Branch R = 18 mm (vertical axis), header R = 25 mm (axis along X at y = 36).
+      // Saddle height: y(θ) = 36 + sqrt(R² − z²), crown y = 61 at x = ±18, valley y = 53.35 at z = ±18.
+      // Vertices fall every 30°, exactly on the 24-facet branch mesh edges, so the chords hug the pipe wall.
+      // Torch normal per segment = bisector of the branch outward radial and the header outward normal
+      // (the fillet's true bisecting angle, which rotates continuously around the saddle).
+      const BRANCH_R = 18;
+      const HEADER_R = 25;
+      const HEADER_Y = 36;
+      const SEGMENTS = 12;
+      const saddlePoint = (deg: number) => {
+        const t = (deg * Math.PI) / 180;
+        const x = BRANCH_R * Math.cos(t);
+        const z = BRANCH_R * Math.sin(t);
+        const y = HEADER_Y + Math.sqrt(HEADER_R * HEADER_R - z * z);
+        return { x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2) };
+      };
+      const saddleNormal = (deg: number) => {
+        const t = (deg * Math.PI) / 180;
+        const z = BRANCH_R * Math.sin(t);
+        const y = Math.sqrt(HEADER_R * HEADER_R - z * z);
+        const nx = Math.cos(t);
+        const ny = y / HEADER_R;
+        const nz = Math.sin(t) + z / HEADER_R;
+        const len = Math.hypot(nx, ny, nz);
+        return { x: +(nx / len).toFixed(3), y: +(ny / len).toFixed(3), z: +(nz / len).toFixed(3) };
+      };
+      const regionName = (deg: number) => {
+        const d = ((deg % 180) + 180) % 180;
+        if (d < 30 || d >= 150) return 'Crown';
+        if (d >= 60 && d < 120) return 'Valley';
+        return 'Flank';
+      };
+      for (let k = 0; k < SEGMENTS; k++) {
+        const a0 = (360 / SEGMENTS) * k;
+        const a1 = a0 + 360 / SEGMENTS;
+        const mid = (a0 + a1) / 2;
+        addSeam(saddlePoint(a0), saddlePoint(a1), saddleNormal(mid), 'detected', `Saddle ${k + 1} ${regionName(mid)} (${a0}°–${a1}°)`);
+      }
     } else if (activeModelName === 'Confined Box Flange' || activeModelName === 'Box Flange') {
       // 4 Internal Floor Fillet Seams inside the deep confined ship cell / compartment
       addSeam({ x: -46, y: 14, z: -37 }, { x: 46, y: 14, z: -37 }, { x: 0, y: 0.707, z: 0.707 }, 'detected', 'Back Floor Fillet');
@@ -191,94 +219,115 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
     reorderSeams(newSeams);
   };
 
-  return (
-    <aside className="w-80 h-full bg-[#0A0D0A] border-r border-[#1E291C] flex flex-col z-10 select-none overflow-hidden relative">
-      {/* Header with prominent Collapse button */}
-      <div className="p-3.5 border-b border-[#1E291C] bg-[#0E140E] flex items-center justify-between">
-        <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-bold text-white tracking-wide text-xs">
-          PART & SEAMS
-        </span>
+  const totalLength = seams.reduce((acc, s) => acc + s.length, 0).toFixed(1);
+  const estArc = seams.reduce((acc, s) => acc + s.length / Math.max(1, s.parameters.travelSpeed), 0).toFixed(1);
 
+  return (
+    <aside className="w-80 h-full bg-[#0A0D0A] border-r border-[#182118] flex flex-col z-10 select-none overflow-hidden relative">
+      {/* Panel header */}
+      <div className="h-11 px-4 border-b border-[#182118] flex items-center justify-between shrink-0">
+        <span className="ax-label !text-[#F6F5EE]">Part &amp; Seams</span>
         {onToggleCollapse && (
-          <button
-            onClick={onToggleCollapse}
-            className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono bg-[#162016] hover:bg-[#202E1F] border border-[#233122] rounded text-[#8EA28D] hover:text-white transition active:scale-95"
-            title="Collapse Seams Panel"
-          >
-            <ChevronLeft className="w-3.5 h-3.5 text-[#e97f01]" />
-            <span>COLLAPSE</span>
+          <button onClick={onToggleCollapse} className="ax-icon-btn" title="Collapse seams panel" aria-label="Collapse seams panel">
+            <ChevronLeft className="w-4 h-4" />
           </button>
         )}
       </div>
 
-      {/* CAD Telemetry Card - Physical Workpiece Envelope & Mesh Specs */}
-      <div className="p-3 border-b border-[#1E291C] bg-[#0C120C]">
-        {part ? (
-          <div className="space-y-1.5 font-mono">
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="flex items-center gap-1.5 text-[#A6BAA5] font-semibold">
-                <Box className="w-3 h-3 text-[#e97f01]" />
-                <span>PART TELEMETRY (STL)</span>
-              </span>
-              <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#152317] text-[#4ADE80] border border-[#224A27] font-bold">
-                WATERTIGHT
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div
-                className="bg-[#131B13] p-2 rounded-lg border border-[#202D1E] hover:border-[#2C3E29] transition"
-                title="Workpiece 3D bounding envelope (Width × Height × Depth in mm). Used for machine clamping & robot reach checks."
-              >
-                <div className="flex items-center gap-1 text-[#7A8E79] text-[9px] uppercase tracking-wider mb-0.5">
-                  <Box className="w-2.5 h-2.5 text-[#38BDF8]" />
-                  <span>Envelope (W×H×D)</span>
-                </div>
-                <span className="font-semibold text-white tracking-tight text-xs">
-                  {part.dimensions.width} × {part.dimensions.height} × {part.dimensions.depth}
-                </span>
-                <span className="block text-[8px] text-[#637662] mt-0.5 font-sans">mm</span>
-              </div>
-
-              <div
-                className="bg-[#131B13] p-2 rounded-lg border border-[#202D1E] hover:border-[#2C3E29] transition"
-                title="Total triangular polygon facets in the ingested STL mesh."
-              >
-                <div className="flex items-center gap-1 text-[#7A8E79] text-[9px] uppercase tracking-wider mb-0.5">
-                  <Layers className="w-2.5 h-2.5 text-[#4ADE80]" />
-                  <span>Mesh Facets</span>
-                </div>
-                <span className="font-semibold text-white tracking-tight text-xs">
-                  {part.triangleCount.toLocaleString()}
-                </span>
-                <span className="block text-[8px] text-[#637662] mt-0.5 font-sans">Triangles</span>
-              </div>
-            </div>
+      {/* /01 Workpiece */}
+      <div className="ax-section shrink-0">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="ax-index">01</span>
+            <span className="ax-label">Workpiece</span>
           </div>
+          {part?.integrity &&
+            (part.integrity.isWatertight ? (
+              <span
+                className="ax-chip ax-chip-ok"
+                title={`Closed surface: every mesh edge is shared by two triangles, so crease detection and air-gap checks are reliable.${
+                  part.integrity.nonManifoldEdges > 0
+                    ? ` ${part.integrity.nonManifoldEdges} edge(s) are shared by more than two triangles where separate bodies touch, which is normal for a welded assembly.`
+                    : ''
+                }`}
+              >
+                Watertight
+              </span>
+            ) : (
+              <span
+                className="ax-chip !border-[#F59E0B]/50 !text-[#FBBF24]"
+                title={`${part.integrity.openEdges} open edge(s): the surface has holes or gaps. Crease detection and air-gap checks may be unreliable near them. Repair the STL in your CAD tool for best results.`}
+              >
+                Open mesh
+              </span>
+            ))}
+        </div>
+
+        {part ? (
+          <>
+            <div
+              className="grid grid-cols-3 border border-[#182118] rounded-[4px] divide-x divide-[#182118]"
+              title="Workpiece 3D bounding envelope (Width × Height × Depth in mm). Used for machine clamping & robot reach checks."
+            >
+              {[
+                { k: 'W', v: part.dimensions.width },
+                { k: 'H', v: part.dimensions.height },
+                { k: 'D', v: part.dimensions.depth },
+              ].map((d) => (
+                <div key={d.k} className="px-2.5 py-2">
+                  <div className="ax-label !text-[10px] mb-1.5">{d.k}</div>
+                  <div className="ax-num text-[13px] font-medium text-[#F6F5EE]">
+                    {d.v}
+                    <span className="text-[10px] text-[#7D8F7C] ml-0.5">mm</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div
+              className="flex items-center justify-between mt-2 text-[11px] text-[#7D8F7C]"
+              title="Total triangular polygon facets in the ingested STL mesh."
+            >
+              <span>Mesh facets</span>
+              <span className="ax-num text-[#B4C2B3]">{part.triangleCount.toLocaleString()} triangles</span>
+            </div>
+          </>
         ) : (
-          <div className="text-xs font-mono text-[#7A8E79] py-1">Processing CAD geometry...</div>
+          <div className="text-[12px] text-[#7D8F7C] py-1">Processing CAD geometry…</div>
         )}
       </div>
 
-      {/* Action Buttons */}
-      <div className="p-3 border-b border-[#1E291C] flex flex-col gap-2 bg-[#0E140E]">
-        <div className="flex items-center gap-1.5">
+      {/* /02 Seam tools */}
+      <div className="ax-section shrink-0 flex flex-col gap-2">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="ax-index">02</span>
+          <span className="ax-label">Seam Tools</span>
+        </div>
+
+        <button
+          onClick={() => setMode(mode === 'add_seam' ? 'orbit' : 'add_seam')}
+          className={`ax-btn w-full !h-8 ${mode === 'add_seam' ? 'ax-btn-primary' : ''}`}
+          title="Pick two points on the part to define a seam"
+        >
+          <Plus className={`w-3.5 h-3.5 ${mode === 'add_seam' ? '' : 'text-[#e97f01]'}`} />
+          <span>{mode === 'add_seam' ? 'Cancel click-to-weld' : 'Manual click-to-weld'}</span>
+        </button>
+
+        <div className="flex items-center gap-2">
           <button
             onClick={handleAutoDetect}
-            style={{ fontFamily: 'Onest, sans-serif' }}
-            className="flex-1 flex items-center justify-center gap-1.5 bg-[#172216] hover:bg-[#202E1E] border border-[#273825] text-white py-2 rounded-lg text-xs font-bold transition active:scale-95"
+            className="ax-btn flex-1"
             title="Auto-detects all 7 finished assembly seams with gusset collision clearance"
           >
             <Target className="w-3.5 h-3.5 text-[#e97f01]" />
-            <span>AUTO-DETECT CREASES</span>
+            <span>Auto-detect creases</span>
           </button>
           {activeModelName === 'Structural L-Bracket' && (
             <button
               onClick={handleFullRootPass}
-              className="px-2.5 py-2 bg-[#121A16] hover:bg-[#1A2520] border border-[#203426] text-[#6EE7B7] hover:text-white rounded-lg text-[10px] font-mono font-medium transition active:scale-95 whitespace-nowrap"
+              className="ax-btn"
               title="Plan single continuous 120mm root seam for Stage-1 subassembly (before gusset stiffeners are installed)"
             >
-              120mm Root
+              120 mm root
             </button>
           )}
         </div>
@@ -286,82 +335,63 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
         <button
           onClick={handleOptimize}
           disabled={seams.length <= 1}
-          style={{ fontFamily: 'Onest, sans-serif' }}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#0F2015] to-[#142A1C] hover:from-[#152E1E] hover:to-[#1B3825] border border-[#23462D] text-[#86EFAC] hover:text-white py-2 rounded text-xs font-bold transition-all duration-200 active:scale-95 disabled:opacity-35 disabled:pointer-events-none shadow-sm"
+          className="ax-btn w-full"
           title="Reorders seams in an alternating skip pattern to distribute heat symmetrically and mitigate thermal warpage"
         >
-          <SlidersHorizontal className="w-3.5 h-3.5 text-[#4ADE80]" />
-          <span>AUTO-OPTIMIZE SEQUENCE</span>
+          <SlidersHorizontal className="w-3.5 h-3.5 text-[#7D8F7C]" />
+          <span>Auto-optimize sequence</span>
         </button>
 
         {showOptimizedToast && (
-          <div className="flex items-center gap-1.5 p-2 rounded bg-[#0E2015] border border-[#22C55E]/30 text-[#86EFAC] text-[10px] font-mono leading-tight">
-            <CheckCircle className="w-3.5 h-3.5 shrink-0 text-[#4ADE80]" />
-            <span>Alternating heat-sink sequence applied. Thermal warpage minimized!</span>
+          <div className="ax-notice ax-notice-ok">
+            <CheckCircle className="w-3.5 h-3.5 shrink-0 mt-px text-[#4ADE80]" />
+            <span>Alternating heat-sink sequence applied. Thermal warpage minimized.</span>
           </div>
         )}
-
-        <button
-          onClick={() => setMode(mode === 'add_seam' ? 'orbit' : 'add_seam')}
-          style={{ fontFamily: 'Onest, sans-serif' }}
-          className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 border ${
-            mode === 'add_seam'
-              ? 'bg-gradient-to-r from-[#e97f01] via-[#d46a00] to-[#b35400] text-white border-[#f59e0b]/50 shadow-md'
-              : 'bg-[#121A12] hover:bg-[#1A241A] text-[#B8C8B7] border-[#223121]'
-          }`}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>{mode === 'add_seam' ? 'CANCEL CLICK-TO-WELD' : '+ MANUAL CLICK-TO-WELD'}</span>
-        </button>
       </div>
 
-      {/* Planned Seams Header with Summary Metrics */}
-      <div className="px-3.5 py-2 bg-[#0E140E] border-b border-[#1E291C] flex flex-col gap-1 text-xs">
+      {/* /03 Weld sequence */}
+      <div className="px-4 pt-3.5 pb-2.5 border-b border-[#182118] shrink-0">
         <div className="flex items-center justify-between">
-          <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[#8FA18E] font-bold tracking-wide">
-            PLANNED SEAMS ({seams.length})
-          </span>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <span className="ax-index">03</span>
+            <span className="ax-label">Weld Sequence</span>
+            <span className="ax-num text-[11px] text-[#B4C2B3]">{seams.length}</span>
+          </div>
+          <div className="flex items-center gap-0.5 -mr-1.5">
             {seamHistory.length > 0 && (
-              <button
-                onClick={undo}
-                className="text-[10px] text-[#38BDF8] hover:underline font-mono flex items-center gap-1 transition"
-                title="Undo last action (Ctrl+Z)"
-              >
-                <span>↩ Undo</span>
+              <button onClick={undo} className="ax-btn ax-btn-ghost !h-6 !px-2 !text-[11px]" title="Undo last action (Ctrl+Z)">
+                <Undo2 className="w-3 h-3" />
+                <span>Undo</span>
               </button>
             )}
             {seams.length > 0 && (
-              <button
-                onClick={clearSeams}
-                className="text-[10px] text-[#EF4444] hover:underline font-mono"
-                title="Clear all planned seams"
-              >
-                Clear All
+              <button onClick={clearSeams} className="ax-btn ax-btn-ghost ax-btn-danger !h-6 !px-2 !text-[11px]" title="Clear all planned seams">
+                Clear all
               </button>
             )}
           </div>
         </div>
         {seams.length > 0 && (
-          <div className="flex items-center justify-between text-[10px] font-mono text-[#6A7E69]">
+          <div className="flex items-center justify-between mt-2.5 text-[11px] text-[#7D8F7C]">
             <span>
-              Total: <strong className="text-[#C2D1C1]">{seams.reduce((acc, s) => acc + s.length, 0).toFixed(1)} mm</strong>
+              Total <span className="ax-num text-[#F6F5EE] ml-1">{totalLength} mm</span>
             </span>
             <span>
-              Est. Arc: <strong className="text-[#e97f01]">{(seams.reduce((acc, s) => acc + (s.length / Math.max(1, s.parameters.travelSpeed)), 0)).toFixed(1)}s</strong>
+              Est. arc <span className="ax-num text-[#e97f01] ml-1">{estArc} s</span>
             </span>
           </div>
         )}
       </div>
 
-      {/* Seam Items Scroll Area: Scalable, high-density list that gracefully handles 10+ seams */}
-      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1.5">
+      {/* Seam list */}
+      <div className="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-1">
         {seams.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-center text-xs text-[#7A8E79] px-4">
-            <Target className="w-7 h-7 text-[#e97f01]/40 mb-2" />
-            <p style={{ fontFamily: 'Onest, sans-serif' }} className="font-bold text-[#A2B5A1]">No weld seams defined</p>
-            <p className="text-[11px] mt-1 text-[#657764]">
-              Click &quot;Auto-Detect Crease Seams&quot; or use &quot;+ Manual Click-to-Weld&quot; to pick points on the 3D part.
+          <div className="flex flex-col items-center justify-center h-48 text-center px-6">
+            <Target className="w-6 h-6 text-[#e97f01]/50 mb-3" />
+            <p style={{ fontFamily: 'Onest, sans-serif' }} className="text-[13px] font-medium text-[#B4C2B3]">No weld seams yet</p>
+            <p className="text-[12px] mt-1.5 text-[#7D8F7C] leading-relaxed">
+              Auto-detect creases, or use manual click-to-weld to pick two points on the part.
             </p>
           </div>
         ) : (
@@ -372,30 +402,27 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
               <div
                 key={seam.id}
                 onClick={() => selectSeam(isSelected ? null : seam.id)}
-                className={`p-2.5 rounded-lg border transition-all duration-150 cursor-pointer select-none text-xs ${
+                className={`px-2.5 py-2.5 rounded-[4px] border transition-colors duration-150 cursor-pointer select-none ${
                   isSelected
-                    ? 'bg-[#121A12] border-[#e97f01]/45 shadow-[0_0_12px_rgba(233,127,1,0.06)]'
-                    : isCompleted
-                    ? 'bg-[#0E150F] border-[#1F3323] opacity-90'
-                    : 'bg-[#0D120D] border-[#1B251A] hover:border-[#283827]'
+                    ? 'bg-[#111711] border-[#e97f01]/40'
+                    : 'border-transparent hover:bg-[#0F140F] hover:border-[#182118]'
                 }`}
               >
-                {/* Header row: Index, Inline-Renamable Name, Process, and Length */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                {/* Index, name, length, process */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <span
-                      className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold font-mono shrink-0 transition-all ${
+                      className={`ax-num w-5 h-5 rounded-[3px] flex items-center justify-center text-[10.5px] font-semibold shrink-0 ${
                         isSelected
-                          ? 'bg-gradient-to-br from-[#e97f01] to-[#b35400] text-white shadow-sm border border-[#f59e0b]/40'
+                          ? 'bg-[#e97f01] text-[#0A0D0A]'
                           : isCompleted
-                          ? 'bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30'
-                          : 'bg-[#182217] text-[#7E937D] border border-[#223021]'
+                          ? 'bg-[#4ADE80]/12 text-[#4ADE80] border border-[#4ADE80]/30'
+                          : 'text-[#7D8F7C] border border-[#253224]'
                       }`}
                     >
                       {idx + 1}
                     </span>
 
-                    {/* Figma-Style Inline Renaming */}
                     {editingSeamId === seam.id ? (
                       <input
                         type="text"
@@ -408,18 +435,18 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                         }}
                         onClick={(e) => e.stopPropagation()}
                         autoFocus
-                        className="bg-[#0A0E0A] border border-[#e97f01]/70 px-1.5 py-0.5 rounded text-white text-xs font-bold outline-none font-mono w-28"
+                        className="ax-input !h-6 !w-32 !border-[#e97f01]"
                       />
                     ) : (
                       <div
-                        className="flex items-center gap-1 group/rename"
+                        className="flex items-center gap-1 min-w-0 group/rename"
                         onDoubleClick={(e) => {
                           e.stopPropagation();
                           handleStartRename(seam.id, seam.name || `Seam ${idx + 1}`);
                         }}
                         title="Double-click to rename"
                       >
-                        <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-bold text-white tracking-wide">
+                        <span style={{ fontFamily: 'Onest, sans-serif' }} className="text-[12.5px] font-medium text-[#F6F5EE] truncate">
                           {seam.name || `Seam ${idx + 1}`}
                         </span>
                         <button
@@ -427,152 +454,126 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
                             e.stopPropagation();
                             handleStartRename(seam.id, seam.name || `Seam ${idx + 1}`);
                           }}
-                          className="opacity-0 group-hover/rename:opacity-100 p-0.5 text-[#6E806D] hover:text-[#e97f01] transition-opacity"
+                          className="opacity-0 group-hover/rename:opacity-100 p-0.5 text-[#7D8F7C] hover:text-[#e97f01] transition-opacity shrink-0"
                           title="Rename seam"
+                          aria-label="Rename seam"
                         >
-                          <Pencil className="w-2.5 h-2.5" />
+                          <Pencil className="w-3 h-3" />
                         </button>
                       </div>
                     )}
 
-                    {isCompleted && (
-                      <span className="text-[9px] px-1 py-0.2 rounded bg-[#132A1C] border border-[#22C55E]/40 text-[#22C55E] font-mono font-bold">
-                        WELDED
-                      </span>
-                    )}
+                    {isCompleted && <span className="ax-chip ax-chip-ok !h-4 !text-[9px] shrink-0">Welded</span>}
                   </div>
-                  <div className="flex items-center gap-1.5 font-mono">
-                    <span className="text-[10px] text-[#A6BAA5] font-semibold">{seam.length} mm</span>
-                    <span
-                      style={{ color: '#e97f01' }}
-                      className="text-[9px] px-1.5 py-0.5 rounded bg-[#1A2518] border border-[#283925] font-bold"
-                    >
-                      {seam.parameters.process}
-                    </span>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="ax-num text-[11.5px] text-[#B4C2B3]">{seam.length} mm</span>
+                    <span className="ax-chip ax-chip-signal !h-4 !text-[9.5px]">{seam.parameters.process}</span>
                   </div>
                 </div>
 
-                {/* Subtitle metrics: joint type & travel speed */}
-                <div className="flex items-center justify-between text-[10px] font-mono text-[#7D917C] mt-1">
-                  <span>
-                    {seam.parameters.jointType} ({seam.parameters.torchTiltAngle}° Tilt)
+                {/* Joint type, tilt, travel speed */}
+                <div className="flex items-center justify-between text-[11px] text-[#7D8F7C] mt-1.5 pl-[30px]">
+                  <span className="ax-num">
+                    {seam.parameters.jointType.charAt(0) + seam.parameters.jointType.slice(1).toLowerCase()} · {seam.parameters.torchTiltAngle}° tilt
                   </span>
-                  <span>{seam.parameters.travelSpeed} mm/s</span>
+                  <span className="ax-num">{seam.parameters.travelSpeed} mm/s</span>
                 </div>
 
-                {/* Air Gap / Non-Manufacturable Warning Tag */}
+                {/* Air gap warning */}
                 {seam.hasAirGap && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="mt-2 p-2 rounded-md bg-[#241305] border border-[#F59E0B]/50 text-[#FCD34D] text-[10px] font-mono flex items-start gap-1.5"
-                  >
-                    <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 mt-0.5" />
+                  <div onClick={(e) => e.stopPropagation()} className="ax-notice ax-notice-warn mt-2.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 mt-px" />
                     <div>
-                      <span className="font-bold text-[#FBBF24]">Air Gap Detected (Non-Manufacturable)</span>
-                      <p className="text-[9px] text-[#FDE68A]/85 mt-0.5 font-sans leading-tight">
-                        Path bridges empty space ({seam.airGapDistanceMm || 0}mm gap) without underlying metal substrate.
+                      <div className="font-medium text-[#FBBF24]">Air gap — not manufacturable</div>
+                      <p className="text-[11px] text-[#FDE68A]/80 mt-0.5">
+                        Path bridges {seam.airGapDistanceMm || 0} mm of empty space with no metal underneath.
                       </p>
                     </div>
                   </div>
                 )}
 
-                {/* Gusset Clash Warning & 1-Click Split Action */}
+                {/* Gusset clash warning with split action */}
                 {checkGussetClash(seam) && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="mt-2 p-2 rounded-md bg-[#231206] border border-[#F59E0B]/50 text-[#FCD34D] text-[10px] font-mono flex flex-col gap-1.5"
-                  >
-                    <div className="flex items-start gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 mt-0.5" />
+                  <div onClick={(e) => e.stopPropagation()} className="ax-notice ax-notice-warn mt-2.5 flex-col !gap-2">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 mt-px" />
                       <div>
-                        <span className="font-bold text-[#FBBF24]">OBSTACLE CLASH: Intersects Gusset Ribs</span>
-                        <p className="text-[9px] text-[#FDE68A]/85 mt-0.5 font-sans leading-tight">
-                          Physical torch will phase through solid gusset plates at X = ±33mm. Robot must stop before the triangle, retract, and resume on the other side.
+                        <div className="font-medium text-[#FBBF24]">Obstacle clash with gusset ribs</div>
+                        <p className="text-[11px] text-[#FDE68A]/80 mt-0.5">
+                          The torch would pass through the gusset plates at X = ±33 mm. Stop before the rib, retract, and resume on the other side.
                         </p>
                       </div>
                     </div>
                     <button
                       onClick={() => handleSplitAroundGussets(seam.id)}
-                      className="w-full py-1.5 px-2 bg-gradient-to-r from-[#B45309] to-[#D97706] hover:from-[#D97706] hover:to-[#F59E0B] text-white font-bold rounded text-[10px] transition active:scale-95 flex items-center justify-center gap-1.5 shadow-sm"
+                      className="ax-btn w-full !h-7 !border-[#F59E0B]/50 !text-[#FBBF24] hover:!bg-[#F59E0B]/10"
                       title="Split continuous line into 3 collision-free passes (Left Outer Root, Center Bay, Right Outer Root) with 4mm setback"
                     >
-                      <Split className="w-3 h-3 text-white" />
-                      <span>Split Around Gussets (3 Clean Passes)</span>
+                      <Split className="w-3.5 h-3.5" />
+                      <span>Split around gussets (3 passes)</span>
                     </button>
                   </div>
                 )}
 
-                {/* Contextual Action Toolbar: Sleek Balanced CAD Control Bar */}
+                {/* Selected seam toolbar */}
                 {isSelected && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="pt-2 mt-2 border-t border-[#1F2B1E] flex flex-col gap-1.5 font-mono text-[10px]"
-                  >
-                    {/* Primary Toolpath Execution & Reversal */}
-                    <div className="grid grid-cols-2 gap-1.5">
+                  <div onClick={(e) => e.stopPropagation()} className="pt-2.5 mt-2.5 border-t border-[#1D271C] flex flex-col gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => startSimulation(seam.id)}
-                        className="py-1 px-2 bg-gradient-to-r from-[#142618] to-[#1E3B24] hover:from-[#1A3320] hover:to-[#284E30] rounded-md border border-[#234E2B] text-[#86EFAC] hover:text-white transition-all duration-150 active:scale-95 flex items-center justify-center gap-1.5 font-semibold shadow-sm"
+                        className="ax-btn !h-7"
                         title="Simulate / test this specific seam path only"
                       >
-                        <Play className="w-3 h-3 fill-current text-[#4ADE80]" />
-                        <span>Simulate Seam</span>
+                        <Play className="w-3 h-3 fill-current text-[#e97f01]" />
+                        <span>Simulate</span>
                       </button>
-
                       <button
                         onClick={() => reverseSeamDirection(seam.id)}
-                        className="py-1 px-2 bg-[#12231C] hover:bg-[#1A3328] rounded-md border border-[#1E4334] text-[#6EE7B7] hover:text-white transition-all duration-150 active:scale-95 flex items-center justify-center gap-1.5 font-medium"
+                        className="ax-btn !h-7"
                         title="Flip start & end points (reverse travel direction of the snake torch)"
                       >
                         <ArrowLeftRight className="w-3 h-3" />
-                        <span>Reverse Path</span>
+                        <span>Reverse path</span>
                       </button>
                     </div>
 
-                    {/* Secondary Sequence & Angle Micro-Controls */}
-                    <div className="flex items-center justify-between gap-1 pt-0.5">
-                      <div className="flex items-center gap-1.5">
-                        {/* Segmented Reorder Pill */}
-                        <div className="flex items-center bg-[#141C14] border border-[#223021] rounded-md p-0.5">
-                          <button
-                            onClick={() => handleMoveUp(idx)}
-                            disabled={idx === 0}
-                            className="px-2 py-0.5 hover:bg-[#1F2E1E] disabled:opacity-20 rounded text-[#A6BAA5] hover:text-white transition flex items-center gap-0.5 text-[9px]"
-                            title="Move earlier in welding sequence"
-                          >
-                            <ArrowUp className="w-2.5 h-2.5" />
-                            <span>Up</span>
-                          </button>
-                          <div className="w-px h-3 bg-[#223021]" />
-                          <button
-                            onClick={() => handleMoveDown(idx)}
-                            disabled={idx === seams.length - 1}
-                            className="px-2 py-0.5 hover:bg-[#1F2E1E] disabled:opacity-20 rounded text-[#A6BAA5] hover:text-white transition flex items-center gap-0.5 text-[9px]"
-                            title="Move later in welding sequence"
-                          >
-                            <ArrowDown className="w-2.5 h-2.5" />
-                            <span>Down</span>
-                          </button>
-                        </div>
-
-                        {/* Invert Normal Button */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleMoveUp(idx)}
+                          disabled={idx === 0}
+                          className="ax-icon-btn"
+                          title="Move earlier in welding sequence"
+                          aria-label="Move earlier in welding sequence"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleMoveDown(idx)}
+                          disabled={idx === seams.length - 1}
+                          className="ax-icon-btn"
+                          title="Move later in welding sequence"
+                          aria-label="Move later in welding sequence"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="h-4 w-px bg-[#253224] mx-1" />
                         <button
                           onClick={() => flipSeamNormal(seam.id)}
-                          className="px-2 py-1 bg-[#15202B] hover:bg-[#1C2C3C] rounded-md border border-[#23435E] text-[#7DD3FC] hover:text-white transition-all active:scale-95 flex items-center gap-1 text-[9px] font-medium"
+                          className="ax-btn ax-btn-ghost !h-[26px] !px-2 !text-[11px]"
                           title="Invert torch normal vector 180° (flips approach and retract side)"
                         >
-                          <RotateCw className="w-2.5 h-2.5" />
-                          <span>Flip Angle</span>
+                          <RotateCw className="w-3 h-3" />
+                          <span>Flip angle</span>
                         </button>
                       </div>
-
-                      {/* Delete Button */}
                       <button
                         onClick={() => removeSeam(seam.id)}
-                        className="px-2 py-1 bg-[#231212]/80 hover:bg-[#351616] rounded-md border border-[#441B1B] text-[#FCA5A5] hover:text-white transition-all duration-150 active:scale-95 flex items-center gap-1 text-[9px] font-medium"
+                        className="ax-btn ax-btn-ghost ax-btn-danger !h-[26px] !px-2 !text-[11px]"
                         title="Delete seam (or press Delete key)"
                       >
-                        <Trash2 className="w-2.5 h-2.5" />
+                        <Trash2 className="w-3 h-3" />
                         <span>Delete</span>
                       </button>
                     </div>

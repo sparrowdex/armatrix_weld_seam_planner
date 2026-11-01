@@ -8,6 +8,8 @@ import { useWeldStore } from '@/store/useWeldStore';
 import { Vector3D, TorchNozzleType, WeldSeam, WeldJointType } from '@/types/weld';
 import { Play, X, Sliders, Target, Crosshair, AlertTriangle } from 'lucide-react';
 import { validatePathSubstrate } from '@/utils/substrateValidator';
+import { analyzeMeshIntegrity } from '@/utils/meshIntegrity';
+import { getReachSummary, REACH_ENVELOPE_MM } from '@/utils/reach';
 
 // Authentic Robotic Welding Torch & Sleek Pencil Industrial End-Effectors
 function buildRoboticTorch(style: 'robotic_gooseneck' | 'sleek_pencil' = 'robotic_gooseneck'): THREE.Group {
@@ -339,6 +341,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
   const selectedSeam = seams.find((s) => s.id === selectedSeamId) || null;
   const jobSummary = exportJobJSON().job_summary;
+  const partReach = getReachSummary(useWeldStore((st) => st.part));
 
   // Internal Three.js refs
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -359,6 +362,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   const torchMeshGroupRef = useRef<THREE.Group>(new THREE.Group());
   const arcLightRef = useRef<THREE.PointLight | null>(null);
   const arcSparksRef = useRef<THREE.Points | null>(null);
+  const arcGlowRef = useRef<THREE.Sprite | null>(null);
+  const puddleLightRef = useRef<THREE.PointLight | null>(null);
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
 
@@ -539,22 +544,88 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     torchMeshGroup.add(buildRoboticTorch(useWeldStore.getState().torchStyle));
     torchContainer.add(torchMeshGroup);
 
-    const arcLight = new THREE.PointLight('#38BDF8', 0, 90);
-    arcLight.position.set(0, 0, 0);
+    // Arc lighting: a blue-white core (the arc column itself) plus a warm orange fill from the molten pool.
+    const arcLight = new THREE.PointLight('#DCEEFF', 0, 140, 1.6);
+    arcLight.position.set(0, 1.5, 0);
     torchContainer.add(arcLight);
     arcLightRef.current = arcLight;
 
-    // Arc Sparks Particles
-    const sparkCount = 35;
-    const sparkGeom = new THREE.BufferGeometry();
-    const sparkPositions = new Float32Array(sparkCount * 3);
-    for (let i = 0; i < sparkCount * 3; i++) {
-      sparkPositions[i] = (Math.random() - 0.5) * 6;
+    const puddleLight = new THREE.PointLight('#FF7A1A', 0, 70, 1.8);
+    puddleLight.position.set(0, 0.5, 0);
+    torchContainer.add(puddleLight);
+    puddleLightRef.current = puddleLight;
+
+    // Arc glare: additive soft sprite so the arc reads as a light source without post-processing bloom
+    const glowCanvas = document.createElement('canvas');
+    glowCanvas.width = 64;
+    glowCanvas.height = 64;
+    const glowCtx = glowCanvas.getContext('2d');
+    if (glowCtx) {
+      const g = glowCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      g.addColorStop(0.1, 'rgba(240, 248, 255, 0.95)');
+      g.addColorStop(0.3, 'rgba(170, 210, 255, 0.4)');
+      g.addColorStop(0.6, 'rgba(110, 170, 255, 0.1)');
+      g.addColorStop(1, 'rgba(80, 150, 255, 0)');
+      glowCtx.fillStyle = g;
+      glowCtx.fillRect(0, 0, 64, 64);
     }
-    sparkGeom.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
-    const sparkMat = new THREE.PointsMaterial({ color: '#FFE066', size: 2.2, transparent: true, opacity: 0 });
+    const arcGlow = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: new THREE.CanvasTexture(glowCanvas),
+        color: '#FFFFFF',
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+    );
+    arcGlow.position.set(0, 2.5, 0); // lifted along the torch axis so the work surface does not clip it
+    arcGlow.scale.setScalar(14);
+    arcGlow.renderOrder = 10;
+    arcGlow.visible = false;
+    torchContainer.add(arcGlow);
+    arcGlowRef.current = arcGlow;
+
+    // Spatter: world-space ballistic particles (spawn at the arc, fly off along the torch axis, fall under gravity, cool and fade)
+    const sparkCount = 90;
+    const sparkGeom = new THREE.BufferGeometry();
+    sparkGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(sparkCount * 3), 3));
+    sparkGeom.setAttribute('color', new THREE.BufferAttribute(new Float32Array(sparkCount * 3), 3));
+
+    // Soft circular ember texture so sparks aren't raw square pixel blocks
+    const sparkCanvas = document.createElement('canvas');
+    sparkCanvas.width = 16;
+    sparkCanvas.height = 16;
+    const sparkCtx = sparkCanvas.getContext('2d');
+    if (sparkCtx) {
+      const grad = sparkCtx.createRadialGradient(8, 8, 0, 8, 8, 8);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      grad.addColorStop(0.35, 'rgba(255, 224, 102, 0.9)');
+      grad.addColorStop(1, 'rgba(255, 120, 0, 0)');
+      sparkCtx.fillStyle = grad;
+      sparkCtx.fillRect(0, 0, 16, 16);
+    }
+    const sparkTexture = new THREE.CanvasTexture(sparkCanvas);
+
+    const sparkMat = new THREE.PointsMaterial({
+      map: sparkTexture,
+      vertexColors: true,
+      size: 1.8,
+      transparent: true,
+      opacity: 1,
+      depthWrite: false, // Must be false so sparks never occlude translucent materials (such as Ghost X-Ray mode)
+      blending: THREE.AdditiveBlending, // Additive: sparks add light, and fading a vertex colour to black fades the spark out
+    });
     const sparkPoints = new THREE.Points(sparkGeom, sparkMat);
-    torchContainer.add(sparkPoints);
+    sparkPoints.userData = {
+      vel: new Float32Array(sparkCount * 3),
+      life: new Float32Array(sparkCount),
+      maxLife: new Float32Array(sparkCount).fill(1),
+    };
+    sparkPoints.frustumCulled = false;
+    sparkPoints.visible = false;
+    scene.add(sparkPoints);
     arcSparksRef.current = sparkPoints;
 
     torchContainer.visible = false;
@@ -835,8 +906,11 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       modelGroup.add(edgeLines);
       edgesRef.current = edgeLines;
 
-      const wireframeGeom = new THREE.WireframeGeometry(geometry);
-      const wireframeMat = new THREE.LineBasicMaterial({ color: '#3A5239', opacity: 0.35, transparent: true });
+      // Facet wireframe: every edge between triangles that are not coplanar (1° threshold).
+      // STL files triangulate flat faces arbitrarily, so a raw WireframeGeometry draws meaningless
+      // diagonals across flat plates; this keeps true facets (cylinders, chamfers) and leaves flat faces clean.
+      const wireframeGeom = new THREE.EdgesGeometry(geometry, 1);
+      const wireframeMat = new THREE.LineBasicMaterial({ color: '#4A6648', opacity: 0.45, transparent: true });
       const wireframe = new THREE.LineSegments(wireframeGeom, wireframeMat);
       wireframe.visible = showWireframe;
       modelGroup.add(wireframe);
@@ -849,6 +923,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
       setPart({
         name: activeModelName,
+        integrity: analyzeMeshIntegrity(geometry),
         triangleCount: geometry.attributes.position.count / 3,
         vertexCount: geometry.attributes.position.count,
         dimensions: { width, height, depth },
@@ -1151,6 +1226,12 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     if (!isSimulating || seams.length === 0 || !torchRef.current) {
       if (torchRef.current) torchRef.current.visible = false;
       if (arcLightRef.current) arcLightRef.current.intensity = 0;
+      if (puddleLightRef.current) puddleLightRef.current.intensity = 0;
+      if (arcGlowRef.current) arcGlowRef.current.visible = false;
+      if (arcSparksRef.current) {
+        arcSparksRef.current.visible = false;
+        (arcSparksRef.current.userData.life as Float32Array).fill(0);
+      }
       return;
     }
 
@@ -1191,19 +1272,131 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     let lastTime = performance.now();
     let currentReportedPhase = '';
 
-    const updatePhase = (newPhase: 'approach' | 'welding' | 'retract' | 'rapid_traverse') => {
+    const updatePhase = (newPhase: 'approach' | 'welding' | 'retract' | 'rapid_traverse' | 'dry_run') => {
       if (currentReportedPhase !== newPhase) {
         currentReportedPhase = newPhase;
         useWeldStore.getState().setSimPhase(newPhase);
       }
     };
 
+    // Run-all mode never welds non-manufacturable (air-gap) seams: they are skipped, and the HUD says so.
+    // A targeted single-seam run of an air-gap seam becomes an arc-off dry run instead (see welding phase).
+    const skippedNames: string[] = [];
+    const nextWeldableIndex = (from: number) => {
+      let i = from;
+      while (i < seams.length && seams[i].hasAirGap) {
+        skippedNames.push(seams[i].name || `Seam ${i + 1}`);
+        i++;
+      }
+      return i;
+    };
+    const publishSkipNotice = () => {
+      if (skippedNames.length === 0) return;
+      const list = skippedNames.length > 2 ? `${skippedNames.length} seams` : skippedNames.join(', ');
+      useWeldStore.getState().setSimNotice(`Skipped ${list}: air gap, not manufacturable`);
+    };
+
+    if (!targetSeamId) {
+      currentSeamIdx = nextWeldableIndex(currentSeamIdx);
+      publishSkipNotice();
+      if (currentSeamIdx >= seams.length) {
+        useWeldStore.getState().pauseSimulation();
+        return;
+      }
+    }
+    let nextSeamIdx = currentSeamIdx + 1;
+
     updatePhase('approach');
     useWeldStore.getState().setSimCurrentSeamIndex(currentSeamIdx);
+
+    // Arc state, written by the welding phase and consumed by tickArc once per frame
+    const arcPos = new THREE.Vector3();
+    const arcAxis = new THREE.Vector3(0, 1, 0);
+    let arcEmitting = false;
+    let arcProcess: string = 'MIG';
+    let arcWireScale = 1;
+    let arcLevel = 0; // smoothed 0..1: ramps up on arc strike, fades on crater fill / retract
+    const puddleLight = puddleLightRef.current;
+    const arcGlow = arcGlowRef.current;
+    const sparks = arcSparksRef.current;
+    const SPARK_GRAVITY = 420; // mm/s² (scaled for the mm-unit scene and sim playback)
+    const sparkDir = new THREE.Vector3();
+
+    const tickArc = (dt: number, now: number) => {
+      arcLevel = THREE.MathUtils.lerp(arcLevel, arcEmitting ? 1 : 0, arcEmitting ? 0.3 : 0.18);
+      const t = now / 1000;
+      // Layered low-frequency flicker instead of per-frame random strobing
+      const flicker = 0.82 + 0.1 * Math.sin(t * 41) + 0.05 * Math.sin(t * 113 + 1.7) + 0.05 * Math.random();
+      const tint = arcProcess === 'TIG' ? '#BFDDFF' : arcProcess === 'LASER' ? '#FFF2E0' : '#DCEEFF';
+
+      if (arcLight) {
+        arcLight.color.set(tint);
+        arcLight.intensity = 60 * arcLevel * flicker;
+      }
+      if (puddleLight) puddleLight.intensity = 22 * arcLevel * (0.92 + 0.08 * Math.sin(t * 9));
+      if (arcGlow) {
+        arcGlow.visible = arcLevel > 0.02;
+        const gm = arcGlow.material as THREE.SpriteMaterial;
+        gm.color.set(tint);
+        gm.opacity = 0.9 * arcLevel * flicker;
+        arcGlow.scale.setScalar((9 + 6 * flicker) * Math.max(0.75, arcWireScale));
+      }
+
+      if (sparks) {
+        const vel = sparks.userData.vel as Float32Array;
+        const life = sparks.userData.life as Float32Array;
+        const maxLife = sparks.userData.maxLife as Float32Array;
+        const posArr = (sparks.geometry.getAttribute('position') as THREE.BufferAttribute).array as Float32Array;
+        const colArr = (sparks.geometry.getAttribute('color') as THREE.BufferAttribute).array as Float32Array;
+        // MIG throws the most spatter, laser some, TIG almost none
+        const rate = arcProcess === 'TIG' ? 12 : arcProcess === 'LASER' ? 90 : 240;
+        let budget = arcEmitting ? Math.round(dt * rate + Math.random()) : 0;
+        let alive = 0;
+
+        for (let i = 0; i < life.length; i++) {
+          const i3 = i * 3;
+          if (life[i] <= 0) {
+            if (budget <= 0) {
+              colArr[i3] = colArr[i3 + 1] = colArr[i3 + 2] = 0;
+              continue;
+            }
+            budget--;
+            sparkDir.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1).normalize();
+            sparkDir.addScaledVector(arcAxis, 1.2).normalize();
+            const speed = 70 + Math.random() * 140;
+            vel[i3] = sparkDir.x * speed;
+            vel[i3 + 1] = sparkDir.y * speed;
+            vel[i3 + 2] = sparkDir.z * speed;
+            posArr[i3] = arcPos.x;
+            posArr[i3 + 1] = arcPos.y;
+            posArr[i3 + 2] = arcPos.z;
+            maxLife[i] = life[i] = 0.25 + Math.random() * 0.45;
+          }
+
+          life[i] -= dt;
+          vel[i3 + 1] -= SPARK_GRAVITY * dt;
+          posArr[i3] += vel[i3] * dt;
+          posArr[i3 + 1] += vel[i3 + 1] * dt;
+          posArr[i3 + 2] += vel[i3 + 2] * dt;
+
+          // Cooling: white-yellow when fresh, dull orange as it dies, fading to black (invisible under additive blending)
+          const f = Math.max(0, life[i] / maxLife[i]);
+          colArr[i3] = f;
+          colArr[i3 + 1] = (0.45 + 0.5 * f) * f;
+          colArr[i3 + 2] = (0.1 + 0.6 * f * f) * f;
+          alive++;
+        }
+
+        sparks.geometry.getAttribute('position').needsUpdate = true;
+        sparks.geometry.getAttribute('color').needsUpdate = true;
+        sparks.visible = alive > 0;
+      }
+    };
 
     const loop = (now: number) => {
       const dt = Math.min(0.1, (now - lastTime) / 1000);
       lastTime = now;
+      arcEmitting = false;
 
       const seam = seams[currentSeamIdx];
       if (!seam) {
@@ -1253,8 +1446,6 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         const currentPos = new THREE.Vector3().lerpVectors(pApproach, pStart, Math.min(1, progress));
         torch.position.copy(currentPos);
         safeQuaternion(effectiveTorchAxis);
-        if (arcLight) arcLight.intensity = 0;
-        if (arcSparksRef.current) (arcSparksRef.current.material as THREE.PointsMaterial).opacity = 0;
         activeBeadMesh.visible = false;
         moltenPuddleMesh.visible = false;
         updatePhase('approach');
@@ -1269,27 +1460,31 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         torch.position.copy(currentPos);
         safeQuaternion(effectiveTorchAxis);
 
-        // Progressive Metallic Weld Bead Deposition behind torch tip (scaled dynamically to wire diameter)
-        const activeBeadRadius = 2.35 * wireScale;
-        positionCylinderBetweenPoints(activeBeadMesh, pStart, currentPos, activeBeadRadius);
+        if (seam.hasAirGap) {
+          // Dry run: trace the path with the arc OFF. No bead, no pool, no spatter, never marked as welded.
+          activeBeadMesh.visible = false;
+          moltenPuddleMesh.visible = false;
+          updatePhase('dry_run');
+        } else {
+          // Progressive Metallic Weld Bead Deposition behind torch tip (scaled dynamically to wire diameter)
+          const activeBeadRadius = 2.35 * wireScale;
+          positionCylinderBetweenPoints(activeBeadMesh, pStart, currentPos, activeBeadRadius);
 
-        // Active glowing molten puddle at contact point (scaled dynamically to wire diameter)
-        moltenPuddleMesh.scale.setScalar(wireScale);
-        moltenPuddleMesh.visible = true;
-        moltenPuddleMesh.position.copy(currentPos);
+          // Active glowing molten puddle at contact point (scaled dynamically to wire diameter)
+          moltenPuddleMesh.scale.setScalar(wireScale);
+          moltenPuddleMesh.visible = true;
+          moltenPuddleMesh.position.copy(currentPos);
 
-        if (arcLight) {
-          arcLight.intensity = 35 + Math.random() * 30;
-          arcLight.color.set(Math.random() > 0.3 ? '#38BDF8' : '#FFFFFF');
+          arcEmitting = true;
+          arcPos.copy(currentPos);
+          arcAxis.copy(effectiveTorchAxis);
+          arcProcess = seam.parameters.process;
+          arcWireScale = wireScale;
+          updatePhase('welding');
         }
-        if (arcSparksRef.current) {
-          (arcSparksRef.current.material as THREE.PointsMaterial).opacity = 0.75 + Math.random() * 0.25;
-          arcSparksRef.current.rotation.y += 0.35;
-        }
-        updatePhase('welding');
 
         if (progress >= 1) {
-          useWeldStore.getState().markSeamCompleted(seam.id);
+          if (!seam.hasAirGap) useWeldStore.getState().markSeamCompleted(seam.id);
           activeBeadMesh.visible = false;
           moltenPuddleMesh.visible = false;
           progress = 0;
@@ -1300,8 +1495,6 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         const currentPos = new THREE.Vector3().lerpVectors(pEnd, pRetract, Math.min(1, progress));
         torch.position.copy(currentPos);
         safeQuaternion(effectiveTorchAxis);
-        if (arcLight) arcLight.intensity = 0;
-        if (arcSparksRef.current) (arcSparksRef.current.material as THREE.PointsMaterial).opacity = 0;
         activeBeadMesh.visible = false;
         moltenPuddleMesh.visible = false;
         updatePhase('retract');
@@ -1313,7 +1506,9 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
             useWeldStore.getState().pauseSimulation();
             return;
           }
-          if (currentSeamIdx < seams.length - 1) {
+          nextSeamIdx = nextWeldableIndex(currentSeamIdx + 1);
+          publishSkipNotice();
+          if (nextSeamIdx < seams.length) {
             phase = 'traverse';
           } else {
             useWeldStore.getState().pauseSimulation();
@@ -1322,7 +1517,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         }
       } else if (phase === 'traverse') {
         progress += dt / traverseDuration;
-        const nextSeam = seams[currentSeamIdx + 1];
+        const nextSeam = seams[nextSeamIdx];
         const nextNorm = new THREE.Vector3(nextSeam.normal.x, nextSeam.normal.y, nextSeam.normal.z).normalize();
         const nextStart = new THREE.Vector3(nextSeam.startPoint.x, nextSeam.startPoint.y, nextSeam.startPoint.z);
         const nextEnd = new THREE.Vector3(nextSeam.endPoint.x, nextSeam.endPoint.y, nextSeam.endPoint.z);
@@ -1342,25 +1537,33 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         torch.position.copy(currentPos);
         const interpAxis = new THREE.Vector3().lerpVectors(effectiveTorchAxis, nextTorchAxis, progress).normalize();
         safeQuaternion(interpAxis);
-        if (arcLight) arcLight.intensity = 0;
-        if (arcSparksRef.current) (arcSparksRef.current.material as THREE.PointsMaterial).opacity = 0;
         activeBeadMesh.visible = false;
         moltenPuddleMesh.visible = false;
         updatePhase('rapid_traverse');
 
         if (progress >= 1) {
           progress = 0;
-          currentSeamIdx++;
+          currentSeamIdx = nextSeamIdx;
           useWeldStore.getState().setSimCurrentSeamIndex(currentSeamIdx);
           phase = 'approach';
         }
       }
 
+      tickArc(dt, now);
       animId = requestAnimationFrame(loop);
     };
 
     animId = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animId);
+    return () => {
+      cancelAnimationFrame(animId);
+      if (arcLightRef.current) arcLightRef.current.intensity = 0;
+      if (puddleLightRef.current) puddleLightRef.current.intensity = 0;
+      if (arcGlowRef.current) arcGlowRef.current.visible = false;
+      if (arcSparksRef.current) {
+        arcSparksRef.current.visible = false;
+        (arcSparksRef.current.userData.life as Float32Array).fill(0);
+      }
+    };
   }, [isSimulating, seams, playbackSpeed]);
 
   // Pointer Movement & Raycast Snapping
@@ -1496,177 +1699,141 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         className="w-full h-full cursor-crosshair"
       />
 
-      {/* 3D Telemetry HUD Overlay (Seamless, transparent, white typography at bottom-left - never overlaps tabs) */}
-      <div className="absolute bottom-5 left-5 z-10 pointer-events-none flex flex-col gap-1 font-mono text-xs select-none">
-        {/* Model Name: Completely transparent, seamless, white */}
-        <div className="flex items-center gap-2 py-0.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]">
-          <span className="w-2 h-2 rounded-full bg-[#e97f01] shadow-[0_0_8px_#e97f01]" />
-          <span className="text-[#A4B3A3] text-[11px] tracking-wider uppercase font-medium">PART:</span>
-          <span className="font-semibold text-white tracking-wide text-[13px]">{activeModelName}</span>
+      {/* Part name and live cursor coordinates (bottom-left) */}
+      <div className="absolute bottom-5 left-5 z-10 pointer-events-none flex flex-col gap-1.5 select-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]">
+        <div className="flex items-baseline gap-2.5">
+          <span className="ax-label">Part</span>
+          <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-medium text-[#F6F5EE] text-[13px]">{activeModelName}</span>
         </div>
 
-        {/* Dynamic X Y Z Coordinates: smooth fade in, slow fade out, seamless transparent in white */}
         <div
-          className={`flex items-center gap-3 py-0.5 text-xs drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition-all duration-700 ease-out ${
+          className={`ax-num flex items-center gap-3 text-[12px] transition-all duration-700 ease-out ${
             isCoordsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-0.5'
           }`}
         >
-          <span className="text-[#A4B3A3]">
-            X: <strong className="text-white font-semibold">{displayCoords ? displayCoords.x.toFixed(2) : '0.00'}</strong>
+          <span className="text-[#7D8F7C]">
+            X <span className="text-[#F6F5EE]">{displayCoords ? displayCoords.x.toFixed(2) : '0.00'}</span>
           </span>
-          <span className="text-[#A4B3A3]">
-            Y: <strong className="text-white font-semibold">{displayCoords ? displayCoords.y.toFixed(2) : '0.00'}</strong>
+          <span className="text-[#7D8F7C]">
+            Y <span className="text-[#F6F5EE]">{displayCoords ? displayCoords.y.toFixed(2) : '0.00'}</span>
           </span>
-          <span className="text-[#A4B3A3]">
-            Z: <strong className="text-white font-semibold">{displayCoords ? displayCoords.z.toFixed(2) : '0.00'}</strong>
+          <span className="text-[#7D8F7C]">
+            Z <span className="text-[#F6F5EE]">{displayCoords ? displayCoords.z.toFixed(2) : '0.00'}</span>
           </span>
           {displayDist !== null && (
-            <span className="text-[#e97f01] font-medium ml-1">
-              LENGTH: <strong className="text-white font-semibold">{displayDist} mm</strong>
+            <span className="text-[#e97f01] ml-1">
+              Length <span className="text-[#F6F5EE]">{displayDist} mm</span>
             </span>
           )}
         </div>
       </div>
 
-      {/* Modern Glassmorphic In-Focus Seam Specs Card (Appears when Right Sidebar is Collapsed) */}
+      {/* Seam in focus (shown when the parameters panel is collapsed) */}
       {isRightCollapsed && selectedSeam && !isSimulating && (
-        <div
-          className="absolute top-4 right-4 z-30 w-80 max-w-[calc(100vw-2.5rem)] bg-[#080D08]/75 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-4 text-white font-mono animate-in fade-in slide-in-from-right-4 duration-300"
-          style={{ fontFamily: 'Onest, sans-serif' }}
-        >
-          {/* Header Status & Dismiss */}
-          <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
+        <div className="absolute top-16 right-4 z-30 w-72 max-w-[calc(100vw-2.5rem)] bg-[#0A0D0A]/45 backdrop-blur-md border border-[#253224]/80 rounded-[6px] text-[#F6F5EE] animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center justify-between px-4 h-10 border-b border-[#253224]/70">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-[0_0_8px_#10B981]" />
-              <span className="text-[10px] uppercase tracking-widest text-[#86EFAC] font-bold">
-                SEAM IN FOCUS
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 bg-white/[0.06] border border-white/10 text-[#A7F3D0] rounded">
-                #{selectedSeam.sequenceOrder}
-              </span>
+              <span className="ax-label">Seam in focus</span>
+              <span className="ax-chip ax-chip-signal ax-num !h-[18px]">{String(selectedSeam.sequenceOrder).padStart(2, '0')}</span>
             </div>
-            <button
-              onClick={() => selectSeam(null)}
-              className="text-[#64748B] hover:text-white p-1 rounded-md hover:bg-white/10 transition active:scale-95"
-              title="Deselect Seam"
-            >
+            <button onClick={() => selectSeam(null)} className="ax-icon-btn -mr-1.5" title="Deselect seam" aria-label="Deselect seam">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {/* Seam Title & Quick Tag */}
-          <div className="pt-2.5 pb-2">
-            <h3 className="text-sm font-bold text-white tracking-wide truncate">
+          <div className="px-4 pt-3 pb-4">
+            <h3 style={{ fontFamily: 'Onest, sans-serif' }} className="text-[14px] font-medium text-[#F6F5EE] truncate">
               {selectedSeam.name}
             </h3>
-            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[#A4B3A3]">
-              <span className="font-semibold text-[#e97f01]">{selectedSeam.parameters.jointType}</span>
-              <span>•</span>
+            <div className="ax-num flex items-center gap-1.5 mt-1 text-[11.5px] text-[#B4C2B3]">
+              <span className="text-[#e97f01]">
+                {selectedSeam.parameters.jointType.charAt(0) + selectedSeam.parameters.jointType.slice(1).toLowerCase()}
+              </span>
+              <span className="text-[#7D8F7C]">·</span>
               <span>{selectedSeam.parameters.process}</span>
-              <span>•</span>
-              <span className="text-white font-medium">{selectedSeam.length} mm</span>
+              <span className="text-[#7D8F7C]">·</span>
+              <span>{selectedSeam.length} mm</span>
             </div>
-          </div>
 
-          {/* Air Gap / Non-Manufacturable Warning Tag in HUD Card */}
-          {selectedSeam.hasAirGap && (
-            <div className="my-2 p-2 rounded-lg bg-[#271305]/80 border border-[#F59E0B]/50 text-[#FCD34D] text-[10px] font-mono flex items-start gap-2 backdrop-blur-sm">
-              <AlertTriangle className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold text-[#FBBF24]">Air Gap Detected (Non-Manufacturable)</span>
-                <p className="text-[9px] text-[#FDE68A]/80 font-sans mt-0.5 leading-tight">
-                  Path bridges empty space ({selectedSeam.airGapDistanceMm || 0}mm gap) without underlying substrate.
-                </p>
+            {selectedSeam.hasAirGap && (
+              <div className="ax-notice ax-notice-warn mt-3">
+                <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 mt-px" />
+                <div>
+                  <div className="font-medium text-[#FBBF24]">Air gap — not manufacturable</div>
+                  <p className="text-[11px] text-[#FDE68A]/80 mt-0.5">
+                    Path bridges {selectedSeam.airGapDistanceMm || 0} mm of empty space with no substrate underneath.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Transparent Glassmorphic Parameter Grid */}
-          <div className="grid grid-cols-2 gap-1.5 my-2 text-[10px] font-mono">
-            <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg p-2 hover:bg-white/[0.06] transition">
-              <span className="text-[#8EA08D] block text-[9px] uppercase tracking-wider">SPEED</span>
-              <span className="text-white font-bold text-xs">{selectedSeam.parameters.travelSpeed} mm/s</span>
+            <dl className="grid grid-cols-2 mt-3 border-t border-[#253224]/70">
+              {[
+                { k: 'Speed', v: `${selectedSeam.parameters.travelSpeed} mm/s` },
+                { k: 'Arc power', v: `${selectedSeam.parameters.current} A · ${selectedSeam.parameters.voltage} V` },
+                { k: 'Wire feed', v: `${selectedSeam.parameters.wireFeedSpeed} m/min` },
+                { k: 'Wire Ø', v: `${selectedSeam.parameters.wireDiameter || 1.2} mm` },
+                { k: 'Tilt', v: `${selectedSeam.parameters.torchTiltAngle}°` },
+                { k: 'Lead', v: `${selectedSeam.parameters.torchLeadAngle}°` },
+              ].map((row, i) => (
+                <div key={row.k} className={`py-2 border-b border-[#253224]/70 ${i % 2 === 0 ? 'pr-3 border-r' : 'pl-3'}`}>
+                  <dt className="text-[10.5px] text-[#7D8F7C] mb-0.5">{row.k}</dt>
+                  <dd className="ax-num text-[12.5px] text-[#F6F5EE]">{row.v}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <div className="grid grid-cols-2 gap-2 mt-3.5">
+              <button onClick={() => startSimulation(selectedSeam.id)} className="ax-btn ax-btn-primary !h-8" title="Simulate this specific seam path">
+                <Play className="w-3 h-3 fill-current" />
+                <span>Simulate</span>
+              </button>
+              <button onClick={() => focusOnSeam(selectedSeam)} className="ax-btn !h-8 !bg-transparent" title="Re-focus camera on this seam">
+                <Target className="w-3.5 h-3.5 text-[#e97f01]" />
+                <span>Re-focus</span>
+              </button>
             </div>
-            <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg p-2 hover:bg-white/[0.06] transition">
-              <span className="text-[#8EA08D] block text-[9px] uppercase tracking-wider">ARC POWER</span>
-              <span className="text-[#38BDF8] font-bold text-xs">{selectedSeam.parameters.current}A • {selectedSeam.parameters.voltage}V</span>
-            </div>
-            <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg p-2 hover:bg-white/[0.06] transition">
-              <span className="text-[#8EA08D] block text-[9px] uppercase tracking-wider">WIRE FEED • Ø</span>
-              <span className="text-white font-bold text-xs">{selectedSeam.parameters.wireFeedSpeed}m • {selectedSeam.parameters.wireDiameter || 1.2}mm</span>
-            </div>
-            <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg p-2 hover:bg-white/[0.06] transition">
-              <span className="text-[#8EA08D] block text-[9px] uppercase tracking-wider">TILT • LEAD</span>
-              <span className="text-[#e97f01] font-bold text-xs">{selectedSeam.parameters.torchTiltAngle}° • {selectedSeam.parameters.torchLeadAngle}°</span>
-            </div>
+
+            {onExpandRight && (
+              <button onClick={onExpandRight} className="ax-btn ax-btn-ghost w-full !h-8 mt-1.5">
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Open parameters panel</span>
+              </button>
+            )}
           </div>
-
-          {/* Action Row */}
-          <div className="grid grid-cols-2 gap-1.5 pt-1">
-            <button
-              onClick={() => startSimulation(selectedSeam.id)}
-              className="py-1.5 px-2 bg-gradient-to-r from-[#17301c] to-[#224428] hover:from-[#1e3c23] hover:to-[#2c5834] border border-[#2b5832] rounded-lg text-[#86EFAC] hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
-              title="Simulate this specific seam path"
-            >
-              <Play className="w-3 h-3 fill-current text-[#4ADE80]" />
-              <span>Simulate</span>
-            </button>
-
-            <button
-              onClick={() => focusOnSeam(selectedSeam)}
-              className="py-1.5 px-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 rounded-lg text-[#CBD5E1] hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition"
-              title="Re-focus camera on this seam"
-            >
-              <Target className="w-3 h-3 text-[#38BDF8]" />
-              <span>Re-Focus</span>
-            </button>
-          </div>
-
-          {/* Expand Full Parameters Panel */}
-          {onExpandRight && (
-            <button
-              onClick={onExpandRight}
-              className="w-full mt-2 py-1.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-[#e97f01]/50 rounded-lg text-[#e97f01] hover:text-[#fb923c] text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 transition"
-            >
-              <Sliders className="w-3 h-3" />
-              <span>Open Parameters Panel</span>
-            </button>
-          )}
         </div>
       )}
 
-      {/* Floating Kinematics Telemetry when Right Sidebar is Collapsed (Seamless, transparent, white at bottom-right) */}
+      {/* Kinematics readout when the parameters panel is collapsed (bottom-right) */}
       <div
-        className={`absolute bottom-5 right-5 z-10 pointer-events-none flex flex-col gap-1 font-mono text-xs select-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition-all duration-700 ease-out ${
+        className={`absolute bottom-5 right-5 z-10 pointer-events-none flex flex-col items-end gap-1.5 select-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition-all duration-700 ease-out ${
           isRightCollapsed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
         }`}
       >
-        <div className="flex items-center justify-end gap-2 text-right">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#e97f01] shadow-[0_0_8px_#e97f01]" />
-          <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-bold text-white tracking-wide text-xs">
-            ARMATRIX KINEMATICS
-          </span>
-        </div>
-        <div className="flex flex-col gap-0.5 text-[11px] text-right">
-          <div className="text-[#38BDF8] font-bold text-[10px]">
-            ● 100% REACHABLE (Zero Singularities)
+        <span className="ax-label">Snake-arm kinematics</span>
+        <div className="ax-num flex flex-col items-end gap-0.5 text-[11.5px] text-[#7D8F7C]">
+          {partReach && (
+            <div className={partReach.withinReach ? '' : 'text-[#FBBF24]'}>
+              {partReach.withinReach ? 'Part within reach' : 'Part exceeds reach'}{' '}
+              <span className="text-[#F6F5EE]">{partReach.envelopePct}%</span>
+            </div>
+          )}
+          <div>
+            Envelope <span className="text-[#F6F5EE]">{REACH_ENVELOPE_MM} mm</span>
           </div>
-          <div className="text-[#A4B3A3]">
-            Envelope: <strong className="text-white font-semibold">3500 mm (Snake-Arm)</strong>
+          <div>
+            Traverse <span className="text-[#F6F5EE]">{rapidTraverseSpeed} mm/s</span>
           </div>
-          <div className="text-[#A4B3A3]">
-            Traverse: <strong className="text-white font-semibold">{rapidTraverseSpeed} mm/s</strong>
+          <div>
+            Weld length <span className="text-[#F6F5EE]">{jobSummary.total_weld_length_mm} mm</span>
           </div>
-          <div className="text-[#A4B3A3]">
-            Total Seams: <strong className="text-[#22C55E] font-semibold">{jobSummary.total_weld_length_mm} mm</strong>
-          </div>
-          <div className="text-[#A4B3A3] pt-0.5">
-            Total Cycle: <strong className="text-[#e97f01] font-bold">{jobSummary.total_cycle_time_sec}s</strong>
+          <div>
+            Total cycle <span className="text-[#e97f01]">{jobSummary.total_cycle_time_sec} s</span>
           </div>
         </div>
       </div>
 
-      {/* Centered Reticle Targeting Banner (No pill shape, no pulse dots, white text, smooth fade in/out, zero slashes) */}
+      {/* Click-to-weld banner */}
       <div
         className={`absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 whitespace-nowrap pointer-events-none transition-all duration-300 ease-out ${
           mode === 'add_seam'
@@ -1675,37 +1842,36 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         }`}
       >
         <div
-          className={`font-mono text-xs px-4 py-2.5 rounded-lg shadow-2xl backdrop-blur-md flex items-center gap-3 tracking-wide transition-all ${
+          className={`h-9 px-3.5 rounded-[6px] backdrop-blur-md flex items-center gap-3 text-[12px] border transition-colors ${
             liveAirGap?.isAirGap
-              ? 'bg-[#291305]/95 border border-[#F59E0B] text-[#FDE68A] shadow-[0_0_20px_rgba(245,158,11,0.25)]'
-              : 'bg-[#0C120C]/92 border border-white/20 text-white'
+              ? 'bg-[#1F1206]/85 border-[#F59E0B]/60 text-[#FDE68A]'
+              : 'bg-[#0A0D0A]/70 border-[#253224] text-[#F6F5EE]'
           }`}
         >
           {liveAirGap?.isAirGap ? (
             <>
-              <span className="flex items-center gap-1.5 text-[#F59E0B] font-bold">
-                <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
-                <span>NO SUBSTRATE:</span>
+              <span className="flex items-center gap-1.5 text-[#FBBF24] font-medium">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>No substrate</span>
               </span>
-              <span className="text-[#FCD34D] font-medium">
-                Bridging empty space ({liveAirGap.gapDistanceMm} mm air gap) — Non-manufacturable!
+              <span className="ax-num text-[#FDE68A]/90">
+                Bridging {liveAirGap.gapDistanceMm} mm of empty space, not manufacturable
               </span>
             </>
           ) : (
             <>
-              <span className="text-white font-bold">
-                {manualStartPoint ? 'STEP 2:' : 'CLICK-TO-WELD:'}
-              </span>
-              <span className="text-[#E2ECE1] font-normal">
+              <span className="ax-label !text-[#e97f01]">{manualStartPoint ? 'Step 2' : 'Click-to-weld'}</span>
+              <span className="ax-num text-[#B4C2B3]">
                 {manualStartPoint
-                  ? `Click 2nd point to finalize seam (${measuredDist || 0} mm) — [ESC to Cancel]`
-                  : 'Click 3D part to anchor start point — [ESC to Cancel]'}
+                  ? `Click the second point to finish the seam (${measuredDist || 0} mm)`
+                  : 'Click the part to anchor the start point'}
               </span>
+              <span className="text-[11px] text-[#7D8F7C]">Esc to cancel</span>
             </>
           )}
           {activeSnapType && (
-            <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] tracking-wider font-mono font-semibold">
-              SNAP: {activeSnapType}
+            <span className="ax-chip ax-chip-ok !normal-case !tracking-normal !text-[11px] !h-5">
+              Snapped to {activeSnapType.toLowerCase().replace('axis lock (', 'axis lock ').replace(')', '')}
             </span>
           )}
         </div>

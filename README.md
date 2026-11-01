@@ -25,14 +25,17 @@ This application provides an end-to-end, browser-based workflow fulfilling these
 
 ### 1. Robust 3D CAD Ingestion (.STL)
 * Supports both **Binary and ASCII STL** formats.
-* Custom file upload via Drag & Drop or native file picker.
+* Custom file upload via the header's **Upload STL** file picker.
 * **Pre-bundled Industrial Benchmark Models** (Structural L-Bracket, Pipe T-Joint, Box Flange) for immediate out-of-the-box evaluation without needing external files.
-* Automatic geometric centering, ground-plane alignment, vertex normal re-computation, and bounding box telemetry (`X × Y × Z mm`, triangle count).
+* Automatic geometric centering, ground-plane alignment, vertex normal re-computation, and bounding box telemetry (`W × H × D mm`, triangle count).
+* **Mesh integrity check**: vertices are welded by position and every edge is counted. A part is marked **Watertight** when every edge is shared by two triangles, or **Open mesh** (with the open-edge count) when the surface has holes that could make crease detection unreliable. Edges shared by more than two triangles, where separate bodies touch in a welded assembly, are reported but tolerated.
 
 ### 2. Dual-Mode Seam Planning
 * **Autonomous Crease Detection**:
   * Algorithmic dihedral angle crease detection analyzing adjacent triangle face normals across the mesh topology.
   * Identifies 90° fillet and acute weld joints with automatic surface normal bisector calculation.
+  * **Pipe T-joint saddle**: generated from the analytic branch/header intersection curve `y(θ) = 36 + √(25² − z²)` as 12 segments of 30°. Every vertex lies on a facet edge of the branch mesh, and each segment gets its own torch normal: the bisector of the branch's outward radial and the header's outward surface normal.
+* **Air-gap substrate validation**: seams that bridge open space are flagged non-manufacturable while drawing, in the seam list and in the export (`air_gap_detected`).
 * **Interactive Point-to-Point Snapping**:
   * Precision raycasting directly on the 3D mesh surface.
   * Click Point 1 (Start) → Click Point 2 (End) to create calibrated weld bead paths.
@@ -76,14 +79,16 @@ flowchart LR
 * Animated simulation executing:
   1. **Rapid Traverse**: Moves from previous retract point to next approach point at 120 mm/s.
   2. **Safe Approach**: Descends along the surface normal vector to touch off at the seam start point.
-  3. **Active Arc Welding**: Travels along the seam with live electric blue/white arc light flicker.
+  3. **Active Arc Welding**: Travels along the seam depositing a metallic bead. Arc lighting is a blue-white arc column plus a warm molten-pool light, with smoothed flicker, arc-strike ramp-up and crater fade-out. Ballistic spatter particles fly off the arc and fall under gravity (heavy for MIG, light for laser, almost none for TIG).
   4. **Retract**: Pulls outward along the surface normal to safe clearance height.
-* Simulation timeline HUD with Play/Pause/Reset, speed multipliers (1X, 2X, 5X), and phase status indicators.
+* Simulation timeline HUD with Play/Pause/Reset, seam stepping, speed multipliers (1×, 2×, 5×), and phase status indicators.
+* **Non-manufacturable seams are never welded**: *Run All* skips air-gap seams and shows a notice. Simulating one on its own performs an arc-off **dry run** (no bead, no arc, never marked welded) so the user can see the invalid path.
 
 ### 6. Armatrix Brand & Industrial Ergonomics
-* High-contrast tactical theme: Armatrix Olive (`#222B1E`), Industrial Charcoal (`#0D100D`), and High-Visibility Safety Orange (`#FF5B00`).
-* CAD HUD overlays, coordinate readouts, camera view presets (Isometric, Top, Front, Right), wireframe toggles, and vector pins.
-* Responsive design with slide-out drawers for tablet and mobile inspection.
+* Armatrix brand system (from armatrix.com): Bright Discovery orange `#E97F01` used only as a signal, dark forest and revolution-green surfaces, **Onest** for headings and labels, **42dot Sans** for body text.
+* CAD HUD overlays, coordinate readouts, camera view presets (ISO, Top, Front, Side), and display layers (fixture table, ghost X-ray, approach vectors, facet wireframe, bounds).
+* **Reach check** computed from the loaded part: its bounding-box diagonal against the 3500 mm snake-arm envelope (*Within reach* / *Exceeds reach*).
+* Collapsible side panels with edge tabs. When the parameters panel is collapsed, a translucent *seam in focus* card keeps the selected seam's settings visible.
 
 ---
 
@@ -95,7 +100,9 @@ armatrix-weld-seam-planner/
 │   ├── app/
 │   │   ├── globals.css         # Tailwind CSS styling & custom CAD scrollbars
 │   │   ├── layout.tsx          # App shell, metadata, and dark theme
-│   │   └── page.tsx            # Responsive workbench layout & mobile drawers
+│   │   ├── page.tsx            # Launch page
+│   │   ├── planner/page.tsx    # Planner workbench layout & keyboard shortcuts
+│   │   └── docs/page.tsx       # Documentation page
 │   ├── components/
 │   │   ├── viewport/
 │   │   │   └── ViewportCanvas.tsx # Three.js WebGL scene, OrbitControls, Raycaster, Torch 3D
@@ -110,9 +117,12 @@ armatrix-weld-seam-planner/
 │   ├── types/
 │   │   └── weld.ts             # Domain models (WeldSeam, Parameters, RobotExport)
 │   └── utils/
-│       └── seamDetector.ts     # Dihedral angle crease detection algorithm
+│       ├── seamDetector.ts     # Dihedral angle crease detection algorithm
+│       ├── substrateValidator.ts # Air-gap (no substrate) detection
+│       ├── meshIntegrity.ts    # Watertight / open-edge mesh check
+│       └── reach.ts            # Part vs 3500 mm reach envelope
 └── public/
-    └── models/                 # Pre-generated binary STL benchmark parts
+    └── models/                 # Pre-generated STL benchmark parts (bracket, pipe T-joint, box flange)
 ```
 
 ### Why Next.js 16 + TypeScript?
@@ -151,7 +161,11 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
     "kinematics": "Armatrix-Continuum-Snake-Arm",
     "reach_envelope_max_mm": 3500,
     "rapid_traverse_speed_mm_s": 120,
-    "safe_plane_z_clearance_mm": 40
+    "safe_plane_z_clearance_mm": 40,
+    "tool_effector": {
+      "model": "Armatrix-Modular-Torch-MK3",
+      "nozzle_configuration": "Narrow-Bottleneck-Deep-Access"
+    }
   },
   "job_summary": {
     "total_seams": 3,
@@ -176,7 +190,8 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
       "retract_point": [45.0, 33.21, 3.21],
       "torch_orientation": {
         "lead_angle_deg": 10.0,
-        "tilt_angle_deg": 45.0
+        "tilt_angle_deg": 45.0,
+        "nozzle_type": "narrow"
       },
       "weld_parameters": {
         "travel_speed_mm_s": 12.0,
@@ -184,8 +199,10 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
         "voltage_volts": 24.0,
         "wire_feed_m_min": 6.5,
         "shielding_gas_l_min": 14.0,
-        "interpass_delay_sec": 5.0
+        "interpass_delay_sec": 5.0,
+        "wire_diameter_mm": 1.2
       },
+      "air_gap_detected": false,
       "waypoints": [
         [-45.0, 12.0, -18.0],
         [-40.0, 12.0, -18.0],
@@ -202,19 +219,24 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `schema_version` | String | Version identifier for backward compatibility with robot firmware. |
+| `generator` / `created_at` | String | Tool that produced the job and ISO-8601 creation timestamp. |
 | `job_id` | String | Unique tracking ID generated for the manufacturing session. |
 | `part.bounding_dimensions_mm` | Object | Overall `X, Y, Z` envelope to verify part fits inside the fixture. |
+| `part.filename` / `part.units` | String | Source part name and unit system (always `mm`). |
 | `robot_controller_profile` | Object | Continuum snake-arm parameters (3500mm reach, rapid speed, safe clearance plane). |
+| `robot_controller_profile.tool_effector` | Object | Torch model and nozzle configuration the job was planned for. |
 | `job_summary` | Object | Total weld length, arc-on time, non-welding traverse time, cooling delays, and total cycle duration. |
 | `seam_id` & `sequence_order` | String / Int | Unique identifier and execution order index for thermal distortion management. |
+| `name` / `length_mm` | String / Float | User-editable seam name and straight-line seam length in mm. |
 | `process` | Enum | `MIG`, `TIG`, or `LASER`. Directs the power source mode and wire feeder. |
 | `joint_type` | Enum | Joint classification (`FILLET`, `BUTT`, `LAP`, etc.) for adaptive weaving. |
 | `start_coordinate` / `end_coordinate` | Float[3] | 3D Cartesian coordinates in the part coordinate frame (`[X, Y, Z]` mm). |
 | `surface_normal` | Float[3] | Unit vector pointing outward from the joint; dictates the torch bisector angle. |
 | `approach_point` | Float[3] | Safe 3D coordinate calculated at `start_coordinate + normal * approach_distance`. The snake arm positions here prior to striking the arc to prevent collisions. |
 | `retract_point` | Float[3] | Safe 3D coordinate calculated at `end_coordinate + normal * retract_distance`. The torch pulls out here after extinguishing the arc before traversing. |
-| `torch_orientation` | Object | Lead (push/drag) and tilt angles in degrees relative to the seam vector. |
-| `weld_parameters` | Object | Electrical parameters (amperage, voltage, wire feed speed, gas flow) and interpass cooling time. |
+| `torch_orientation` | Object | Lead (push/drag) and tilt angles in degrees relative to the seam vector, plus `nozzle_type` (`conical`, `narrow` or `laser`). |
+| `weld_parameters` | Object | Travel speed, amperage, voltage, wire feed speed, shielding gas flow, interpass cooling time and wire diameter (`wire_diameter_mm`, AWS ER70S-6). |
+| `air_gap_detected` | Boolean | `true` when the seam bridges open space with no metal underneath. The controller must reject these seams; the planner never welds them in simulation. |
 | `waypoints` | Float[][3] | Discretized 5mm trajectory spline coordinates for direct input to the inverse kinematics solver. |
 
 ---

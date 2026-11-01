@@ -6,6 +6,9 @@ import {
   Play,
   Pause,
   RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
 } from 'lucide-react';
 
 export const SimulationHUD: React.FC = () => {
@@ -22,6 +25,7 @@ export const SimulationHUD: React.FC = () => {
     seams,
     playbackSpeed,
     setPlaybackSpeed,
+    simNotice,
   } = useWeldStore();
 
   if (seams.length === 0) return null;
@@ -33,26 +37,27 @@ export const SimulationHUD: React.FC = () => {
     welding: { bg: 'bg-[#e97f01]/15', text: 'text-[#e97f01]', border: 'border-[#e97f01]/40', dot: 'bg-[#e97f01] shadow-[0_0_8px_#e97f01]' },
     retract: { bg: 'bg-[#A855F7]/10', text: 'text-[#A855F7]', border: 'border-[#A855F7]/30', dot: 'bg-[#A855F7]' },
     cooling: { bg: 'bg-[#3B82F6]/10', text: 'text-[#3B82F6]', border: 'border-[#3B82F6]/30', dot: 'bg-[#3B82F6]' },
+    dry_run: { bg: 'bg-[#F59E0B]/10', text: 'text-[#FBBF24]', border: 'border-[#F59E0B]/40', dot: 'bg-[#F59E0B]' },
   };
 
   const currentPhaseStyle = phaseColors[simPhase] || phaseColors.idle;
 
   return (
-    <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 select-none pointer-events-auto">
-      {/* Sleek Aerospace Simulation Control Dock */}
-      <div className="bg-[#080C08]/80 backdrop-blur-xl border border-white/10 px-3.5 py-1.5 rounded-xl shadow-2xl flex items-center gap-3 text-xs text-white whitespace-nowrap shrink-0">
-        {/* Play/Pause Button - Context-aware (Single Seam vs All) */}
+    <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 select-none pointer-events-auto flex flex-col items-center gap-2">
+      {simNotice && (
+        <div className="ax-notice ax-notice-warn !py-1.5 backdrop-blur-md !bg-[#1F1206]/80 whitespace-nowrap">
+          <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 mt-px" />
+          <span>{simNotice}</span>
+        </div>
+      )}
+      <div className="bg-[#0A0D0A]/85 backdrop-blur-xl border border-[#253224] h-11 pl-1.5 pr-2 rounded-[6px] shadow-[0_12px_32px_-8px_rgba(0,0,0,0.6)] flex items-center gap-3 text-xs text-[#F6F5EE] whitespace-nowrap shrink-0">
+        {/* Play / pause (single seam vs all) */}
         <button
           onClick={() => (isSimulating ? pauseSimulation() : startSimulation(selectedSeamId))}
-          style={{ fontFamily: 'Onest, sans-serif' }}
-          className={`flex items-center gap-1.5 px-3.5 py-1 rounded-lg font-bold text-xs transition-all duration-200 active:scale-95 shrink-0 shadow-lg ${
-            isSimulating
-              ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-black border border-amber-300/60 font-black'
-              : 'bg-gradient-to-r from-[#e97f01] via-[#d46a00] to-[#b35400] hover:from-[#f38b0e] hover:to-[#c25e00] text-white border border-[#f59e0b]/40'
-          }`}
+          className={`ax-btn !h-8 shrink-0 ${isSimulating ? '!border-[#F59E0B]/60 !text-[#FBBF24]' : 'ax-btn-primary'}`}
         >
           {isSimulating ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-          <span>
+          <span className="tracking-[0.06em]">
             {isSimulating
               ? 'PAUSE'
               : selectedSeamId
@@ -61,45 +66,40 @@ export const SimulationHUD: React.FC = () => {
           </span>
         </button>
 
-        {/* Run All link when single seam is selected */}
         {selectedSeamId && !isSimulating && (
           <button
             onClick={() => {
               selectSeam(null);
               startSimulation(null);
             }}
-            className="text-[10px] font-mono text-[#7E8F7D] hover:text-[#38BDF8] underline transition px-1"
+            className="ax-btn ax-btn-ghost !h-7 !px-2 !text-[11px] -ml-1.5"
             title="Deselect and simulate all seams sequentially"
           >
-            Run All ({seams.length})
+            Run all <span className="ax-num text-[#7D8F7C]">{seams.length}</span>
           </button>
         )}
 
-        {/* Reset Button */}
-        <button
-          onClick={resetSimulation}
-          className="p-1 hover:bg-white/10 rounded-md text-[#7E8F7D] hover:text-white transition shrink-0"
-          title="Reset Simulation"
-        >
+        <button onClick={resetSimulation} className="ax-icon-btn shrink-0" title="Reset simulation" aria-label="Reset simulation">
           <RotateCcw className="w-3.5 h-3.5" />
         </button>
 
-        <div className="h-4 w-px bg-white/10 shrink-0" />
+        <span className="h-5 w-px bg-[#253224] shrink-0" />
 
-        {/* Minimalist Phase Badge */}
-        <div className="flex items-center gap-1.5 font-mono shrink-0 whitespace-nowrap">
-          <span className="text-[10px] text-[#7E8F7D] tracking-wider uppercase">PHASE:</span>
+        {/* Phase */}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="ax-label">Phase</span>
           <span
-            className={`px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border flex items-center gap-1.5 ${currentPhaseStyle.bg} ${currentPhaseStyle.text} ${currentPhaseStyle.border}`}
+            className={`h-5 px-2 rounded-[3px] text-[10px] font-medium tracking-[0.08em] uppercase border flex items-center gap-1.5 ${currentPhaseStyle.bg} ${currentPhaseStyle.text} ${currentPhaseStyle.border}`}
+            style={{ fontFamily: 'Onest, sans-serif' }}
           >
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${currentPhaseStyle.dot}`} />
-            <span>{simPhase.replace('_', ' ')}</span>
+            <span>{simPhase === 'dry_run' ? 'dry run, arc off' : simPhase.replace('_', ' ')}</span>
           </span>
         </div>
 
-        {/* Current Seam indicator with direct step navigation (◀ / ▶) */}
-        <div className="flex items-center gap-1 text-[11px] font-mono text-[#8EA28D] shrink-0 whitespace-nowrap">
-          <span className="text-[10px] text-[#7E8F7D] tracking-wider uppercase mr-0.5">SEAM:</span>
+        {/* Seam stepper */}
+        <div className="flex items-center gap-1 shrink-0">
+          <span className="ax-label mr-1">Seam</span>
           <button
             onClick={() => {
               const prev = Math.max(0, simCurrentSeamIndex - 1);
@@ -107,14 +107,15 @@ export const SimulationHUD: React.FC = () => {
               selectSeam(seams[prev]?.id ?? null);
             }}
             disabled={simCurrentSeamIndex === 0}
-            className="px-1 text-[10px] hover:text-white disabled:opacity-20 text-[#8EA28D] transition active:scale-95"
+            className="ax-icon-btn !w-6 !h-6"
             title="Step back to previous seam"
+            aria-label="Previous seam"
           >
-            ◀
+            <ChevronLeft className="w-3.5 h-3.5" />
           </button>
-          <strong className="text-white font-bold px-0.5">
-            {Math.min(simCurrentSeamIndex + 1, seams.length)} of {seams.length}
-          </strong>
+          <span className="ax-num text-[12px] text-[#F6F5EE] min-w-[44px] text-center">
+            {Math.min(simCurrentSeamIndex + 1, seams.length)} <span className="text-[#7D8F7C]">/ {seams.length}</span>
+          </span>
           <button
             onClick={() => {
               const next = Math.min(seams.length - 1, simCurrentSeamIndex + 1);
@@ -122,28 +123,21 @@ export const SimulationHUD: React.FC = () => {
               selectSeam(seams[next]?.id ?? null);
             }}
             disabled={simCurrentSeamIndex >= seams.length - 1}
-            className="px-1 text-[10px] hover:text-white disabled:opacity-20 text-[#8EA28D] transition active:scale-95"
+            className="ax-icon-btn !w-6 !h-6"
             title="Step forward to next seam"
+            aria-label="Next seam"
           >
-            ▶
+            <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="h-4 w-px bg-white/10 shrink-0" />
+        <span className="h-5 w-px bg-[#253224] shrink-0" />
 
-        {/* Speed Multiplier */}
-        <div className="flex items-center bg-white/[0.04] border border-white/10 rounded-lg p-0.5 text-[10px] font-mono shrink-0">
+        {/* Playback speed */}
+        <div className="ax-seg shrink-0" role="group" aria-label="Playback speed">
           {[1, 2, 5].map((spd) => (
-            <button
-              key={spd}
-              onClick={() => setPlaybackSpeed(spd)}
-              className={`px-2 py-0.5 rounded-md font-bold transition-all text-[10px] ${
-                playbackSpeed === spd
-                  ? 'bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white shadow-sm'
-                  : 'text-[#7E8F7D] hover:text-white'
-              }`}
-            >
-              {spd}X
+            <button key={spd} data-active={playbackSpeed === spd} onClick={() => setPlaybackSpeed(spd)} className="ax-num !px-2">
+              {spd}×
             </button>
           ))}
         </div>
