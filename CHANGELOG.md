@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.8.0] - 2026-11-01
+
+### Added
+- **Guided tour** on the first planner visit: six skippable steps, remembered in the browser, replayable from the Controls dialog.
+- **Controls dialog** (keyboard button next to Export) and always-on hotkeys: arrows orbit, `+`/`-` zoom (also the number pad), `F` frames the selected seam, `Home` resets the view, `Space` plays or pauses.
+- **Part orientation**: uploaded parts can be turned 90° about X or Z (Shift+click reverses), for STLs exported with Z up. Export schema **1.4.0** adds `part.import_rotation_deg`.
+- **Units hint** for parts under 5 mm or over 50 m across.
+
+### Changed
+- **Crease detection** follows weld joints: inside corners plus contact lines where one body sits on another; outside edges of single solids and edges facing the table are no longer reported.
+- **Part-size aware drawing aids**: snap reticle, preview markers, planning tubes, pins, arrows, snapping radii, edge-glide speed, camera framing and view presets scale with the part. The torch, bead, molten pool and sparks always stay real size. Fixture table and grid grow for large parts.
+- Planning tubes turn thin and translucent during simulation so the torch and bead stay visible.
+- Edge panning only after the cursor rests at an edge, never while orbiting or off-canvas.
+- Header view highlight follows the camera; hotkeys keep working after using sliders.
+- Wireframe is light blue, drawn over the part, built on demand, and shows fine facets on curved surfaces.
+- Dense meshes load without freezing: the part appears first, then outline edges and a faster numeric-hash mesh check.
+- Invalid or empty STL uploads show an in-app message instead of a browser alert.
+
+### Fixed
+- Seams shorter than 2 mm were silently discarded on small parts.
+
 ## [1.7.0] - 2026-11-01
 
 ### Added
@@ -15,7 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Weld visuals**: rippled "stack of dimes" bead, deposit-revealed bead with cooling glow, fading heat-affected-zone temper tint, realistic arc light and ballistic spatter by process.
 - **Arc sound** (Web Audio, muted by default): MIG crackle, TIG buzz with HF start, muffled laser; ducks when the tab loses focus.
 - **Redesigned homepage and docs page** in the Armatrix brand style.
-- A few hidden easter eggs.
 
 ### Changed
 - **Export schema 1.3.0**: `part.coordinate_frame`, `part.mesh_integrity`, per-seam `torch_axis`, `travel_direction` and `executable`, `job_summary.executable_seams` and `skipped_seam_ids`. Totals cover executable seams only; interpass cooling is counted between passes only.

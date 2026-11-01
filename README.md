@@ -28,6 +28,7 @@ This application provides an end-to-end, browser-based workflow fulfilling these
 * Custom file upload via the header's **Upload STL** file picker.
 * **Pre-bundled Industrial Benchmark Models** (Structural L-Bracket, Pipe T-Joint, Box Flange) for immediate out-of-the-box evaluation without needing external files.
 * Automatic geometric centering, ground-plane alignment, vertex normal re-computation, and bounding box telemetry (`W × H × D mm`, triangle count).
+* **Orientation control**: STL has no notion of "up", so Z-up exports can arrive lying on their side. Uploaded parts can be turned in 90° steps about X or Z (Shift+click turns the other way); the part re-seats on the table and the rotation is recorded in the export.
 * **Mesh integrity check**: vertices are welded by position and every edge is counted. A part is marked **Watertight** when every edge is shared by two triangles, or **Open mesh** (with the open-edge count) when the surface has holes that could make crease detection unreliable. Edges shared by more than two triangles, where separate bodies touch in a welded assembly, are reported but tolerated.
 
 ### 2. Dual-Mode Seam Planning
@@ -162,7 +163,7 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
 
 ```json
 {
-  "schema_version": "1.3.0",
+  "schema_version": "1.4.0",
   "generator": "Armatrix Autonomous Seam Planner v1.0",
   "job_id": "ARMX-WELD-MH82J9X",
   "created_at": "2026-10-30T14:15:00.000Z",
@@ -252,6 +253,7 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
 | `job_id` | String | Unique tracking ID generated for the manufacturing session. |
 | `part.bounding_dimensions_mm` | Object | Overall `X, Y, Z` envelope to verify part fits inside the fixture. |
 | `part.filename` / `part.units` | String | Source part name and unit system (always `mm`). |
+| `part.import_rotation_deg` | Object | Quarter-turn rotation (`x`, `z` in degrees) applied to an uploaded STL to stand it upright before planning. All coordinates are after this rotation. |
 | `part.coordinate_frame` | Object | Right-handed, `+Y` up; origin at the part bounding-box centre in X/Z on the table surface (lowest Y). Every coordinate in the file is in this frame. |
 | `part.mesh_integrity` | Object \| null | `watertight` flag and `open_edges` count from the STL edge-manifold check. |
 | `robot_controller_profile` | Object | Continuum snake-arm parameters (3500mm reach, rapid speed, safe clearance plane). |
