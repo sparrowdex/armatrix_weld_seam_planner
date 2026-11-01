@@ -2,8 +2,6 @@
 
 An industrial CAD/CAM web platform engineered for **autonomous robotic weld seam planning**, tailored specifically to the operational constraints of **Armatrix's hyper-redundant continuum snake-arm robots**.
 
-![Armatrix Seam Planner Header](public/models/bracket.stl)
-
 ---
 
 ## 1. Project Overview & Operational Context
@@ -64,9 +62,9 @@ This application provides an end-to-end, browser-based workflow fulfilling these
 
 ```mermaid
 flowchart LR
-    A["1. Approach Point\n(Blue Dot in Air)"] -->|Dashed Standoff Line| B["2. Arc Ignition\n(Blue Dot on Metal)"]
-    B -->|Welding Along Seam\n(Green Line / Torch Moves)| C["3. Arc Cutoff\n(Red Dot on Metal)"]
-    C -->|Dashed Retract Line| D["4. Retract Point\n(Red Dot in Air)"]
+    A["1. Approach point<br/>blue dot in air"] -- "dashed standoff line" --> B["2. Arc ignition<br/>blue dot on metal"]
+    B -- "weld along the seam" --> C["3. Arc cutoff<br/>red dot on metal"]
+    C -- "dashed retract line" --> D["4. Retract point<br/>red dot in air"]
 ```
 
 ```
@@ -89,6 +87,25 @@ flowchart LR
 * CAD HUD overlays, coordinate readouts, camera view presets (ISO, Top, Front, Side), and display layers (fixture table, ghost X-ray, approach vectors, facet wireframe, bounds).
 * **Reach check** computed from the loaded part: its bounding-box diagonal against the 3500 mm snake-arm envelope (*Within reach* / *Exceeds reach*).
 * Collapsible side panels with edge tabs. When the parameters panel is collapsed, a translucent *seam in focus* card keeps the selected seam's settings visible.
+
+### 7. Planner Controls
+Press `?` in the planner (or use the keyboard button next to Export) to see these in the app.
+
+| Input | Action |
+| :--- | :--- |
+| Left or right drag | Orbit the camera. Right drag also works while drawing and keeps the anchored start point. |
+| Scroll | Zoom |
+| Click a seam | Select it and focus the camera on it |
+| Double-click a seam name | Rename it |
+| `Ctrl` + `Z` | Undo the last seam change |
+| `Delete` | Delete the selected seam |
+| `Esc` | Drop the anchored point, leave click-to-weld, or deselect |
+| Arrow keys | Orbit the view in 15° steps, including while drawing a seam |
+| `+` / `-` | Zoom in and out |
+| `F` | Frame the selected seam |
+| `Home` | Reset to the ISO view |
+| `Space` | Play or pause the simulation |
+| `?` | Show or hide the controls reference |
 
 ---
 

@@ -53,6 +53,7 @@ export interface WeldState {
   // Easter eggs
   funToast: string | null;
   funToastKey: number;
+  shortcutsOpen: boolean;
   logoWiggleKey: number;
   playbackSpeed: number;
 
@@ -104,6 +105,7 @@ export interface WeldState {
   toggleSound: () => void;
   showFunToast: (message: string) => void;
   wiggleLogo: () => void;
+  setShortcutsOpen: (open: boolean) => void;
   setPlaybackSpeed: (speed: number) => void;
 
   // Exporters
@@ -169,6 +171,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   soundEnabled: false,
   funToast: null,
   funToastKey: 0,
+  shortcutsOpen: false,
   logoWiggleKey: 0,
   playbackSpeed: 1,
 
@@ -450,6 +453,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
     }, 3200);
   },
   wiggleLogo: () => set((state) => ({ logoWiggleKey: state.logoWiggleKey + 1 })),
+  setShortcutsOpen: (open) => set({ shortcutsOpen: open }),
   setPlaybackSpeed: (speed) => set({ playbackSpeed: speed }),
 
   exportJobJSON: () => {

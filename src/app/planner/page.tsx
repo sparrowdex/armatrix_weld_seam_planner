@@ -7,6 +7,7 @@ import { SidebarRight } from '@/components/panels/SidebarRight';
 import { ViewportCanvas } from '@/components/viewport/ViewportCanvas';
 import { SimulationHUD } from '@/components/panels/SimulationHUD';
 import { ExportModal } from '@/components/panels/ExportModal';
+import { ShortcutsPanel } from '@/components/panels/ShortcutsPanel';
 import { useWeldStore } from '@/store/useWeldStore';
 import { ChevronRight, ChevronLeft, Undo2 } from 'lucide-react';
 
@@ -35,12 +36,39 @@ export default function PlannerPage() {
     };
   }, []);
 
+  // First visit only: a quiet hint that the controls reference exists
+  useEffect(() => {
+    let seen = false;
+    try {
+      seen = localStorage.getItem('ax-controls-hint-seen') === '1';
+      if (!seen) localStorage.setItem('ax-controls-hint-seen', '1');
+    } catch {
+      /* storage unavailable: show the hint anyway */
+    }
+    if (seen) return;
+    const t = setTimeout(() => useWeldStore.getState().showFunToast('Press ? for keyboard and mouse controls'), 1500);
+    return () => clearTimeout(t);
+  }, []);
+
   // Global CAD Keyboard Shortcuts (Ctrl+Z, Delete/Backspace, Escape)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Do not trigger hotkeys if user is focused inside a text input or select
       const activeEl = document.activeElement as HTMLElement | null;
       if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) {
+        return;
+      }
+
+      // "?" toggles the controls reference; Esc closes it before doing anything else
+      if (e.key === '?' || (e.shiftKey && e.code === 'Slash')) {
+        e.preventDefault();
+        const st = useWeldStore.getState();
+        st.setShortcutsOpen(!st.shortcutsOpen);
+        return;
+      }
+      if (e.key === 'Escape' && useWeldStore.getState().shortcutsOpen) {
+        e.preventDefault();
+        useWeldStore.getState().setShortcutsOpen(false);
         return;
       }
 
@@ -183,6 +211,8 @@ export default function PlannerPage() {
           </div>
         </div>
       )}
+
+      <ShortcutsPanel />
 
       {/* Export Modal */}
       <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} />

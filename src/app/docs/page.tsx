@@ -11,6 +11,7 @@ const TOC = [
   { id: 'fields', label: 'Field reference' },
   { id: 'motion', label: 'Motion per seam' },
   { id: 'ingest', label: 'Controller example' },
+  { id: 'controls', label: 'Planner controls' },
 ];
 
 type Field = { name: string; type: string; desc: string };
@@ -327,6 +328,36 @@ export default function DocsPage() {
                 {PYTHON_EXAMPLE}
               </pre>
             </div>
+          </section>
+
+          {/* 07 Controls */}
+          <section id="controls" className="scroll-mt-24 pt-20">
+            <SectionHead
+              index="07"
+              title="Planner controls"
+              intro="Also available inside the planner: press ? or use the keyboard button next to Export."
+            />
+            <dl className="border-t border-[#1D271C]">
+              {[
+                { k: 'Left or right drag', v: 'Orbit the camera. Right drag also works while drawing and keeps the anchored start point.' },
+                { k: 'Scroll', v: 'Zoom.' },
+                { k: 'Click a seam', v: 'Select it and focus the camera on it. Double-click its name in the list to rename it.' },
+                { k: 'Ctrl + Z', v: 'Undo the last seam change.' },
+                { k: 'Delete', v: 'Delete the selected seam.' },
+                { k: 'Esc', v: 'Drop the anchored point, leave click-to-weld, or deselect.' },
+                { k: 'Arrow keys', v: 'Orbit the view in 15° steps, including while drawing a seam.' },
+                { k: '+ / −', v: 'Zoom in and out.' },
+                { k: 'F', v: 'Frame the selected seam.' },
+                { k: 'Home', v: 'Reset to the ISO view.' },
+                { k: 'Space', v: 'Play or pause the simulation.' },
+                { k: '?', v: 'Show or hide the controls reference.' },
+              ].map((row) => (
+                <div key={row.k} className="grid sm:grid-cols-[200px_1fr] gap-1 sm:gap-6 py-4 border-b border-[#1D271C]">
+                  <dt className="text-[13px] text-[#F6F5EE]">{row.k}</dt>
+                  <dd className="text-[14px] leading-[1.6] text-[#B4C2B3]">{row.v}</dd>
+                </div>
+              ))}
+            </dl>
           </section>
 
           {/* Next */}

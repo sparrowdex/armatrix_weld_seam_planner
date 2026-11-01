@@ -41,3 +41,31 @@ export function getEffectiveTorchVector(
 
   return torchAxis.normalize();
 }
+
+// Robust 6-DOF Orthonormal Torch Pose Calculator
+// Positions the torch longitudinal axis along targetVector, while aligning the curved gooseneck
+// handle strictly into open workspace clearance (UP / OUT), preventing upside-down or gusset collisions.
+export function orientTorch(torch: THREE.Object3D, targetVector: THREE.Vector3) {
+  const Y_world = targetVector.clone().normalize();
+  if (Y_world.lengthSq() < 0.001) Y_world.set(0, 1, 0);
+
+  // Clearance reference vector: for welding, open clearance is primarily UP (+Y)
+  let refClearance = new THREE.Vector3(0, 1, 0);
+  // If the torch is pointing nearly straight up (+Y) or down (-Y), use front (+Z) as reference clearance
+  if (Math.abs(Y_world.y) > 0.85) {
+    refClearance.set(0, 0, 1);
+  }
+
+  // Project refClearance perpendicular to Y_world so the gooseneck handle (local +Z) curves UP into clearance
+  let Z_world = new THREE.Vector3().copy(refClearance).addScaledVector(Y_world, -refClearance.dot(Y_world)).normalize();
+  if (Z_world.lengthSq() < 0.001) {
+    Z_world.set(0, 0, 1).addScaledVector(Y_world, -new THREE.Vector3(0, 0, 1).dot(Y_world)).normalize();
+  }
+
+  // Right-handed orthonormal basis: X = Y x Z, then Z = X x Y
+  const X_world = new THREE.Vector3().crossVectors(Y_world, Z_world).normalize();
+  Z_world.crossVectors(X_world, Y_world).normalize();
+
+  const rotMatrix = new THREE.Matrix4().makeBasis(X_world, Y_world, Z_world);
+  torch.quaternion.setFromRotationMatrix(rotMatrix);
+}

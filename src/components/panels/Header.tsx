@@ -3,7 +3,7 @@
 import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useWeldStore } from '@/store/useWeldStore';
-import { Upload, Download, ChevronDown } from 'lucide-react';
+import { Upload, Download, ChevronDown, Keyboard } from 'lucide-react';
 import { STLLoader } from 'three-stdlib';
 import { ArmatrixLogo } from '@/components/ui/ArmatrixLogo';
 
@@ -40,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
     toggleXRay,
     setViewPreset,
     logoWiggleKey,
+    setShortcutsOpen,
   } = useWeldStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -192,11 +193,21 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
         </div>
       </div>
 
-      {/* Primary action */}
+      {/* Controls reference and primary action */}
+      <div className="flex items-center gap-1.5 shrink-0">
+      <button
+        onClick={() => setShortcutsOpen(true)}
+        className="ax-icon-btn !w-8 !h-8"
+        title="Keyboard and mouse controls (?)"
+        aria-label="Keyboard and mouse controls"
+      >
+        <Keyboard className="w-4 h-4" />
+      </button>
       <button onClick={onOpenExport} className="ax-btn ax-btn-primary shrink-0 !h-8 !px-3.5">
         <Download className="w-3.5 h-3.5" />
         <span className="tracking-[0.06em]">EXPORT WELD JOB</span>
       </button>
+      </div>
     </header>
   );
 };
