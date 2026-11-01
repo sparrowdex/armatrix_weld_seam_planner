@@ -124,7 +124,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({ onToggleCollapse }) 
   };
 
   return (
-    <aside className="w-80 h-full bg-[#0A0D0A] border-l border-[#182118] flex flex-col z-10 select-none overflow-y-auto text-xs relative">
+    <aside data-tour="params" className="w-80 h-full bg-[#0A0D0A] border-l border-[#182118] flex flex-col z-10 select-none overflow-y-auto text-xs relative">
       {/* Panel header */}
       <div className="h-11 px-4 border-b border-[#182118] flex items-center justify-between shrink-0 sticky top-0 bg-[#0A0D0A] z-10">
         <span className="ax-label !text-[#F6F5EE]">Weld Parameters</span>

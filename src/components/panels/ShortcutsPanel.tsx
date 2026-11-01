@@ -20,7 +20,6 @@ const KEYS = [
   { keys: ['F'], what: 'Frame the selected seam' },
   { keys: ['Home'], what: 'Reset to the ISO view' },
   { keys: ['Space'], what: 'Play or pause the simulation' },
-  { keys: ['?'], what: 'Show or hide this list' },
 ];
 
 function Key({ label }: { label: string }) {
@@ -60,10 +59,11 @@ function Rows({ title, rows, asText = false }: { title: string; rows: { keys: st
   );
 }
 
-/** Keyboard and mouse reference. Opened from the header or by pressing "?" in the planner. */
+/** Keyboard and mouse reference, opened from the keyboard button in the header. */
 export function ShortcutsPanel() {
   const open = useWeldStore((s) => s.shortcutsOpen);
   const setOpen = useWeldStore((s) => s.setShortcutsOpen);
+  const setTourOpen = useWeldStore((s) => s.setTourOpen);
   if (!open) return null;
 
   return (
@@ -87,6 +87,17 @@ export function ShortcutsPanel() {
         <div className="p-5 grid md:grid-cols-2 gap-6 md:gap-8 items-start">
           <Rows title="Mouse" rows={MOUSE} asText />
           <Rows title="Keyboard" rows={KEYS} />
+        </div>
+        <div className="px-5 pb-5 -mt-1 flex justify-end">
+          <button
+            onClick={() => {
+              setOpen(false);
+              setTourOpen(true);
+            }}
+            className="ax-btn ax-btn-ghost !h-8 !px-3 !text-[12px]"
+          >
+            Replay the tour
+          </button>
         </div>
       </div>
     </div>

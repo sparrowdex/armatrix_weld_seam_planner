@@ -326,3 +326,7 @@ select.ax-input option, select.ax-input optgroup { background: #0E140E; color: v
   .ax-home-rise { animation: none; }
   .ax-home-seam { animation: none; stroke-dashoffset: 0; }
 }
+
+.ax-fun-float-long {
+  animation: ax-fun-float 5.2s cubic-bezier(0.16, 0.84, 0.32, 1) forwards;
+}

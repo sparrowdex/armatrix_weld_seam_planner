@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { STLLoader } from 'three-stdlib';
 import { detectCandidateSeams } from '@/utils/seamDetector';
+import { minCreaseLengthMm } from '@/utils/partScale';
 
 const RENAME_HINTS = ['bacon', 'sparky', 'pink'];
 
@@ -162,12 +163,17 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
           const bbox = geom.boundingBox!;
           geom.translate(0, -bbox.min.y, 0);
 
-          const candidateSeams = detectCandidateSeams(geom, 35, 5);
+          geom.computeBoundingBox();
+          const bb = geom.boundingBox!;
+          const diag = bb.max.distanceTo(bb.min);
+          const candidateSeams = detectCandidateSeams(geom, 35, minCreaseLengthMm(diag));
           if (candidateSeams.length > 0) {
             candidateSeams.slice(0, 24).forEach((cs, i) => {
               addSeam(cs.start, cs.end, cs.normal, 'detected', `Crease ${i + 1}`);
             });
-            setDetectionToast(`Detected ${Math.min(candidateSeams.length, 24)} true topological fillet creases.`);
+            const found = `Detected ${Math.min(candidateSeams.length, 24)} weld creases.`;
+            setDetectionToast(found);
+            useWeldStore.getState().showFunToast(found);
             setTimeout(() => setDetectionToast(null), 3500);
             return;
           }
@@ -175,7 +181,9 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
           console.error('Failed topological crease detection on custom STL:', e);
         }
       }
-      setDetectionToast('No 90° weld creases detected on this mechanical component. Use Manual Click-to-Weld with OSNAP.');
+      const none = 'No weld joints found. Welds sit where two parts meet, so a single solid has none. Use manual click-to-weld to place seams yourself.';
+      setDetectionToast(none);
+      useWeldStore.getState().showFunToast(none, 'warn');
       setTimeout(() => setDetectionToast(null), 3500);
     }
   };
@@ -291,7 +299,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
       </div>
 
       {/* 02 Seam tools: two rows */}
-      <div className="px-4 py-3 border-b border-[#182118] shrink-0 flex flex-col gap-2">
+      <div className="px-4 py-3 border-b border-[#182118] shrink-0 flex flex-col gap-2" data-tour="seams">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="ax-index">02</span>
@@ -357,7 +365,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({ onToggleCollapse }) =>
       </div>
 
       {/* /03 Weld sequence */}
-      <div className="px-4 pt-3 pb-2 border-b border-[#182118] shrink-0">
+      <div className="px-4 pt-3 pb-2 border-b border-[#182118] shrink-0" data-tour="sequence">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="ax-index">03</span>

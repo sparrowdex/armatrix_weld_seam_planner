@@ -46,6 +46,7 @@ export function ViewportOverlays({
   const part = useWeldStore((st) => st.part);
   const funToast = useWeldStore((st) => st.funToast);
   const funToastKey = useWeldStore((st) => st.funToastKey);
+  const funToastTone = useWeldStore((st) => st.funToastTone);
 
   const selectedSeam = seams.find((sm) => sm.id === selectedSeamId) || null;
   const jobSummary = exportJobJSON().job_summary;
@@ -59,7 +60,7 @@ export function ViewportOverlays({
           <p
             key={funToastKey}
             style={{ fontFamily: 'Onest, sans-serif', textShadow: '0 1px 3px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.6)' }}
-            className="ax-fun-float text-center text-[17px] font-medium text-white"
+            className={`${funToastTone === 'warn' ? 'ax-fun-float-long text-[#FBBF24] text-[15px] max-w-[520px]' : 'ax-fun-float text-white text-[17px]'} text-center font-medium`}
           >
             {funToast}
           </p>

@@ -55,8 +55,10 @@ export interface WeldState {
   soundEnabled: boolean;
   // Easter eggs
   funToast: string | null;
+  funToastTone: 'info' | 'warn';
   funToastKey: number;
   shortcutsOpen: boolean;
+  tourOpen: boolean;
   logoWiggleKey: number;
   playbackSpeed: number;
 
@@ -106,9 +108,10 @@ export interface WeldState {
   setSimCurrentSeamIndex: (index: number) => void;
   setSimNotice: (notice: string | null) => void;
   toggleSound: () => void;
-  showFunToast: (message: string) => void;
+  showFunToast: (message: string, tone?: 'info' | 'warn') => void;
   wiggleLogo: () => void;
   setShortcutsOpen: (open: boolean) => void;
+  setTourOpen: (open: boolean) => void;
   setPlaybackSpeed: (speed: number) => void;
 
   // Exporters
@@ -174,8 +177,10 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   simNotice: null,
   soundEnabled: false,
   funToast: null,
+  funToastTone: 'info',
   funToastKey: 0,
   shortcutsOpen: false,
+  tourOpen: false,
   logoWiggleKey: 0,
   playbackSpeed: 1,
 
@@ -215,8 +220,12 @@ export const useWeldStore = create<WeldState>((set, get) => ({
     const dz = end.z - start.z;
     const length = parseFloat(Math.sqrt(dx * dx + dy * dy + dz * dz).toFixed(2));
 
-    // Reject accidental micro-clicks (< 2 mm) so accidental clicks don't spawn floating zero-length spheres
-    if (length < 2.0) {
+    // Reject accidental micro-clicks so they don't spawn near-zero-length seams. The threshold is 2 mm on
+    // normal parts and 2% of the part diagonal on small ones, so real seams on tiny parts are kept.
+    const dims = get().part?.dimensions;
+    const partDiag = dims ? Math.hypot(dims.width, dims.height, dims.depth) : 100;
+    const minSeamLength = Math.min(2.0, Math.max(0.01, partDiag * 0.02));
+    if (length < minSeamLength) {
       set({ manualStartPoint: null, manualCandidatePoint: null });
       return null as any;
     }
@@ -451,14 +460,15 @@ export const useWeldStore = create<WeldState>((set, get) => ({
   setSimCurrentSeamIndex: (index) => set({ simCurrentSeamIndex: index }),
   setSimNotice: (notice) => set({ simNotice: notice }),
   toggleSound: () => set((state) => ({ soundEnabled: !state.soundEnabled })),
-  showFunToast: (message) => {
-    set((state) => ({ funToast: message, funToastKey: state.funToastKey + 1 }));
+  showFunToast: (message, tone = 'info') => {
+    set((state) => ({ funToast: message, funToastTone: tone, funToastKey: state.funToastKey + 1 }));
     setTimeout(() => {
       if (get().funToast === message) set({ funToast: null });
-    }, 3200);
+    }, tone === 'warn' ? 5200 : 3200);
   },
   wiggleLogo: () => set((state) => ({ logoWiggleKey: state.logoWiggleKey + 1 })),
   setShortcutsOpen: (open) => set({ shortcutsOpen: open }),
+  setTourOpen: (open) => set({ tourOpen: open }),
   setPlaybackSpeed: (speed) => set({ playbackSpeed: speed }),
 
   exportJobJSON: () => {

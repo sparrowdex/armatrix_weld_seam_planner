@@ -8,6 +8,7 @@ import { ViewportCanvas } from '@/components/viewport/ViewportCanvas';
 import { SimulationHUD } from '@/components/panels/SimulationHUD';
 import { ExportModal } from '@/components/panels/ExportModal';
 import { ShortcutsPanel } from '@/components/panels/ShortcutsPanel';
+import { OnboardingTour, TOUR_DONE_KEY } from '@/components/panels/OnboardingTour';
 import { isTypingTarget } from '@/utils/keyboard';
 import { useWeldStore } from '@/store/useWeldStore';
 import { ChevronRight, ChevronLeft, Undo2 } from 'lucide-react';
@@ -37,17 +38,16 @@ export default function PlannerPage() {
     };
   }, []);
 
-  // First visit only: a quiet hint that the controls reference exists
+  // First visit only: start the guided tour (skipped or finished tours are remembered)
   useEffect(() => {
-    let seen = false;
+    let done = false;
     try {
-      seen = localStorage.getItem('ax-controls-hint-seen') === '1';
-      if (!seen) localStorage.setItem('ax-controls-hint-seen', '1');
+      done = localStorage.getItem(TOUR_DONE_KEY) === '1';
     } catch {
-      /* storage unavailable: show the hint anyway */
+      /* storage unavailable: show the tour */
     }
-    if (seen) return;
-    const t = setTimeout(() => useWeldStore.getState().showFunToast('Press ? for keyboard and mouse controls'), 1500);
+    if (done) return;
+    const t = setTimeout(() => useWeldStore.getState().setTourOpen(true), 900);
     return () => clearTimeout(t);
   }, []);
 
@@ -57,11 +57,15 @@ export default function PlannerPage() {
       // Stay out of the way while the user is typing (sliders and buttons do not block hotkeys)
       if (isTypingTarget(document.activeElement)) return;
 
-      // "?" toggles the controls reference; Esc closes it before doing anything else
-      if (e.key === '?' || (e.shiftKey && e.code === 'Slash')) {
+      // Esc closes the tour or the controls dialog before doing anything else
+      if (e.key === 'Escape' && useWeldStore.getState().tourOpen) {
         e.preventDefault();
-        const st = useWeldStore.getState();
-        st.setShortcutsOpen(!st.shortcutsOpen);
+        try {
+          localStorage.setItem(TOUR_DONE_KEY, '1');
+        } catch {
+          /* ignore */
+        }
+        useWeldStore.getState().setTourOpen(false);
         return;
       }
       if (e.key === 'Escape' && useWeldStore.getState().shortcutsOpen) {
@@ -211,6 +215,7 @@ export default function PlannerPage() {
       )}
 
       <ShortcutsPanel />
+      <OnboardingTour />
 
       {/* Export Modal */}
       <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} />

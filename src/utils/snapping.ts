@@ -6,7 +6,8 @@ export function getSnappedPoint(
   hit: THREE.Intersection,
   manualStartPoint: Vector3D | null,
   seams: WeldSeam[],
-  mesh: THREE.Mesh
+  mesh: THREE.Mesh,
+  scale = 1
 ): { point: THREE.Vector3; normal: THREE.Vector3; snapType: string | null } {
   let p = hit.point.clone();
   let n = hit.face ? hit.face.normal.clone().transformDirection(mesh.matrixWorld).normalize() : new THREE.Vector3(0, 1, 0);
@@ -16,10 +17,10 @@ export function getSnappedPoint(
   for (const seam of seams) {
     const s1 = new THREE.Vector3(seam.startPoint.x, seam.startPoint.y, seam.startPoint.z);
     const s2 = new THREE.Vector3(seam.endPoint.x, seam.endPoint.y, seam.endPoint.z);
-    if (p.distanceTo(s1) < 8.0) {
+    if (p.distanceTo(s1) < 8.0 * scale) {
       return { point: s1, normal: new THREE.Vector3(seam.normal.x, seam.normal.y, seam.normal.z), snapType: 'SEAM ENDPOINT' };
     }
-    if (p.distanceTo(s2) < 8.0) {
+    if (p.distanceTo(s2) < 8.0 * scale) {
       return { point: s2, normal: new THREE.Vector3(seam.normal.x, seam.normal.y, seam.normal.z), snapType: 'SEAM ENDPOINT' };
     }
   }
@@ -39,7 +40,7 @@ export function getSnappedPoint(
       const dC = p.distanceTo(vC);
       const minD = Math.min(dA, dB, dC);
 
-      if (minD < 6.0) {
+      if (minD < 6.0 * scale) {
         if (minD === dA) return { point: vA, normal: n, snapType: 'VERTEX CORNER' };
         if (minD === dB) return { point: vB, normal: n, snapType: 'VERTEX CORNER' };
         if (minD === dC) return { point: vC, normal: n, snapType: 'VERTEX CORNER' };
@@ -53,15 +54,17 @@ export function getSnappedPoint(
     const dy = Math.abs(p.y - manualStartPoint.y);
     const dz = Math.abs(p.z - manualStartPoint.z);
 
-    if (dy < 4.5 && dz < 4.5 && dx > 6.0) {
+    const lock = 4.5 * scale;
+    const far = 6.0 * scale;
+    if (dy < lock && dz < lock && dx > far) {
       p.y = manualStartPoint.y;
       p.z = manualStartPoint.z;
       snapType = 'AXIS LOCK (X)';
-    } else if (dx < 4.5 && dz < 4.5 && dy > 6.0) {
+    } else if (dx < lock && dz < lock && dy > far) {
       p.x = manualStartPoint.x;
       p.z = manualStartPoint.z;
       snapType = 'AXIS LOCK (Y)';
-    } else if (dx < 4.5 && dy < 4.5 && dz > 6.0) {
+    } else if (dx < lock && dy < lock && dz > far) {
       p.x = manualStartPoint.x;
       p.y = manualStartPoint.y;
       snapType = 'AXIS LOCK (Z)';

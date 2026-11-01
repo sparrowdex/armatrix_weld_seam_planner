@@ -124,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
       {/* Command bar */}
       <div className="flex items-center gap-3 min-w-0 overflow-x-auto">
         {/* Workpiece */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0" data-tour="part">
           <div className="relative flex items-center">
             <select
               value={activeModelName}
@@ -196,12 +196,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenExport }) => {
       <button
         onClick={() => setShortcutsOpen(true)}
         className="ax-icon-btn !w-8 !h-8"
-        title="Keyboard and mouse controls (?)"
+        title="Keyboard and mouse controls"
+        data-tour="controls"
         aria-label="Keyboard and mouse controls"
       >
         <Keyboard className="w-4 h-4" />
       </button>
-      <button onClick={onOpenExport} className="ax-btn ax-btn-primary shrink-0 !h-8 !px-3.5">
+      <button onClick={onOpenExport} className="ax-btn ax-btn-primary shrink-0 !h-8 !px-3.5" data-tour="export">
         <Download className="w-3.5 h-3.5" />
         <span className="tracking-[0.06em]">EXPORT WELD JOB</span>
       </button>

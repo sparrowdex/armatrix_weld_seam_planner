@@ -10,6 +10,7 @@ import { validatePathSubstrate } from '@/utils/substrateValidator';
 import { analyzeMeshIntegrity } from '@/utils/meshIntegrity';
 import { getEffectiveTorchVector, orientTorch } from '@/utils/torchKinematics';
 import { getSnappedPoint } from '@/utils/snapping';
+import { gizmoScaleForRadius } from '@/utils/partScale';
 import { isTypingTarget, isSliderFocused } from '@/utils/keyboard';
 import { buildRoboticTorch } from './torchModel';
 import { ViewportOverlays } from './ViewportOverlays';
@@ -72,6 +73,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const platenGroupRef = useRef<THREE.Group | null>(null);
+  const gridRef = useRef<THREE.GridHelper | null>(null);
   const modelGroupRef = useRef<THREE.Group>(new THREE.Group());
   const meshRef = useRef<THREE.Mesh | null>(null);
   const edgesRef = useRef<THREE.LineSegments | null>(null);
@@ -97,6 +99,17 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
   // On-demand rendering: the WebGL frame is only redrawn while something is changing.
   // Any store update, camera move, resize or pointer move extends the render window briefly.
   const renderUntilRef = useRef<number>(0);
+  // Edge-glide etiquette: never while orbiting, only after the cursor rests at an edge, never off-canvas
+  const orbitingRef = useRef(false);
+  const lastOrbitEndRef = useRef(0);
+  const edgeSinceRef = useRef(0);
+  const pointerInsideRef = useRef(false);
+  // Size of on-screen helpers relative to the loaded part (1 for benchmark-sized parts)
+  const [gizmoScale, setGizmoScale] = useState(1);
+  // Physical things (torch, bead, molten pool, sparks) always stay real size; only on-screen
+  // drawing aids (markers, planning tubes, arrows, snapping, panning, framing) scale with the part.
+  // Camera framing of the loaded part, used by the view presets
+  const frameRef = useRef({ radius: 90, height: 78 });
   // Weld heat: per-seam deposit timing (real seconds) so finished beads keep cooling after rebuilds,
   // the time until which something is still glowing, and the plate's temper-tint (HAZ) uniforms.
   const weldTimesRef = useRef<Map<string, { start: number; speed: number }>>(new Map());
@@ -185,6 +198,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     const grid = new THREE.GridHelper(360, 36, '#385235', '#1F2E1E');
     grid.position.y = 0.05;
     scene.add(grid);
+    gridRef.current = grid;
 
     // 2. Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 1, 3000);
@@ -220,7 +234,12 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       RIGHT: THREE.MOUSE.ROTATE,
     };
     // Instant manual break-out: if user drags or orbits manually, cancel automated camera lerp immediately
+    controls.addEventListener('end', () => {
+      orbitingRef.current = false;
+      lastOrbitEndRef.current = performance.now();
+    });
     controls.addEventListener('start', () => {
+      orbitingRef.current = true;
       isCameraTransitioning.current = false;
       // A manual orbit leaves any preset view, so the header highlight clears
       useWeldStore.getState().setActiveView(null);
@@ -392,10 +411,25 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       // Smooth Dynamic Canvas Gliding while drawing seams ('add_seam' mode with anchored start point)
       const state = useWeldStore.getState();
       let glided = false;
-      if (state.mode === 'add_seam' && state.manualStartPoint && !isCameraTransitioning.current) {
+      // Glide only when the cursor has rested in the edge zone (~350 ms), the user is not orbiting
+      // (or has just stopped), and the cursor is actually over the canvas
+      const mxNow = mouseRef.current.x;
+      const myNow = mouseRef.current.y;
+      const inEdgeZone = Math.abs(myNow) > 0.62 || Math.abs(mxNow) > 0.72;
+      const nowMs = performance.now();
+      if (!inEdgeZone || !pointerInsideRef.current) edgeSinceRef.current = 0;
+      else if (edgeSinceRef.current === 0) edgeSinceRef.current = nowMs;
+      const glideAllowed =
+        pointerInsideRef.current &&
+        !orbitingRef.current &&
+        nowMs - lastOrbitEndRef.current > 500 &&
+        edgeSinceRef.current > 0 &&
+        nowMs - edgeSinceRef.current > 350;
+      if (glideAllowed && state.mode === 'add_seam' && state.manualStartPoint && !isCameraTransitioning.current) {
         const mx = mouseRef.current.x; // [-1, 1]
         const my = mouseRef.current.y; // [-1, 1], +1 top, -1 bottom
-        const glideSpeed = 1.6;
+        // Pan speed follows the part's size so small parts don't fly past the cursor
+        const glideSpeed = 1.6 * gizmoScaleForRadius(frameRef.current.radius);
 
         // Downward panning when cursor approaches bottom margin (my < -0.62)
         if (my < -0.62) {
@@ -513,22 +547,23 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     const camera = cameraRef.current;
     const controls = controlsRef.current;
 
+    // Presets are framed to the loaded part, so tiny and huge parts fill the view like the benchmarks
+    const { radius, height } = frameRef.current;
+    const d = radius * 3.1;
+    const target = new THREE.Vector3(0, height * 0.45, 0);
+    controls.target.copy(target);
     switch (viewPreset) {
       case 'iso':
-        camera.position.set(170, 150, 190);
-        controls.target.set(0, 35, 0);
+        camera.position.copy(target).add(new THREE.Vector3(170, 115, 190).setLength(d));
         break;
       case 'top':
-        camera.position.set(0, 290, 0);
-        controls.target.set(0, 0, 0);
+        camera.position.copy(target).add(new THREE.Vector3(0, d, 0.001));
         break;
       case 'front':
-        camera.position.set(0, 35, 270);
-        controls.target.set(0, 35, 0);
+        camera.position.copy(target).add(new THREE.Vector3(0, 0, d));
         break;
       case 'right':
-        camera.position.set(270, 35, 0);
-        controls.target.set(0, 35, 0);
+        camera.position.copy(target).add(new THREE.Vector3(d, 0, 0));
         break;
     }
     controls.update();
@@ -555,7 +590,9 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
     viewDir.normalize();
 
     // Cinematic framing distance proportional to seam length (between 85mm and 150mm)
-    const focusDist = Math.max(90, Math.min(150, seam.length * 1.6));
+    // Scaled to the part (reads the ref, so it is correct even from long-lived key handlers)
+    const fs = gizmoScaleForRadius(frameRef.current.radius);
+    const focusDist = Math.max(90 * fs, Math.min(150 * fs, seam.length * 1.6));
     const targetCamPos = mid.clone().addScaledVector(viewDir, focusDist);
 
     targetControlsTarget.current = mid;
@@ -628,11 +665,35 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       geometry.computeBoundingSphere();
       const sphere = geometry.boundingSphere!;
       if (cameraRef.current && controlsRef.current) {
-        const radius = Math.max(25, sphere.radius);
+        // Frame any size of part, from a 1 mm test piece to a multi-metre beam
+        const radius = Math.max(0.5, sphere.radius);
+        frameRef.current = { radius, height };
+        setGizmoScale(gizmoScaleForRadius(radius));
+        controlsRef.current.minDistance = Math.max(0.05, radius * 0.2);
+        controlsRef.current.maxDistance = Math.max(1400, radius * 20);
         controlsRef.current.target.set(0, height * 0.45, 0);
         cameraRef.current.position.set(radius * 1.5, height + radius * 0.8, radius * 1.5);
-        cameraRef.current.near = Math.max(0.1, radius * 0.01);
-        cameraRef.current.far = Math.max(2000, radius * 20);
+        cameraRef.current.near = Math.max(0.01, radius * 0.01);
+        cameraRef.current.far = Math.max(2000, radius * 40);
+
+        // The fixture table and grid grow to fit large parts (never shrink: the 360 mm table is real size)
+        const tableScale = Math.max(1, (Math.max(width, depth) * 1.3) / 360);
+        platenGroupRef.current?.scale.set(tableScale, 1, tableScale);
+        gridRef.current?.scale.set(tableScale, 1, tableScale);
+
+        // Implausible sizes usually mean the STL was exported in other units
+        const diag = Math.hypot(width, height, depth);
+        if (diag < 5) {
+          useWeldStore.getState().showFunToast(
+            `This part is only ${diag.toFixed(1)} mm across. If that looks wrong, the STL may have been exported in metres or centimetres.`,
+            'warn'
+          );
+        } else if (diag > 50000) {
+          useWeldStore.getState().showFunToast(
+            `This part is ${(diag / 1000).toFixed(0)} m across. If that looks wrong, the STL may have been exported in micrometres.`,
+            'warn'
+          );
+        }
         cameraRef.current.updateProjectionMatrix();
         controlsRef.current.update();
       }
@@ -811,7 +872,12 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       // 4. Default: clean CAD planning green (#22C55E)
       const isSelectedAndIdle = isSelected && !isSimulating;
       const wireScale = (seam.parameters.wireDiameter ?? 1.2) / 1.2;
-      const beadRadius = (isSelectedAndIdle ? 2.2 : isCompleted ? 2.1 : 1.7) * wireScale;
+      // While simulating, unwelded planning tubes become thin and translucent so they never hide the
+      // real-size torch, bead and metal
+      const simThin = isSimulating && !isCompleted ? 0.3 : 1;
+      const beadRadius = isCompleted
+        ? 2.1 * wireScale // finished weld bead: real size
+        : (isSelectedAndIdle ? 2.2 : 1.7) * wireScale * gizmoScale * simThin; // planning marker: scales with part
       let cylinderGeom: THREE.BufferGeometry = new THREE.CylinderGeometry(beadRadius, beadRadius, length, 16);
       cylinderGeom.translate(0, length / 2, 0);
       cylinderGeom.rotateX(Math.PI / 2);
@@ -854,6 +920,9 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           emissiveIntensity: 0.4,
           roughness: 0.2,
           metalness: 0.85,
+          transparent: isSimulating,
+          opacity: isSimulating ? 0.45 : 1,
+          depthWrite: !isSimulating,
         });
       }
 
@@ -865,14 +934,14 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
       // Sleek precision CAD pin handles (scaled down from 3.0mm to 1.3mm)
       const startSphere = new THREE.Mesh(
-        new THREE.SphereGeometry(isSelectedAndIdle ? 1.5 : 1.2, 16, 16),
+        new THREE.SphereGeometry((isSelectedAndIdle ? 1.5 : 1.2) * gizmoScale * simThin, 16, 16),
         new THREE.MeshStandardMaterial({ color: '#38BDF8', emissive: '#0284C7', emissiveIntensity: 0.6 })
       );
       startSphere.position.copy(p1);
       seamContainer.add(startSphere);
 
       const endSphere = new THREE.Mesh(
-        new THREE.SphereGeometry(isSelectedAndIdle ? 1.5 : 1.2, 16, 16),
+        new THREE.SphereGeometry((isSelectedAndIdle ? 1.5 : 1.2) * gizmoScale * simThin, 16, 16),
         new THREE.MeshStandardMaterial({ color: '#EF4444', emissive: '#B91C1C', emissiveIntensity: 0.6 })
       );
       endSphere.position.copy(p2);
@@ -884,16 +953,16 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       // Travel direction arrow: offset outward parallel to the seam so it floats cleanly alongside/above the bead
       // Automatically fades out/hides completely during active simulation to prevent visual clutter with live torch/sparks
       if (!isSimulating) {
-        const arrowOffset = new THREE.Vector3().copy(normal).multiplyScalar(beadRadius + 2.5);
+        const arrowOffset = new THREE.Vector3().copy(normal).multiplyScalar(beadRadius + 2.5 * gizmoScale);
         const arrowPos = new THREE.Vector3().copy(mid).add(arrowOffset);
-        const arrowLen = Math.min(12, Math.max(5, length * 0.35));
+        const arrowLen = Math.min(12 * gizmoScale, Math.max(5 * gizmoScale, length * 0.35));
         const arrowHelper = new THREE.ArrowHelper(
           dir,
           arrowPos,
           arrowLen,
           isSelectedAndIdle ? 0xffffff : 0xe97f01,
-          2.4,
-          1.6
+          2.4 * gizmoScale,
+          1.6 * gizmoScale
         );
         seamContainer.add(arrowHelper);
       }
@@ -907,7 +976,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           seam.parameters.torchLeadAngle,
           seam.parameters.jointType
         );
-        const normalHelper = new THREE.ArrowHelper(effectiveVector, mid, 20, 0x38bdf8, 4, 2.5);
+        const normalHelper = new THREE.ArrowHelper(effectiveVector, mid, 20 * gizmoScale, 0x38bdf8, 4 * gizmoScale, 2.5 * gizmoScale);
         seamContainer.add(normalHelper);
 
         const appPt = new THREE.Vector3().copy(p1).addScaledVector(effectiveVector, seam.parameters.approachDistance);
@@ -924,9 +993,9 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         seamContainer.add(retLine);
 
         if (showWaypoints) {
-          const appSphere = new THREE.Mesh(new THREE.SphereGeometry(0.8, 10, 10), new THREE.MeshBasicMaterial({ color: '#60A5FA' }));
+          const appSphere = new THREE.Mesh(new THREE.SphereGeometry(0.8 * gizmoScale, 10, 10), new THREE.MeshBasicMaterial({ color: '#60A5FA' }));
           appSphere.position.copy(appPt);
-          const retSphere = new THREE.Mesh(new THREE.SphereGeometry(0.8, 10, 10), new THREE.MeshBasicMaterial({ color: '#F87171' }));
+          const retSphere = new THREE.Mesh(new THREE.SphereGeometry(0.8 * gizmoScale, 10, 10), new THREE.MeshBasicMaterial({ color: '#F87171' }));
           retSphere.position.copy(retPt);
           seamContainer.add(appSphere);
           seamContainer.add(retSphere);
@@ -935,7 +1004,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
       group.add(seamContainer);
     });
-  }, [seams, selectedSeamId, completedSeamIds, showNormals, showWaypoints, isSimulating]);
+  }, [seams, selectedSeamId, completedSeamIds, showNormals, showWaypoints, isSimulating, gizmoScale]);
 
   // Live Preview Seam during interactive 'add_seam' click
   useEffect(() => {
@@ -946,7 +1015,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       const p1 = new THREE.Vector3(manualStartPoint.x, manualStartPoint.y, manualStartPoint.z);
 
       const startMarker = new THREE.Mesh(
-        new THREE.SphereGeometry(1.2, 16, 16),
+        new THREE.SphereGeometry(1.2 * gizmoScale, 16, 16),
         new THREE.MeshStandardMaterial({ color: '#e97f01', emissive: '#e97f01', emissiveIntensity: 0.9 })
       );
       startMarker.position.copy(p1);
@@ -964,14 +1033,20 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         group.add(line);
 
         const endPreview = new THREE.Mesh(
-          new THREE.SphereGeometry(1.0, 12, 12),
+          new THREE.SphereGeometry(1.0 * gizmoScale, 12, 12),
           new THREE.MeshBasicMaterial({ color: isAir ? '#F59E0B' : '#38BDF8' })
         );
         endPreview.position.copy(p2);
         group.add(endPreview);
       }
     }
-  }, [mode, manualStartPoint, cursorPos, liveAirGap]);
+  }, [mode, manualStartPoint, cursorPos, liveAirGap, gizmoScale]);
+
+  // Snap reticle follows the part's size
+  useEffect(() => {
+    reticleRef.current?.scale.setScalar(gizmoScale);
+    invalidate();
+  }, [gizmoScale]);
 
   // Heat-affected zone: every welded seam leaves temper colours on the plate around it
   useEffect(() => {
@@ -1001,7 +1076,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const el = document.activeElement as HTMLElement | null;
       if (isTypingTarget(el)) return;
-      if (useWeldStore.getState().shortcutsOpen) return;
+      if (useWeldStore.getState().shortcutsOpen || useWeldStore.getState().tourOpen) return;
       const cam = cameraRef.current;
       const ctr = controlsRef.current;
       if (!cam || !ctr) return;
@@ -1033,11 +1108,14 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         return;
       }
 
-      if (e.key === '+' || e.key === '=' || e.key === '-' || e.key === '_') {
+      // Plain + / - (and the number pad). Ctrl/Cmd + / - is left to the browser's own page zoom.
+      const zoomIn = e.key === '+' || e.key === '=' || e.code === 'NumpadAdd';
+      const zoomOut = e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract';
+      if (zoomIn || zoomOut) {
         e.preventDefault();
         const target = currentTarget();
         const offset = currentGoal().sub(target);
-        const factor = e.key === '-' || e.key === '_' ? 1.2 : 1 / 1.2;
+        const factor = zoomOut ? 1.2 : 1 / 1.2;
         const dist = THREE.MathUtils.clamp(offset.length() * factor, ctr.minDistance, ctr.maxDistance);
         glideTo(target.clone().add(offset.setLength(dist)), target);
         return;
@@ -1196,6 +1274,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       }
     }
     let nextSeamIdx = currentSeamIdx + 1;
+    let saidWelp = false;
 
     updatePhase('approach');
     useWeldStore.getState().setSimCurrentSeamIndex(currentSeamIdx);
@@ -1370,6 +1449,16 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
           progress = 0;
           phase = 'welding';
           if (!seam.hasAirGap) startActiveBead(seam, pStart, pEnd, normal, weldDuration);
+          // Easter egg: a real-size bead that dwarfs the part (once per run)
+          if (!seam.hasAirGap && !saidWelp) {
+            const dims = useWeldStore.getState().part?.dimensions;
+            const partDiag = dims ? Math.hypot(dims.width, dims.height, dims.depth) : Infinity;
+            const beadDiameter = 4.2 * ((seam.parameters.wireDiameter ?? 1.2) / 1.2);
+            if (beadDiameter > partDiag * 0.25) {
+              saidWelp = true;
+              useWeldStore.getState().showFunToast('Welp. That’s more weld than part.');
+            }
+          }
           // Easter egg: a dry run over open air gets a deadpan remark
           if (seam.hasAirGap) {
             const quips = [
@@ -1471,6 +1560,8 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         torch.rotateX(Math.sin(Math.min(1, progress) * Math.PI) * 0.45);
         if (progress >= 1) {
           safeQuaternion(effectiveTorchAxis);
+          const n = seams.length;
+          useWeldStore.getState().showFunToast(`All ${n} seam${n === 1 ? '' : 's'} welded. Clean run.`);
           useWeldStore.getState().pauseSimulation();
           return;
         }
@@ -1527,6 +1618,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
   // Pointer Movement & Raycast Snapping
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    pointerInsideRef.current = true;
     invalidate();
     if (!canvasMountRef.current || !cameraRef.current || !meshRef.current) return;
     const rect = canvasMountRef.current.getBoundingClientRect();
@@ -1538,7 +1630,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
 
     if (intersects.length > 0) {
       const hit = intersects[0];
-      const snapped = getSnappedPoint(hit, manualStartPoint, seams, meshRef.current);
+      const snapped = getSnappedPoint(hit, manualStartPoint, seams, meshRef.current, gizmoScale);
       const p = snapped.point;
       const n = snapped.normal;
       setActiveSnapType(snapped.snapType);
@@ -1610,7 +1702,7 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
       if (intersects.length === 0) return;
 
       const hit = intersects[0];
-      const snapped = getSnappedPoint(hit, manualStartPoint, seams, meshRef.current);
+      const snapped = getSnappedPoint(hit, manualStartPoint, seams, meshRef.current, gizmoScale);
       const normal = snapped.normal;
       const pt: Vector3D = {
         x: parseFloat(snapped.point.x.toFixed(2)),
@@ -1657,6 +1749,13 @@ export const ViewportCanvas: React.FC<ViewportCanvasProps> = ({
         ref={canvasMountRef}
         onPointerMove={handlePointerMove}
         onPointerDown={handlePointerDown}
+        onPointerEnter={() => {
+          pointerInsideRef.current = true;
+        }}
+        onPointerLeave={() => {
+          pointerInsideRef.current = false;
+          edgeSinceRef.current = 0;
+        }}
         onContextMenu={(e) => {
           e.preventDefault();
         }}

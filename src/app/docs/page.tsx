@@ -335,7 +335,7 @@ export default function DocsPage() {
             <SectionHead
               index="07"
               title="Planner controls"
-              intro="Also available inside the planner: press ? or use the keyboard button next to Export."
+              intro="Also available inside the planner from the keyboard button next to Export, where the guided tour can be replayed."
             />
             <dl className="border-t border-[#1D271C]">
               {[
@@ -350,7 +350,6 @@ export default function DocsPage() {
                 { k: 'F', v: 'Frame the selected seam.' },
                 { k: 'Home', v: 'Reset to the ISO view.' },
                 { k: 'Space', v: 'Play or pause the simulation.' },
-                { k: '?', v: 'Show or hide the controls reference.' },
               ].map((row) => (
                 <div key={row.k} className="grid sm:grid-cols-[200px_1fr] gap-1 sm:gap-6 py-4 border-b border-[#1D271C]">
                   <dt className="text-[13px] text-[#F6F5EE]">{row.k}</dt>
