@@ -1,398 +1,298 @@
-'use client';
-
-import React from 'react';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { ArmatrixLogo } from '@/components/ui/ArmatrixLogo';
-import {
-  ArrowRight,
-  Cpu,
-  Layers,
-  ShieldCheck,
-  Zap,
-  Box,
-  Compass,
-  FileCode2,
-  CheckCircle2,
-  Sliders,
-  ExternalLink,
-  ChevronRight,
-  Flame,
-} from 'lucide-react';
+
+const STATS = [
+  { value: '3500', unit: 'mm', label: 'Snake-arm reach envelope' },
+  { value: '120', unit: 'mm/s', label: 'Rapid traverse between seams' },
+  { value: '3', unit: '', label: 'Processes: MIG, TIG, laser' },
+  { value: '5', unit: '', label: 'Joint types, from fillet to edge' },
+];
+
+const STEPS = [
+  {
+    title: 'Load the part',
+    body: 'Pick a benchmark part or upload any STL. Size, mesh integrity and reach are checked the moment it loads.',
+  },
+  {
+    title: 'Find the seams',
+    body: 'Auto-detect creases from the mesh, or click two points to place a seam by hand. Paths over open air are flagged.',
+  },
+  {
+    title: 'Set the process',
+    body: 'Process and joint type, travel speed, current, voltage, wire feed, torch tilt and lead, approach and retract standoffs.',
+  },
+  {
+    title: 'Sequence and simulate',
+    body: 'Reorder for heat balance, reverse direction, then watch the torch approach, lay each bead and retract.',
+  },
+  {
+    title: 'Export the job',
+    body: 'Download a JSON job with tool axes, waypoints, standoffs and cycle time, ready for the arm controller.',
+  },
+];
+
+const EXPORT_POINTS = [
+  'Tool axis and travel direction per seam, exactly as simulated',
+  'Approach and retract standoffs that keep the torch clear of walls',
+  'Non-manufacturable seams flagged and excluded from the run',
+  'Cycle time split into arc, rapid traverse and interpass cooling',
+];
+
+const JSON_SAMPLE = `{
+  "seam_id": "SEAM-01",
+  "joint_type": "FILLET",
+  "start_coordinate": [-26, 14, -31],
+  "end_coordinate": [26, 14, -31],
+  "torch_axis": [0, 0.7071, 0.7071],
+  "approach_point": [-26, 31.68, -13.32],
+  "executable": true,
+  "weld_parameters": {
+    "process": "MIG",
+    "travel_speed_mm_s": 12,
+    "current_amps": 180,
+    "voltage_volts": 24
+  }
+}`;
+
+/** Isometric line drawing of the benchmark L-bracket; its three weld seams draw themselves in sequence. */
+function BracketDrawing() {
+  const line = 'rgba(246,246,238,0.32)';
+  return (
+    <svg
+      viewBox="160 60 520 560"
+      className="w-full h-auto"
+      role="img"
+      aria-label="Line drawing of an L-bracket with a gusset, its weld seams tracing in orange"
+    >
+      {/* Base plate */}
+      <polygon points="632.8,474.5 632.8,492.5 451,597.5 451,579.5" fill="#0C110C" stroke={line} />
+      <polygon points="451,579.5 451,597.5 191.2,447.5 191.2,429.5" fill="#0E140E" stroke={line} />
+      <polygon points="373,324.5 632.8,474.5 451,579.5 191.2,429.5" fill="#111811" stroke={line} />
+      {/* Upright plate */}
+      <polygon points="632.8,234.5 617.2,243.5 617.2,483.5 632.8,474.5" fill="#0C110C" stroke={line} />
+      <polygon points="357.4,339.5 617.2,483.5 617.2,243.5 357.4,93.5" fill="#0F150F" stroke={line} />
+      <polygon points="373,84.5 632.8,234.5 617.2,243.5 357.4,93.5" fill="#131B13" stroke={line} />
+      {/* Gusset */}
+      <polygon points="487.3,408.5 487.3,261.5 399,459.5" fill="#141C14" stroke={line} />
+
+      {/* Weld seams */}
+      <g className="ax-home-seams">
+        <line className="ax-home-seam ax-home-seam-1" x1="357.4" y1="339.5" x2="617.2" y2="483.5" pathLength={1} />
+        <line className="ax-home-seam ax-home-seam-2" x1="487.3" y1="408.5" x2="399" y2="459.5" pathLength={1} />
+        <line className="ax-home-seam ax-home-seam-3" x1="487.3" y1="408.5" x2="487.3" y2="261.5" pathLength={1} />
+      </g>
+
+      {/* Callouts */}
+      <g stroke="rgba(246,246,238,0.28)" strokeWidth="1" fill="none">
+        <polyline points="560,451 600,420 668,420" />
+        <polyline points="487.3,330 530,300 668,300" />
+      </g>
+      <g fill="rgba(246,246,238,0.55)" fontFamily="Onest, sans-serif" fontSize="11" letterSpacing="1.4">
+        <text x="668" y="414" textAnchor="end">ROOT FILLET</text>
+        <text x="668" y="294" textAnchor="end">GUSSET UPRIGHT</text>
+      </g>
+    </svg>
+  );
+}
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#070A07] text-[#DCE6DB] font-sans selection:bg-[#e97f01]/30">
-      {/* Top Industrial Navigation Bar */}
-      <header className="sticky top-0 z-50 h-16 bg-[#0A0E0A]/90 backdrop-blur-md border-b border-[#1A2619] px-6 sm:px-12 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
-          <ArmatrixLogo className="w-7 h-7 text-[#e97f01] transition-transform group-hover:scale-105" color="#e97f01" />
-          <div className="flex flex-col">
-            <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-extrabold tracking-wider text-sm text-white">
-              ARMATRIX
-            </span>
-            <span className="text-[10px] font-mono text-[#8EA28D] tracking-widest uppercase">
-              Robotics
-            </span>
-          </div>
+    <div className="min-h-screen bg-[#070A07] text-[#F6F5EE] select-text">
+      {/* Navigation */}
+      <header className="max-w-[1200px] mx-auto px-5 sm:px-10 h-20 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3">
+          <ArmatrixLogo className="w-7 h-7" color="#e97f01" />
+          <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-semibold tracking-[0.14em] text-[13px]">
+            ARMATRIX
+          </span>
         </Link>
-
-        {/* Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8 text-xs font-mono text-[#8EA28D]">
-          <a href="#capabilities" className="hover:text-white transition">CAPABILITIES</a>
-          <a href="#pipeline" className="hover:text-white transition">MOTION PIPELINE</a>
-          <a href="#workpieces" className="hover:text-white transition">CAD PARTS</a>
-          <Link href="/docs" className="hover:text-[#e97f01] transition flex items-center gap-1">
-            <span>DOCS</span>
-            <ExternalLink className="w-3 h-3" />
+        <nav className="flex items-center gap-7">
+          <a href="#workflow" className="hidden md:block ax-label hover:!text-[#F6F5EE] transition-colors">
+            Workflow
+          </a>
+          <a href="#export" className="hidden md:block ax-label hover:!text-[#F6F5EE] transition-colors">
+            Export
+          </a>
+          <Link href="/docs" className="hidden sm:block ax-label hover:!text-[#F6F5EE] transition-colors">
+            Docs
+          </Link>
+          <Link href="/planner" className="ax-btn ax-btn-primary !h-9 !px-4">
+            Open planner
           </Link>
         </nav>
-
-        {/* Primary Action Button */}
-        <div className="flex items-center gap-3">
-          <Link
-            href="/docs"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#141E14] hover:bg-[#1D2A1C] text-xs font-mono text-[#A4B5A3] hover:text-white border border-[#223121] transition active:scale-95"
-          >
-            <span>Job Spec</span>
-          </Link>
-          <Link
-            href="/planner"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white text-xs font-bold transition active:scale-95 shadow-lg shadow-[#e97f01]/25 hover:shadow-[#e97f01]/40"
-          >
-            <span>Launch 3D Planner</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-20 pb-24 px-6 sm:px-12 max-w-7xl mx-auto">
-        {/* Subtle Ambient Radial Gradients */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#e97f01]/10 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute top-1/3 left-1/4 w-[300px] h-[250px] bg-[#22C55E]/5 rounded-full blur-[100px] pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col items-center text-center space-y-8 max-w-4xl mx-auto">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#121912] border border-[#233522] text-[11px] font-mono text-[#DCE6DB] shadow-inner">
-            <span className="w-2 h-2 rounded-full bg-[#22C55E]" />
-            <span className="text-[#86EFAC] font-semibold">ARMATRIX v1.2</span>
-            <span className="text-[#556953]">|</span>
-            <span className="text-[#A4B5A3]">Autonomous Robotic Weld Seam Planning</span>
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none opacity-60"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(246,246,238,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(246,246,238,0.035) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+            maskImage: 'radial-gradient(ellipse 70% 60% at 70% 45%, black 20%, transparent 75%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 70% 45%, black 20%, transparent 75%)',
+          }}
+        />
+        <div className="relative max-w-[1200px] mx-auto px-5 sm:px-10 pt-10 sm:pt-16 pb-20 sm:pb-28 grid lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-8 items-center">
+          <div className="ax-home-rise">
+            <span className="ax-label">Weld seam planner for snake-arm robots</span>
+            <h1
+              style={{ fontFamily: 'Onest, sans-serif' }}
+              className="mt-6 text-[44px] sm:text-[64px] lg:text-[76px] leading-[0.95] tracking-[-0.02em] font-normal"
+            >
+              Plan every weld before the arm moves.
+            </h1>
+            <p className="mt-7 max-w-[480px] text-[16px] sm:text-[17px] leading-[1.6] text-[#B4C2B3]">
+              Load a CAD part, find its seams, tune the process and simulate the toolpath. Then hand the cell a job file
+              the controller can run.
+            </p>
+            <div className="mt-10 flex flex-wrap items-center gap-3">
+              <Link href="/planner" className="ax-btn ax-btn-primary !h-11 !px-5 !text-[13px] group">
+                Open the planner
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <Link href="/docs" className="ax-btn !h-11 !px-5 !text-[13px] !bg-transparent">
+                Read the docs
+              </Link>
+            </div>
           </div>
 
-          {/* Headline */}
-          <h1
-            style={{ fontFamily: 'Onest, sans-serif' }}
-            className="text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-[1.12]"
-          >
-            Precision Weld Seam Planning for{' '}
-            <span className="bg-gradient-to-r from-[#e97f01] via-[#ffa133] to-[#e97f01] bg-clip-text text-transparent">
-              Snake-Arm Robotics
-            </span>
-          </h1>
+          <div className="ax-home-rise ax-home-delay max-w-[560px] w-full mx-auto lg:mx-0 lg:justify-self-end">
+            <BracketDrawing />
+          </div>
+        </div>
+      </section>
 
-          {/* Subtitle */}
-          <p className="text-base sm:text-lg text-[#8EA28D] max-w-3xl leading-relaxed font-normal">
-            Autonomous 3D CAD/CAM trajectory orchestration engineered for hyper-redundant continuum manipulators operating inside hazardous, GPS-denied, and ultra-confined industrial geometries.
-          </p>
-
-          {/* CTA Group */}
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-            <Link
-              href="/planner"
-              className="flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white text-sm font-bold tracking-wide transition transform hover:-translate-y-0.5 active:translate-y-0 shadow-xl shadow-[#e97f01]/25 hover:shadow-[#e97f01]/40"
+      {/* Numbers */}
+      <section className="max-w-[1200px] mx-auto px-5 sm:px-10">
+        <dl className="grid grid-cols-2 lg:grid-cols-4 border-t border-[#1D271C]">
+          {STATS.map((s, i) => (
+            <div
+              key={s.label}
+              className={`py-8 sm:py-10 pr-4 ${i % 2 === 1 ? 'pl-5 sm:pl-8 border-l border-[#1D271C]' : ''} ${
+                i >= 2 ? 'border-t border-[#1D271C] lg:border-t-0' : ''
+              } ${i === 2 ? 'lg:pl-8 lg:border-l' : ''}`}
             >
-              <span>Launch 3D Seam Planner</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+              <dd
+                style={{ fontFamily: 'Onest, sans-serif' }}
+                className="ax-num text-[40px] sm:text-[52px] leading-none tracking-[-0.02em]"
+              >
+                {s.value}
+                {s.unit && <span className="text-[16px] sm:text-[18px] text-[#7D8F7C] ml-1.5">{s.unit}</span>}
+              </dd>
+              <dt className="mt-3 text-[13px] text-[#7D8F7C]">{s.label}</dt>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      {/* Workflow */}
+      <section id="workflow" className="max-w-[1200px] mx-auto px-5 sm:px-10 pt-24 sm:pt-32">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
+          <div>
+            <span className="ax-label">Workflow</span>
+            <h2
+              style={{ fontFamily: 'Onest, sans-serif' }}
+              className="mt-4 text-[32px] sm:text-[44px] leading-[1] tracking-[-0.02em] font-normal max-w-[560px]"
+            >
+              From mesh to motion in five steps.
+            </h2>
+          </div>
+          <p className="max-w-[340px] text-[15px] leading-[1.6] text-[#7D8F7C]">
+            Everything runs in the browser. No install, no account, nothing leaves your machine until you export.
+          </p>
+        </div>
+
+        <ol className="grid sm:grid-cols-2 lg:grid-cols-5 gap-x-8">
+          {STEPS.map((step, i) => (
+            <li key={step.title} className="group border-t border-[#1D271C] pt-6 pb-10">
+              <span className="ax-index transition-colors">{String(i + 1).padStart(2, '0')}</span>
+              <h3 style={{ fontFamily: 'Onest, sans-serif' }} className="mt-4 text-[18px] font-medium">
+                {step.title}
+              </h3>
+              <p className="mt-3 text-[14px] leading-[1.6] text-[#7D8F7C]">{step.body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* Export */}
+      <section id="export" className="max-w-[1200px] mx-auto px-5 sm:px-10 pt-16 sm:pt-24">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+          <div>
+            <span className="ax-label">Weld job export</span>
+            <h2
+              style={{ fontFamily: 'Onest, sans-serif' }}
+              className="mt-4 text-[32px] sm:text-[44px] leading-[1] tracking-[-0.02em] font-normal"
+            >
+              A job file the controller can trust.
+            </h2>
+            <p className="mt-6 max-w-[460px] text-[15px] leading-[1.6] text-[#B4C2B3]">
+              Every coordinate is in one declared part frame, and every seam carries the torch pose the simulator used.
+            </p>
+            <ul className="mt-8 border-t border-[#1D271C]">
+              {EXPORT_POINTS.map((point) => (
+                <li key={point} className="py-4 border-b border-[#1D271C] text-[14px] text-[#F6F5EE]">
+                  {point}
+                </li>
+              ))}
+            </ul>
             <Link
               href="/docs"
-              className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#121A12] hover:bg-[#1A251A] text-sm font-mono text-[#C2D1C1] hover:text-white border border-[#223121] transition active:scale-95"
+              className="mt-8 inline-flex items-center gap-2 text-[13px] text-[#e97f01] hover:text-[#f38b0e] transition-colors"
             >
-              <FileCode2 className="w-4 h-4 text-[#e97f01]" />
-              <span>Job Schema Documentation</span>
+              Field-by-field schema
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          {/* Live Feature Highlights Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full pt-10 text-left">
-            <div className="bg-[#0C120C]/80 border border-[#192419] p-4 rounded-xl">
-              <div className="text-[#e97f01] text-xs font-mono font-bold uppercase mb-1">01 / KINEMATICS</div>
-              <div className="text-white font-semibold text-sm">6-DOF Torch Vector</div>
-              <div className="text-[#7D8F7C] text-xs mt-1">45° bisecting fillet tilt and push/pull lead angles</div>
+          <div className="rounded-[6px] border border-[#1D271C] bg-[#0A0E0A] overflow-hidden">
+            <div className="h-10 px-4 flex items-center justify-between border-b border-[#1D271C]">
+              <span className="ax-label">weld_job.json</span>
+              <span className="ax-label">Schema 1.3.0</span>
             </div>
-            <div className="bg-[#0C120C]/80 border border-[#192419] p-4 rounded-xl">
-              <div className="text-[#22C55E] text-xs font-mono font-bold uppercase mb-1">02 / CAD ENGINE</div>
-              <div className="text-white font-semibold text-sm">Topological Creases</div>
-              <div className="text-[#7D8F7C] text-xs mt-1">Automatic dihedral angle boundary extraction</div>
-            </div>
-            <div className="bg-[#0C120C]/80 border border-[#192419] p-4 rounded-xl">
-              <div className="text-[#38BDF8] text-xs font-mono font-bold uppercase mb-1">03 / VALIDATION</div>
-              <div className="text-white font-semibold text-sm">Air-Gap & Clash Detection</div>
-              <div className="text-[#7D8F7C] text-xs mt-1">Substrate verification and obstacle avoidance</div>
-            </div>
-            <div className="bg-[#0C120C]/80 border border-[#192419] p-4 rounded-xl">
-              <div className="text-[#F59E0B] text-xs font-mono font-bold uppercase mb-1">04 / OUTPUT</div>
-              <div className="text-white font-semibold text-sm">Universal Export</div>
-              <div className="text-[#7D8F7C] text-xs mt-1">KUKA, ABB, Fanuc, G-code, and Armatrix JSON</div>
-            </div>
+            <pre className="p-5 text-[12.5px] leading-[1.7] overflow-x-auto text-[#B4C2B3] font-[ui-monospace,SFMono-Regular,Menlo,monospace]">
+              {JSON_SAMPLE}
+            </pre>
           </div>
         </div>
       </section>
 
-      {/* Visual CAD Environment Banner */}
-      <section id="workpieces" className="px-6 sm:px-12 max-w-7xl mx-auto pb-24">
-        <div className="relative rounded-2xl bg-gradient-to-b from-[#101710] to-[#0A0E0A] border border-[#202E1F] p-8 sm:p-12 overflow-hidden shadow-2xl">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-[#e97f01]/5 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
-            <div className="space-y-4 max-w-xl">
-              <div className="inline-flex items-center gap-2 text-xs font-mono text-[#e97f01] font-bold uppercase">
-                <Box className="w-4 h-4" />
-                <span>Multi-Part CAD Workpiece Ingestion</span>
-              </div>
-              <h2 style={{ fontFamily: 'Onest, sans-serif' }} className="text-2xl sm:text-3xl font-extrabold text-white">
-                Pre-Loaded Industrial Geometries and Custom STL Ingestion
-              </h2>
-              <p className="text-sm text-[#8EA28D] leading-relaxed">
-                Test and calibrate multi-pass weld paths across standardized industrial benchmarks or drag and drop your own proprietary binary/ASCII .STL files directly into the browser.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                <div className="bg-[#080D08] border border-[#1C291B] p-3 rounded-lg">
-                  <div className="text-white text-xs font-bold">Structural L-Bracket</div>
-                  <div className="text-[11px] text-[#7D8F7C] font-mono mt-0.5">80x80x12 mm</div>
-                </div>
-                <div className="bg-[#080D08] border border-[#1C291B] p-3 rounded-lg">
-                  <div className="text-white text-xs font-bold">Pipe T-Joint Saddle</div>
-                  <div className="text-[11px] text-[#7D8F7C] font-mono mt-0.5">True 3D Hyperbolic</div>
-                </div>
-                <div className="bg-[#080D08] border border-[#1C291B] p-3 rounded-lg">
-                  <div className="text-white text-xs font-bold">Confined Box Flange</div>
-                  <div className="text-[11px] text-[#7D8F7C] font-mono mt-0.5">Deep Pocket Void</div>
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <Link
-                  href="/planner"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#e97f01] hover:bg-[#d87401] text-white text-xs font-bold transition active:scale-95 shadow-md"
-                >
-                  <span>Open Interactive 3D Workcell</span>
-                  <ChevronRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Industrial Specs Preview Card */}
-            <div className="w-full lg:w-[440px] bg-[#070A07] border border-[#233522] rounded-xl p-6 shadow-2xl font-mono text-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-[#1A2619] pb-3">
-                <span className="text-[#8EA28D]">WELD CONTROLLER</span>
-                <span className="text-[#22C55E] flex items-center gap-1.5 font-bold">
-                  <span className="w-2 h-2 rounded-full bg-[#22C55E]" />
-                  ONLINE / SYNCED
-                </span>
-              </div>
-
-              <div className="space-y-2.5 text-[11px]">
-                <div className="flex justify-between">
-                  <span className="text-[#7D8F7C]">Process Mode</span>
-                  <span className="text-white font-semibold">MIG (GMAW) Fillet 45°</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#7D8F7C]">Wire Feed Speed</span>
-                  <span className="text-white font-semibold">8.5 m/min (AWS ER70S-6)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#7D8F7C]">Current / Voltage</span>
-                  <span className="text-white font-semibold">180 A / 22.5 V</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#7D8F7C]">Traverse Travel Speed</span>
-                  <span className="text-white font-semibold">6.5 mm/s</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#7D8F7C]">Standoff Approach Clearance</span>
-                  <span className="text-[#38BDF8] font-semibold">15.0 mm (Rapid G00)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#7D8F7C]">Substrate Air-Gap Check</span>
-                  <span className="text-[#22C55E] font-semibold">0.00 mm (100% Solid)</span>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-[#1A2619]">
-                <div className="w-full bg-[#121912] rounded-md h-2 overflow-hidden flex">
-                  <div className="bg-[#22C55E] h-full w-full" />
-                </div>
-                <div className="flex justify-between text-[10px] text-[#7D8F7C] mt-1.5">
-                  <span>Trajectory Safety Score</span>
-                  <span className="text-[#22C55E] font-bold">100% Collision-Free</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4-Stage Motion Pipeline Section */}
-      <section id="pipeline" className="px-6 sm:px-12 max-w-7xl mx-auto pb-24">
-        <div className="text-center space-y-3 mb-12">
-          <div className="inline-flex items-center gap-1.5 text-xs font-mono text-[#e97f01] font-bold uppercase">
-            <Compass className="w-4 h-4" />
-            <span>Autonomous Trajectory Architecture</span>
-          </div>
-          <h2 style={{ fontFamily: 'Onest, sans-serif' }} className="text-3xl font-extrabold text-white">
-            Deterministic 4-Stage Waypoint Pipeline
+      {/* Closing call to action */}
+      <section className="max-w-[1200px] mx-auto px-5 sm:px-10 pt-24 sm:pt-32 pb-16">
+        <div
+          className="rounded-[10px] px-6 sm:px-12 py-14 sm:py-16 flex flex-col md:flex-row md:items-center justify-between gap-8 border border-[#2B381F]"
+          style={{ background: 'linear-gradient(135deg, #030500 0%, #2B381F 60%, #455B32 100%)' }}
+        >
+          <h2
+            style={{ fontFamily: 'Onest, sans-serif' }}
+            className="text-[30px] sm:text-[40px] leading-[1.05] tracking-[-0.02em] font-normal max-w-[560px]"
+          >
+            Open a benchmark part and run your first weld.
           </h2>
-          <p className="text-sm text-[#8EA28D] max-w-2xl mx-auto">
-            Every planned seam computes an exact 4-point collision-free spatial envelope guaranteeing safe standoff approach, stable arc initiation, and crater-free weld conclusion.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* Stage 1 */}
-          <div className="bg-[#0C120C] border border-[#1A2619] p-6 rounded-xl relative space-y-3">
-            <div className="w-8 h-8 rounded-lg bg-[#38BDF8]/10 border border-[#38BDF8]/30 flex items-center justify-center text-[#38BDF8] font-mono font-bold text-xs">
-              01
-            </div>
-            <h3 className="text-white font-bold text-base">Approach Waypoint</h3>
-            <p className="text-xs text-[#7D8F7C] leading-relaxed">
-              Rapid traverse (G00) from home parking pose to safe standoff clearance offset along the surface normal vector.
-            </p>
-            <div className="font-mono text-[10px] text-[#38BDF8] pt-2">offset: +15mm normal</div>
-          </div>
-
-          {/* Stage 2 */}
-          <div className="bg-[#0C120C] border border-[#1A2619] p-6 rounded-xl relative space-y-3">
-            <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 border border-[#F59E0B]/30 flex items-center justify-center text-[#F59E0B] font-mono font-bold text-xs">
-              02
-            </div>
-            <h3 className="text-white font-bold text-base">Arc Strike Initiation</h3>
-            <p className="text-xs text-[#7D8F7C] leading-relaxed">
-              Descend to exact weld start coordinate, activate shielding gas pre-flow, ignite high-frequency arc, and initiate molten puddle.
-            </p>
-            <div className="font-mono text-[10px] text-[#F59E0B] pt-2">gas pre-flow: 0.5s</div>
-          </div>
-
-          {/* Stage 3 */}
-          <div className="bg-[#0C120C] border border-[#1A2619] p-6 rounded-xl relative space-y-3">
-            <div className="w-8 h-8 rounded-lg bg-[#22C55E]/10 border border-[#22C55E]/30 flex items-center justify-center text-[#22C55E] font-mono font-bold text-xs">
-              03
-            </div>
-            <h3 className="text-white font-bold text-base">Controlled Travel</h3>
-            <p className="text-xs text-[#7D8F7C] leading-relaxed">
-              Interpolated weld motion with constant linear velocity, synchronized wire feed, real-time bead deposition, and weave oscillation.
-            </p>
-            <div className="font-mono text-[10px] text-[#22C55E] pt-2">speed: 6.5 mm/s</div>
-          </div>
-
-          {/* Stage 4 */}
-          <div className="bg-[#0C120C] border border-[#1A2619] p-6 rounded-xl relative space-y-3">
-            <div className="w-8 h-8 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/30 flex items-center justify-center text-[#EF4444] font-mono font-bold text-xs">
-              04
-            </div>
-            <h3 className="text-white font-bold text-base">Retract & Crater Fill</h3>
-            <p className="text-xs text-[#7D8F7C] leading-relaxed">
-              Dwell for crater fill, burn-back wire, extinguish arc, maintain gas post-flow, and execute rapid traverse clearance retract.
-            </p>
-            <div className="font-mono text-[10px] text-[#EF4444] pt-2">offset: +15mm retract</div>
-          </div>
+          <Link href="/planner" className="ax-btn ax-btn-primary !h-11 !px-5 !text-[13px] shrink-0 group self-start md:self-auto">
+            Open the planner
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
         </div>
       </section>
 
-      {/* Industrial Capabilities Section */}
-      <section id="capabilities" className="px-6 sm:px-12 max-w-7xl mx-auto pb-24">
-        <div className="text-center space-y-3 mb-12">
-          <div className="inline-flex items-center gap-1.5 text-xs font-mono text-[#e97f01] font-bold uppercase">
-            <Cpu className="w-4 h-4" />
-            <span>Core Capabilities</span>
-          </div>
-          <h2 style={{ fontFamily: 'Onest, sans-serif' }} className="text-3xl font-extrabold text-white">
-            Engineered for Extreme Industrial Environments
-          </h2>
+      {/* Footer */}
+      <footer className="max-w-[1200px] mx-auto px-5 sm:px-10 py-10 border-t border-[#1D271C] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <ArmatrixLogo className="w-5 h-5" color="#e97f01" />
+          <span className="text-[13px] text-[#7D8F7C]">Armatrix Weld Seam Planner</span>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-[#0C120C] border border-[#1A2619] p-6 rounded-xl space-y-3">
-            <Layers className="w-6 h-6 text-[#e97f01]" />
-            <h3 className="text-white font-bold text-base">Topological Crease Detection</h3>
-            <p className="text-xs text-[#8EA28D] leading-relaxed">
-              Extract dihedral boundary angles across triangular STL meshes automatically. Detect and plan multi-perimeter weld seams with zero manual CAD clicking.
-            </p>
-          </div>
-
-          <div className="bg-[#0C120C] border border-[#1A2619] p-6 rounded-xl space-y-3">
-            <ShieldCheck className="w-6 h-6 text-[#22C55E]" />
-            <h3 className="text-white font-bold text-base">Substrate & Obstacle Verification</h3>
-            <p className="text-xs text-[#8EA28D] leading-relaxed">
-              Spatial raycasting identifies accidental air-gap draws through hollow voids and detects geometric collisions with surrounding bulkheads.
-            </p>
-          </div>
-
-          <div className="bg-[#0C120C] border border-[#1A2619] p-6 rounded-xl space-y-3">
-            <Flame className="w-6 h-6 text-[#F59E0B]" />
-            <h3 className="text-white font-bold text-base">Thermal Deposition Simulation</h3>
-            <p className="text-xs text-[#8EA28D] leading-relaxed">
-              Real-time visualization of glowing weld pool, dynamic molten metal deposition, active arc sparks, and metallic solidification.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Call to Action Banner */}
-      <section className="px-6 sm:px-12 max-w-7xl mx-auto pb-24">
-        <div className="bg-gradient-to-r from-[#172016] via-[#1F2C1E] to-[#172016] border border-[#2B3C2A] rounded-2xl p-10 sm:p-14 text-center space-y-6 shadow-2xl relative overflow-hidden">
-          <div className="relative z-10 space-y-4 max-w-2xl mx-auto">
-            <h2 style={{ fontFamily: 'Onest, sans-serif' }} className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Ready to Plan Autonomous Weld Trajectories?
-            </h2>
-            <p className="text-sm text-[#A4B5A3] leading-relaxed">
-              Experience the full 3D interactive workspace with real-time CAD model loading, trajectory simulation, and robotic code export.
-            </p>
-            <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
-              <Link
-                href="/planner"
-                className="flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white text-sm font-bold tracking-wide transition transform hover:-translate-y-0.5 active:translate-y-0 shadow-2xl shadow-[#e97f01]/40"
-              >
-                <span>Launch 3D Seam Planner</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
-                href="/docs"
-                className="flex items-center gap-2 px-6 py-4 rounded-xl bg-[#101710] hover:bg-[#162216] text-sm font-mono text-white border border-[#253624] transition active:scale-95"
-              >
-                <FileCode2 className="w-4 h-4 text-[#e97f01]" />
-                <span>View Job Spec</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Industrial Footer */}
-      <footer className="border-t border-[#162216] bg-[#070A07] py-12 px-6 sm:px-12">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-[#7D8F7C] font-mono">
-          <div className="flex items-center gap-3">
-            <ArmatrixLogo className="w-5 h-5 text-[#e97f01]" color="#e97f01" />
-            <span className="text-white font-bold tracking-wider">ARMATRIX ROBOTICS INC.</span>
-            <span>|</span>
-            <span>Autonomous Continuum Welding Systems</span>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <Link href="/planner" className="hover:text-white transition">3D Planner</Link>
-            <Link href="/docs" className="hover:text-white transition">Job Spec</Link>
-            <a
-              href="https://github.com/sparrowdex/armatrix_weld_seam_planner.git"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#e97f01] transition flex items-center gap-1"
-            >
-              <span>GitHub</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
+        <div className="flex items-center gap-6">
+          <Link href="/planner" className="text-[13px] text-[#7D8F7C] hover:text-[#F6F5EE] transition-colors">
+            Planner
+          </Link>
+          <Link href="/docs" className="text-[13px] text-[#7D8F7C] hover:text-[#F6F5EE] transition-colors">
+            Docs
+          </Link>
         </div>
       </footer>
     </div>

@@ -1,219 +1,362 @@
-import React from 'react';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { ArmatrixLogo } from '@/components/ui/ArmatrixLogo';
-import { ArrowLeft, BookOpen, Code, Cpu, Shield, Zap, FileJson, CheckCircle } from 'lucide-react';
 
-export default function DocsPage() {
-  return (
-    <div className="min-h-screen bg-[#070A07] text-[#DCE6DB] font-sans selection:bg-[#e97f01]/30">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-30 h-14 bg-[#0A0E0A]/90 backdrop-blur border-b border-[#1A2619] px-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <ArmatrixLogo className="w-6 h-6" color="#e97f01" />
-          <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-extrabold tracking-wider text-xs text-white">
-            ARMATRIX DOCS
-          </span>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#162516] text-[#22C55E] border border-[#223B21]">
-            v1.2.0 Spec
-          </span>
-        </div>
+const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
 
-        <div className="flex items-center gap-2">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#141E14] hover:bg-[#1D2A1C] text-xs font-mono text-[#A4B5A3] hover:text-white border border-[#223121] transition active:scale-95"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 text-[#8EA28D]" />
-            <span>Home</span>
-          </Link>
-          <Link
-            href="/planner"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#e97f01] to-[#b35400] text-white text-xs font-bold transition active:scale-95 shadow-md shadow-[#e97f01]/20"
-          >
-            <span>Launch 3D Planner →</span>
-          </Link>
-        </div>
-      </header>
+const TOC = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'frame', label: 'Coordinate frame' },
+  { id: 'structure', label: 'Job structure' },
+  { id: 'fields', label: 'Field reference' },
+  { id: 'motion', label: 'Motion per seam' },
+  { id: 'ingest', label: 'Controller example' },
+];
 
-      {/* Main Documentation Container */}
-      <main className="max-w-4xl mx-auto px-6 py-10 space-y-12">
-        {/* Hero Section */}
-        <div className="border-b border-[#1A2619] pb-8">
-          <div className="flex items-center gap-2 text-[#e97f01] text-xs font-mono font-bold tracking-wider uppercase mb-2">
-            <Cpu className="w-4 h-4" />
-            <span>Industrial Robotics Specification</span>
-          </div>
-          <h1 style={{ fontFamily: 'Onest, sans-serif' }} className="text-3xl font-extrabold text-white tracking-tight mb-3">
-            Armatrix Autonomous Weld Job Schema
-          </h1>
-          <p className="text-sm text-[#8EA28D] leading-relaxed">
-            Standardized trajectory and process payload engineered specifically for hyper-redundant continuum snake-arm manipulators operating inside hazardous, GPS-denied, and highly confined industrial geometries.
-          </p>
-        </div>
+type Field = { name: string; type: string; desc: string };
 
-        {/* Section 1: Architectural Overview */}
-        <section className="space-y-4">
-          <h2 style={{ fontFamily: 'Onest, sans-serif' }} className="text-xl font-bold text-white flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#e97f01]" />
-            1. Continuum Snake-Arm Architecture
-          </h2>
-          <p className="text-xs text-[#9BB09A] leading-relaxed">
-            Traditional industrial robots are rigid 6-axis articulated arms that cannot negotiate internal baffles, rib stiffeners, or tortuous pipe bends. Armatrix continuum manipulators feature 20+ motorized degrees of freedom, enabling whole-body obstacle avoidance and deep reach (up to 3500 mm).
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-            <div className="p-3.5 rounded-xl bg-[#0C120C] border border-[#1E2B1D]">
-              <span className="text-[#38BDF8] font-mono text-xs font-bold block mb-1">Confined Access Standoff</span>
-              <p className="text-[11px] text-[#7A8C79] leading-relaxed">
-                Normal approach and retract vectors ensure the snake arm never scrapes sidewalls or ribs on entry and exit.
-              </p>
-            </div>
-            <div className="p-3.5 rounded-xl bg-[#0C120C] border border-[#1E2B1D]">
-              <span className="text-[#22C55E] font-mono text-xs font-bold block mb-1">Thermal Heat-Sink Mitigation</span>
-              <p className="text-[11px] text-[#7A8C79] leading-relaxed">
-                Alternating skip-weld sequence prevents localized thermal accumulation and eliminates angular structural distortion.
-              </p>
-            </div>
-            <div className="p-3.5 rounded-xl bg-[#0C120C] border border-[#1E2B1D]">
-              <span className="text-[#e97f01] font-mono text-xs font-bold block mb-1">Deterministic IK Discretization</span>
-              <p className="text-[11px] text-[#7A8C79] leading-relaxed">
-                Cartesian waypoints discretized at 5 mm pitch are streamed directly to the continuum inverse kinematics (IK) solver.
-              </p>
-            </div>
-          </div>
-        </section>
+const FIELD_GROUPS: { title: string; fields: Field[] }[] = [
+  {
+    title: 'Job and part',
+    fields: [
+      { name: 'schema_version', type: 'string', desc: 'Schema version, currently "1.3.0".' },
+      { name: 'generator · created_at', type: 'string', desc: 'Tool that produced the job and an ISO-8601 timestamp.' },
+      { name: 'job_id', type: 'string', desc: 'Unique job identifier, e.g. "ARMX-WELD-MH82J9X".' },
+      { name: 'part.filename · part.units', type: 'string', desc: 'Source part name; units are always "mm".' },
+      { name: 'part.bounding_dimensions_mm', type: '{ x, y, z }', desc: 'Workpiece envelope, used for fixturing and reach checks.' },
+      { name: 'part.coordinate_frame', type: 'object', desc: 'Declares the frame every coordinate in the file uses (see Coordinate frame).' },
+      { name: 'part.mesh_integrity', type: 'object | null', desc: 'watertight flag and open_edges count from the STL edge check.' },
+    ],
+  },
+  {
+    title: 'Robot profile',
+    fields: [
+      { name: 'robot_controller_profile.kinematics', type: 'string', desc: '"Armatrix-Continuum-Snake-Arm".' },
+      { name: 'reach_envelope_max_mm', type: 'number', desc: 'Maximum reach of the arm: 3500 mm.' },
+      { name: 'rapid_traverse_speed_mm_s', type: 'number', desc: 'Non-welding move speed between seams: 120 mm/s.' },
+      { name: 'safe_plane_z_clearance_mm', type: 'number', desc: 'Clearance height for transit moves.' },
+      { name: 'tool_effector', type: 'object', desc: 'Torch model and nozzle configuration the job was planned for.' },
+    ],
+  },
+  {
+    title: 'Seam geometry',
+    fields: [
+      { name: 'seam_id · name', type: 'string', desc: 'Stable identifier (e.g. "SEAM-01") and the user-editable name.' },
+      { name: 'sequence_order', type: 'number', desc: 'Execution order, 1-based, as arranged for heat balance.' },
+      { name: 'start_coordinate · end_coordinate', type: '[x, y, z]', desc: 'Seam end points in the part frame (mm).' },
+      { name: 'length_mm', type: 'number', desc: 'Straight-line seam length.' },
+      { name: 'surface_normal', type: '[x, y, z]', desc: 'Unit joint normal: the fillet bisector or plate normal.' },
+      { name: 'torch_axis', type: '[x, y, z]', desc: 'Unit tool axis (weld point toward torch body) after tilt and lead: exactly what the simulator used.' },
+      { name: 'travel_direction', type: '[x, y, z]', desc: 'Unit vector from start to end. With torch_axis it fully defines the tool frame.' },
+      { name: 'approach_point', type: '[x, y, z]', desc: 'start_coordinate + torch_axis × approach distance (default 25 mm).' },
+      { name: 'retract_point', type: '[x, y, z]', desc: 'end_coordinate + torch_axis × retract distance (default 30 mm).' },
+      { name: 'waypoints', type: '[x, y, z][]', desc: 'Seam path sampled every 5 mm for the inverse kinematics solver.' },
+      { name: 'executable · air_gap_detected', type: 'boolean', desc: 'executable is false when the seam bridges open space. The controller must skip it.' },
+    ],
+  },
+  {
+    title: 'Seam process',
+    fields: [
+      { name: 'process', type: 'enum', desc: 'MIG, TIG or LASER.' },
+      { name: 'joint_type', type: 'enum', desc: 'FILLET, BUTT, LAP, CORNER or EDGE.' },
+      { name: 'torch_orientation', type: 'object', desc: 'lead_angle_deg (default 0°), tilt_angle_deg (default 45°), nozzle_type.' },
+      {
+        name: 'weld_parameters',
+        type: 'object',
+        desc: 'travel_speed_mm_s (12), current_amps (180), voltage_volts (24), wire_feed_m_min (6.5), shielding_gas_l_min (14), interpass_delay_sec (5), wire_diameter_mm (1.2).',
+      },
+    ],
+  },
+  {
+    title: 'Job summary',
+    fields: [
+      { name: 'total_seams · executable_seams', type: 'number', desc: 'All seams, and those the controller should run.' },
+      { name: 'skipped_seam_ids', type: 'string[]', desc: 'Non-manufacturable seams, excluded from every total below.' },
+      { name: 'total_weld_length_mm', type: 'number', desc: 'Sum of executable seam lengths.' },
+      { name: 'estimated_active_weld_time_sec', type: 'number', desc: 'Arc-on time: length ÷ travel speed, per seam.' },
+      { name: 'estimated_traverse_time_sec', type: 'number', desc: 'Retract to next approach at rapid traverse speed.' },
+      { name: 'estimated_cooling_delays_sec', type: 'number', desc: 'Interpass cooling between passes; none after the last.' },
+      { name: 'total_cycle_time_sec', type: 'number', desc: 'Arc + traverse + cooling.' },
+    ],
+  },
+];
 
-        {/* Section 2: Field-by-Field JSON Schema Specification */}
-        <section className="space-y-4">
-          <h2 style={{ fontFamily: 'Onest, sans-serif' }} className="text-xl font-bold text-white flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#22C55E]" />
-            2. Field-by-Field Schema Specification
-          </h2>
-          <p className="text-xs text-[#9BB09A]">
-            Every exported <code className="text-[#A3E635] bg-[#121A11] px-1.5 py-0.5 rounded">.json</code> file strictly conforms to this deterministic structure:
-          </p>
+const MOTION = [
+  { title: 'Rapid traverse', body: 'From the previous retract point to this seam’s approach point at 120 mm/s, arc off.' },
+  { title: 'Approach', body: 'Along torch_axis from approach_point down to start_coordinate. Shielding gas pre-flows.' },
+  { title: 'Arc on and weld', body: 'Follow the waypoints at travel speed with the torch held on torch_axis.' },
+  { title: 'Arc off', body: 'At end_coordinate the crater is filled and the arc is extinguished.' },
+  { title: 'Retract', body: 'Back out along torch_axis to retract_point, clear of walls, then wait interpass_delay_sec.' },
+];
 
-          <div className="overflow-x-auto rounded-xl border border-[#1E2B1D] bg-[#0A0F0A]">
-            <table className="w-full text-left border-collapse text-xs font-mono">
-              <thead>
-                <tr className="border-b border-[#1E2B1D] bg-[#0F160F] text-[#8EA28D]">
-                  <th className="p-3 font-semibold">JSON Field</th>
-                  <th className="p-3 font-semibold">Type</th>
-                  <th className="p-3 font-semibold">Description & Units</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#151F14] text-[#C2D1C1]">
-                <tr>
-                  <td className="p-3 text-[#e97f01] font-semibold">schema_version</td>
-                  <td className="p-3 text-[#7E8F7D]">string</td>
-                  <td className="p-3">Semantic versioning of the schema specification (e.g. &quot;1.2.0&quot;).</td>
-                </tr>
-                <tr>
-                  <td className="p-3 text-[#e97f01] font-semibold">job_id</td>
-                  <td className="p-3 text-[#7E8F7D]">string</td>
-                  <td className="p-3">Unique job session identifier (e.g. &quot;JOB-20261031-1402&quot;).</td>
-                </tr>
-                <tr>
-                  <td className="p-3 text-[#38BDF8] font-semibold">part.bounding_dimensions_mm</td>
-                  <td className="p-3 text-[#7E8F7D]">object [x, y, z]</td>
-                  <td className="p-3">Workpiece bounding box dimensions in true millimeters.</td>
-                </tr>
-                <tr>
-                  <td className="p-3 text-[#38BDF8] font-semibold">robot_controller_profile</td>
-                  <td className="p-3 text-[#7E8F7D]">object</td>
-                  <td className="p-3">Arm reach envelope (3500 mm), rapid traverse speed (120 mm/s), and safe clearance plane.</td>
-                </tr>
-                <tr>
-                  <td className="p-3 text-[#22C55E] font-semibold">seams[].seam_id</td>
-                  <td className="p-3 text-[#7E8F7D]">string</td>
-                  <td className="p-3">Unique identifier for the weld seam (e.g. &quot;SEAM-01&quot;).</td>
-                </tr>
-                <tr>
-                  <td className="p-3 text-[#22C55E] font-semibold">seams[].sequence_order</td>
-                  <td className="p-3 text-[#7E8F7D]">number</td>
-                  <td className="p-3">Execution index (1, 2, 3...) optimized for thermal distortion mitigation.</td>
-                </tr>
-                <tr>
-                  <td className="p-3 text-[#22C55E] font-semibold">seams[].approach_point</td>
-                  <td className="p-3 text-[#7E8F7D]">[x, y, z]</td>
-                  <td className="p-3">Standoff waypoint normal to seam start point (+25 mm standoff).</td>
-                </tr>
-                <tr>
-                  <td className="p-3 text-[#22C55E] font-semibold">seams[].retract_point</td>
-                  <td className="p-3 text-[#7E8F7D]">[x, y, z]</td>
-                  <td className="p-3">Withdrawal waypoint normal to seam end point (+30 mm standoff).</td>
-                </tr>
-                <tr>
-                  <td className="p-3 text-[#EAB308] font-semibold">seams[].torch_orientation</td>
-                  <td className="p-3 text-[#7E8F7D]">object</td>
-                  <td className="p-3">Lead angle (10°), tilt angle (45°), and nozzle profile (narrow deep-access).</td>
-                </tr>
-                <tr>
-                  <td className="p-3 text-[#F43F5E] font-semibold">seams[].weld_parameters</td>
-                  <td className="p-3 text-[#7E8F7D]">object</td>
-                  <td className="p-3">Travel speed (12 mm/s), current (180 A), voltage (24 V), wire feed (6.5 m/min), gas (14 L/min), interpass cooling delay (5 s).</td>
-                </tr>
-                <tr>
-                  <td className="p-3 text-[#A855F7] font-semibold">seams[].waypoints</td>
-                  <td className="p-3 text-[#7E8F7D]">Array&lt;[x, y, z]&gt;</td>
-                  <td className="p-3">High-resolution 3D spline trajectory sampled at 5 mm pitch for continuum IK solver.</td>
-                </tr>
-                <tr>
-                  <td className="p-3 text-[#A3E635] font-semibold">job_summary</td>
-                  <td className="p-3 text-[#7E8F7D]">object</td>
-                  <td className="p-3">Total seam count, total weld length (mm), estimated active weld time, traverse time, cooling time, and total cycle time (seconds).</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+const PYTHON_EXAMPLE = `import json
 
-        {/* Section 3: Ingestion Example */}
-        <section className="space-y-4">
-          <h2 style={{ fontFamily: 'Onest, sans-serif' }} className="text-xl font-bold text-white flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#38BDF8]" />
-            3. Armatrix Controller Ingestion Example (Python / ROS2)
-          </h2>
-          <p className="text-xs text-[#9BB09A]">
-            Below is an example showing how the Armatrix robot controller consumes the exported payload in a ROS2 trajectory action client:
-          </p>
-
-          <pre className="text-xs text-[#9DE09D] font-mono leading-relaxed p-4 bg-[#050705] rounded-xl border border-[#1A2619] overflow-x-auto">
-{`import json
-import rclpy
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-
-def execute_armatrix_weld_job(job_file_path: str):
-    with open(job_file_path, 'r') as f:
+def run_weld_job(path: str, arm) -> None:
+    with open(path) as f:
         job = json.load(f)
 
-    print(f"Loading Job: {job['job_id']} for Part: {job['part']['filename']}")
-    print(f"Kinematics Reach Envelope: {job['robot_controller_profile']['reach_envelope_max_mm']} mm")
+    # All coordinates: right-handed, +Y up, origin at the part centre on the table
+    arm.register_part_frame(job["part"]["coordinate_frame"])
 
-    for seam in job['seams']:
-        print(f"Executing {seam['seam_id']} ({seam['length_mm']} mm) - Process: {seam['process']}")
-        
-        # 1. Approach phase: Rapid traverse to standoff
-        approach_pt = seam['approach_point']
-        
-        # 2. Continuous 5mm waypoints passed to Continuum Snake IK solver
-        for wp in seam['waypoints']:
-            # joint_angles = snake_arm_ik_solver.solve(wp, seam['torch_orientation'])
-            pass
-            
-        # 3. Retract outward before transit
-        retract_pt = seam['retract_point']`}
-          </pre>
-        </section>
+    for seam in sorted(job["seams"], key=lambda s: s["sequence_order"]):
+        if not seam["executable"]:
+            continue  # air gap: never weld across open space
 
-        {/* Footer */}
-        <div className="pt-8 border-t border-[#1A2619] flex items-center justify-between text-xs text-[#7A8C79] font-mono">
-          <span>Armatrix Autonomous Weld Seam Planner v1.0</span>
-          <Link href="/" className="text-[#e97f01] hover:underline font-bold">
-            Open 3D Planner Workspace →
-          </Link>
-        </div>
-      </main>
+        tool = {"axis": seam["torch_axis"], "travel": seam["travel_direction"]}
+        params = seam["weld_parameters"]
+
+        arm.rapid_to(seam["approach_point"], tool)
+        arm.linear_to(seam["start_coordinate"], tool)
+        arm.arc_on(seam["process"], params)
+        arm.follow(seam["waypoints"], tool, speed=params["travel_speed_mm_s"])
+        arm.arc_off()
+        arm.linear_to(seam["retract_point"], tool)
+        arm.dwell(params["interpass_delay_sec"])`;
+
+function SectionHead({ index, title, intro }: { index: string; title: string; intro?: string }) {
+  return (
+    <div className="mb-8">
+      <div className="flex items-center gap-2">
+        <span className="ax-index">{index}</span>
+        <span className="ax-label">{title}</span>
+      </div>
+      {intro && <p className="mt-4 max-w-[640px] text-[15px] leading-[1.65] text-[#B4C2B3]">{intro}</p>}
     </div>
   );
 }
 
+export default function DocsPage() {
+  return (
+    <div className="min-h-screen bg-[#070A07] text-[#F6F5EE] select-text">
+      {/* Navigation */}
+      <header className="sticky top-0 z-30 bg-[#070A07]/85 backdrop-blur-md border-b border-[#141C14]">
+        <div className="max-w-[1200px] mx-auto px-5 sm:px-10 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <ArmatrixLogo className="w-6 h-6" color="#e97f01" />
+            <span style={{ fontFamily: 'Onest, sans-serif' }} className="font-semibold tracking-[0.14em] text-[12px]">
+              ARMATRIX
+            </span>
+            <span className="hidden sm:block h-4 w-px bg-[#253224]" />
+            <span className="hidden sm:block ax-label">Docs</span>
+          </Link>
+          <nav className="flex items-center gap-6">
+            <Link href="/" className="hidden sm:block ax-label hover:!text-[#F6F5EE] transition-colors">
+              Home
+            </Link>
+            <Link href="/planner" className="ax-btn ax-btn-primary !h-9 !px-4">
+              Open planner
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      <div className="max-w-[1200px] mx-auto px-5 sm:px-10 lg:grid lg:grid-cols-[200px_1fr] lg:gap-16">
+        {/* Table of contents */}
+        <aside className="hidden lg:block">
+          <nav className="sticky top-16 pt-14" aria-label="On this page">
+            <span className="ax-label">On this page</span>
+            <ol className="mt-5 border-l border-[#1D271C]">
+              {TOC.map((t, i) => (
+                <li key={t.id}>
+                  <a
+                    href={`#${t.id}`}
+                    className="flex items-baseline gap-3 -ml-px pl-4 py-2 border-l border-transparent hover:border-[#e97f01] text-[13px] text-[#7D8F7C] hover:text-[#F6F5EE] transition-colors"
+                  >
+                    <span className="ax-num text-[11px] text-[#4F5F4E]">{String(i + 1).padStart(2, '0')}</span>
+                    {t.label}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </aside>
+
+        <main className="min-w-0 pt-14 pb-24">
+          {/* Title */}
+          <div className="pb-14 border-b border-[#1D271C]">
+            <span className="ax-label">Weld job specification · Schema 1.3.0</span>
+            <h1
+              style={{ fontFamily: 'Onest, sans-serif' }}
+              className="mt-5 text-[38px] sm:text-[56px] leading-[0.98] tracking-[-0.02em] font-normal max-w-[760px]"
+            >
+              The weld job file, field by field.
+            </h1>
+            <p className="mt-6 max-w-[620px] text-[16px] leading-[1.65] text-[#B4C2B3]">
+              What the planner exports, how every coordinate is framed, and how an Armatrix snake-arm controller should
+              read it.
+            </p>
+          </div>
+
+          {/* 01 Overview */}
+          <section id="overview" className="scroll-mt-24 pt-16">
+            <SectionHead
+              index="01"
+              title="Overview"
+              intro="Rigid six-axis arms cannot thread past internal ribs, baffles or pipe bends. Armatrix continuum arms can, reaching up to 3500 mm into confined structures. This file gives them everything needed to weld once inside."
+            />
+            <dl className="grid md:grid-cols-3 border-t border-[#1D271C]">
+              {[
+                {
+                  k: 'Safe entry and exit',
+                  v: 'Approach and retract points sit out along the torch axis, so the arm never drags the torch along a wall.',
+                },
+                {
+                  k: 'Heat-balanced order',
+                  v: 'Seams carry an execution order that can alternate sides to limit distortion, with interpass cooling.',
+                },
+                {
+                  k: 'Ready for IK',
+                  v: 'Each seam has a full tool frame and 5 mm waypoints, so the solver does not have to infer anything.',
+                },
+              ].map((item, i) => (
+                <div key={item.k} className={`py-6 md:pr-6 ${i > 0 ? 'md:pl-6 md:border-l border-t md:border-t-0 border-[#1D271C]' : ''}`}>
+                  <dt style={{ fontFamily: 'Onest, sans-serif' }} className="text-[16px] font-medium">
+                    {item.k}
+                  </dt>
+                  <dd className="mt-2 text-[14px] leading-[1.6] text-[#7D8F7C]">{item.v}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          {/* 02 Coordinate frame */}
+          <section id="frame" className="scroll-mt-24 pt-20">
+            <SectionHead
+              index="02"
+              title="Coordinate frame"
+              intro="Every point and vector in the file uses one part frame, declared in part.coordinate_frame so the controller can register the part without guessing."
+            />
+            <dl className="border-t border-[#1D271C]">
+              {[
+                { k: 'Handedness', v: 'Right-handed' },
+                { k: 'Up axis', v: '+Y' },
+                { k: 'Origin', v: 'Part bounding-box centre in X and Z, at the part’s lowest point in Y (the table surface)' },
+                { k: 'Units', v: 'Millimetres, seconds, degrees, amperes, volts' },
+              ].map((row) => (
+                <div key={row.k} className="grid sm:grid-cols-[200px_1fr] gap-1 sm:gap-6 py-4 border-b border-[#1D271C]">
+                  <dt className="text-[13px] text-[#7D8F7C]">{row.k}</dt>
+                  <dd className="text-[14px]">{row.v}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          {/* 03 Structure */}
+          <section id="structure" className="scroll-mt-24 pt-20">
+            <SectionHead index="03" title="Job structure" intro="Four blocks at the top level. Seams are listed in execution order." />
+            <div className="rounded-[6px] border border-[#1D271C] bg-[#0A0E0A] overflow-hidden">
+              <div className="h-10 px-4 flex items-center border-b border-[#1D271C]">
+                <span className="ax-label">weld_job.json</span>
+              </div>
+              <pre style={{ fontFamily: MONO }} className="p-5 text-[12.5px] leading-[1.8] overflow-x-auto text-[#B4C2B3]">
+{`{
+  "schema_version": "1.3.0",
+  "job_id": "ARMX-WELD-…",
+  `}<span className="text-[#F6F5EE]">&quot;part&quot;</span>{`: { filename, units, bounding_dimensions_mm, coordinate_frame, mesh_integrity },
+  `}<span className="text-[#F6F5EE]">&quot;robot_controller_profile&quot;</span>{`: { kinematics, reach_envelope_max_mm, rapid_traverse_speed_mm_s, … },
+  `}<span className="text-[#F6F5EE]">&quot;job_summary&quot;</span>{`: { total_seams, executable_seams, skipped_seam_ids, …, total_cycle_time_sec },
+  `}<span className="text-[#e97f01]">&quot;seams&quot;</span>{`: [ { seam_id, torch_axis, approach_point, waypoints, weld_parameters, … } ]
+}`}
+              </pre>
+            </div>
+          </section>
+
+          {/* 04 Fields */}
+          <section id="fields" className="scroll-mt-24 pt-20">
+            <SectionHead index="04" title="Field reference" intro="Defaults in brackets are what a new seam starts with." />
+            <div className="flex flex-col gap-12">
+              {FIELD_GROUPS.map((group) => (
+                <div key={group.title}>
+                  <h3 style={{ fontFamily: 'Onest, sans-serif' }} className="text-[20px] font-medium mb-4">
+                    {group.title}
+                  </h3>
+                  <dl className="border-t border-[#1D271C]">
+                    {group.fields.map((f) => (
+                      <div
+                        key={f.name}
+                        className="grid md:grid-cols-[minmax(0,280px)_120px_1fr] gap-1 md:gap-6 py-4 border-b border-[#1D271C]"
+                      >
+                        <dt style={{ fontFamily: MONO }} className="text-[12.5px] text-[#F6F5EE] break-words">
+                          {f.name}
+                        </dt>
+                        <dd style={{ fontFamily: MONO }} className="text-[12px] text-[#e97f01]/85">
+                          {f.type}
+                        </dd>
+                        <dd className="text-[14px] leading-[1.6] text-[#B4C2B3]">{f.desc}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 05 Motion */}
+          <section id="motion" className="scroll-mt-24 pt-20">
+            <SectionHead
+              index="05"
+              title="Motion per seam"
+              intro="The controller runs the same five moves the simulator animates, for every executable seam in order."
+            />
+            <ol className="grid sm:grid-cols-2 lg:grid-cols-5 gap-x-6">
+              {MOTION.map((m, i) => (
+                <li key={m.title} className="border-t border-[#1D271C] pt-5 pb-8">
+                  <span className="ax-index">{String(i + 1).padStart(2, '0')}</span>
+                  <h3 style={{ fontFamily: 'Onest, sans-serif' }} className="mt-3 text-[16px] font-medium">
+                    {m.title}
+                  </h3>
+                  <p className="mt-2 text-[13.5px] leading-[1.6] text-[#7D8F7C]">{m.body}</p>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {/* 06 Ingest */}
+          <section id="ingest" className="scroll-mt-24 pt-16">
+            <SectionHead
+              index="06"
+              title="Controller example"
+              intro="How a controller might consume the file. The arm interface is illustrative; the field usage is exact."
+            />
+            <div className="rounded-[6px] border border-[#1D271C] bg-[#0A0E0A] overflow-hidden">
+              <div className="h-10 px-4 flex items-center justify-between border-b border-[#1D271C]">
+                <span className="ax-label">run_weld_job.py</span>
+                <span className="ax-label">Python</span>
+              </div>
+              <pre style={{ fontFamily: MONO }} className="p-5 text-[12.5px] leading-[1.75] overflow-x-auto text-[#B4C2B3]">
+                {PYTHON_EXAMPLE}
+              </pre>
+            </div>
+          </section>
+
+          {/* Next */}
+          <div className="mt-20 pt-10 border-t border-[#1D271C] flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <p style={{ fontFamily: 'Onest, sans-serif' }} className="text-[22px] sm:text-[26px] leading-[1.15] tracking-[-0.01em] max-w-[520px]">
+              Generate a real job file from a benchmark part.
+            </p>
+            <Link href="/planner" className="ax-btn ax-btn-primary !h-11 !px-5 !text-[13px] group self-start sm:self-auto">
+              Open the planner
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+        </main>
+      </div>
+
+      {/* Footer */}
+      <footer className="max-w-[1200px] mx-auto px-5 sm:px-10 py-10 border-t border-[#1D271C] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <ArmatrixLogo className="w-5 h-5" color="#e97f01" />
+          <span className="text-[13px] text-[#7D8F7C]">Armatrix Weld Seam Planner</span>
+        </div>
+        <div className="flex items-center gap-6">
+          <Link href="/" className="text-[13px] text-[#7D8F7C] hover:text-[#F6F5EE] transition-colors">
+            Home
+          </Link>
+          <Link href="/planner" className="text-[13px] text-[#7D8F7C] hover:text-[#F6F5EE] transition-colors">
+            Planner
+          </Link>
+        </div>
+      </footer>
+    </div>
+  );
+}

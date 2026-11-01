@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: 'Armatrix | Autonomous Robotic Weld Seam Planner',
   description: 'CAD/CAM Weld Seam Planning & Motion Control for Armatrix Snake-Arm Robots',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/images/logo/armatrix-symbol.svg',
   },
 };
 
