@@ -94,6 +94,8 @@ flowchart LR
 ### 7. Planner Controls
 The keyboard button next to Export shows these in the app. A short guided tour runs on the first visit and can be replayed from there.
 
+The planner also runs on tablets for viewing, auto-detection, parameters, simulation and export. Manual click-to-weld needs a mouse, because drawing a seam relies on precise clicks and right-drag orbiting while a start point is anchored.
+
 | Input | Action |
 | :--- | :--- |
 | Left or right drag | Orbit the camera. Right drag also works while drawing and keeps the anchored start point. |
@@ -188,7 +190,7 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
     "rapid_traverse_speed_mm_s": 120,
     "safe_plane_z_clearance_mm": 40,
     "tool_effector": {
-      "model": "Armatrix-Modular-Torch-MK3",
+      "model": "Generic-Robotic-Weld-Torch",
       "nozzle_configuration": "Narrow-Bottleneck-Deep-Access"
     }
   },
@@ -257,7 +259,7 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
 | `part.coordinate_frame` | Object | Right-handed, `+Y` up; origin at the part bounding-box centre in X/Z on the table surface (lowest Y). Every coordinate in the file is in this frame. |
 | `part.mesh_integrity` | Object \| null | `watertight` flag and `open_edges` count from the STL edge-manifold check. |
 | `robot_controller_profile` | Object | Continuum snake-arm parameters (3500mm reach, rapid speed, safe clearance plane). |
-| `robot_controller_profile.tool_effector` | Object | Torch model and nozzle configuration the job was planned for. |
+| `robot_controller_profile.tool_effector` | Object | Torch model and nozzle configuration the job was planned for. The model is a generic stand-in; the arm's real end-effector geometry and tool-centre-point offset belong to the controller's tool configuration. |
 | `job_summary` | Object | `total_seams`, `executable_seams` and `skipped_seam_ids`, then, for executable seams only: weld length, arc-on time, rapid traverse time (retract → next approach), interpass cooling (between passes, none after the final pass) and total cycle time. |
 | `seam_id` & `sequence_order` | String / Int | Unique identifier and execution order index for thermal distortion management. |
 | `name` / `length_mm` | String / Float | User-editable seam name and straight-line seam length in mm. |
@@ -286,8 +288,8 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
 ### Steps
 ```bash
 # 1. Clone repository
-git clone https://github.com/your-username/armatrix-weld-seam-planner.git
-cd armatrix-weld-seam-planner
+git clone https://github.com/sparrowdex/armatrix_weld_seam_planner.git
+cd armatrix_weld_seam_planner
 
 # 2. Install dependencies
 pnpm install

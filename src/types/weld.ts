@@ -130,7 +130,7 @@ export interface WeldJobExport {
     rapid_traverse_speed_mm_s: number;
     safe_plane_z_clearance_mm: number;
     tool_effector: {
-      model: 'Armatrix-Modular-Torch-MK3';
+      model: 'Generic-Robotic-Weld-Torch';
       nozzle_configuration: string;
     };
   };

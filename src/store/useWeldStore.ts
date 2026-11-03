@@ -619,7 +619,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
         rapid_traverse_speed_mm_s: s.rapidTraverseSpeed,
         safe_plane_z_clearance_mm: s.safePlaneZClearance,
         tool_effector: {
-          model: 'Armatrix-Modular-Torch-MK3',
+          model: 'Generic-Robotic-Weld-Torch',
           nozzle_configuration: s.nozzleType === 'narrow' ? 'Narrow-Bottleneck-Deep-Access' : s.nozzleType === 'laser' ? 'Laser-Optic-Coaxial' : 'Standard-Conical-MIG',
         },
       },
