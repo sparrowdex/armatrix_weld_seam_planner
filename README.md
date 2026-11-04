@@ -1,14 +1,21 @@
 # Armatrix — Autonomous Robotic Weld Seam Planner
 
-An industrial CAD/CAM web platform engineered for **autonomous robotic weld seam planning**, tailored specifically to the operational constraints of **Armatrix's hyper-redundant continuum snake-arm robots**.
+An industrial CAD/CAM web platform engineered for **autonomous robotic weld seam planning**, tailored specifically to the operational constraints of **Armatrix's hyper-redundant snake-arm robots**.
 
 Built by **Sreeja Das**.
+
+| | |
+| :--- | :--- |
+| **Live planner** | [armatrix-weld-seam-planner-gules.vercel.app](https://armatrix-weld-seam-planner-gules.vercel.app) (runs in the browser, no install) |
+| **Demo video** | [Watch the full workflow walkthrough](https://drive.google.com/file/d/1jQg1bqgj1vfCsZEpdHGzcx0194EBMaKV/view?usp=sharing): load, detect, configure, simulate, export |
+
+![The planner: part and seam tools on the left, the 3D viewport with the benchmark L-bracket on its fixture table, weld parameters and snake-arm kinematics on the right](docs/images/planner.png)
 
 ---
 
 ## 1. Project Overview & Operational Context
 
-Armatrix designs snake-like robotic manipulators (3–5 meter reach, 50–150 mm cross-section, 20+ degrees of freedom) engineered to enter ultra-confined, hazardous industrial environments (ship hull double bottoms, boiler tubes, pipelines, and nuclear heat exchangers) where human welders cannot physically fit.
+Armatrix builds snake-like robotic arms (3–5 m reach, 50–150 mm cross-section, real-time 24-DoF control) that enter confined, hazardous structures through existing manholes, nozzles and access ports, for shipbuilding and marine, oil and gas, and aerospace work. The arms are externally actuated, with no motors or electronics inside the arm body, so they can operate in explosive, flooded, irradiated and extreme-temperature environments where human welders cannot safely work. This planner uses the 3500 mm reach envelope from the assignment brief.
 
 Before an autonomous snake arm can weld inside a complex cavity, an engineer must:
 1. Ingest the structural CAD geometry (`.stl`).
@@ -18,6 +25,8 @@ Before an autonomous snake arm can weld inside a complex cavity, an engineer mus
 5. Export a deterministic, machine-readable **Weld Job JSON** consumed by the robot's inverse kinematics (IK) motion controller.
 
 This application provides an end-to-end, browser-based workflow fulfilling these operational requirements.
+
+![The landing page: "Plan every weld before the arm moves", with an animated line drawing of the L-bracket tracing its weld seams](docs/images/homepage.png)
 
 ---
 
@@ -185,7 +194,7 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
     "mesh_integrity": { "watertight": true, "open_edges": 0 }
   },
   "robot_controller_profile": {
-    "kinematics": "Armatrix-Continuum-Snake-Arm",
+    "kinematics": "Armatrix-Snake-Arm",
     "reach_envelope_max_mm": 3500,
     "rapid_traverse_speed_mm_s": 120,
     "safe_plane_z_clearance_mm": 40,
@@ -258,7 +267,7 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
 | `part.import_rotation_deg` | Object | Quarter-turn rotation (`x`, `z` in degrees) applied to an uploaded STL to stand it upright before planning. All coordinates are after this rotation. |
 | `part.coordinate_frame` | Object | Right-handed, `+Y` up; origin at the part bounding-box centre in X/Z on the table surface (lowest Y). Every coordinate in the file is in this frame. |
 | `part.mesh_integrity` | Object \| null | `watertight` flag and `open_edges` count from the STL edge-manifold check. |
-| `robot_controller_profile` | Object | Continuum snake-arm parameters (3500mm reach, rapid speed, safe clearance plane). |
+| `robot_controller_profile` | Object | Snake-arm parameters (3500mm reach, rapid speed, safe clearance plane). |
 | `robot_controller_profile.tool_effector` | Object | Torch model and nozzle configuration the job was planned for. The model is a generic stand-in; the arm's real end-effector geometry and tool-centre-point offset belong to the controller's tool configuration. |
 | `job_summary` | Object | `total_seams`, `executable_seams` and `skipped_seam_ids`, then, for executable seams only: weld length, arc-on time, rapid traverse time (retract → next approach), interpass cooling (between passes, none after the final pass) and total cycle time. |
 | `seam_id` & `sequence_order` | String / Int | Unique identifier and execution order index for thermal distortion management. |

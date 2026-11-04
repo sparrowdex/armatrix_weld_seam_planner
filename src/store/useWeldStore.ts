@@ -614,7 +614,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
           : null,
       },
       robot_controller_profile: {
-        kinematics: 'Armatrix-Continuum-Snake-Arm',
+        kinematics: 'Armatrix-Snake-Arm',
         reach_envelope_max_mm: REACH_ENVELOPE_MM,
         rapid_traverse_speed_mm_s: s.rapidTraverseSpeed,
         safe_plane_z_clearance_mm: s.safePlaneZClearance,

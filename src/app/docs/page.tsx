@@ -33,7 +33,7 @@ const FIELD_GROUPS: { title: string; fields: Field[] }[] = [
   {
     title: 'Robot profile',
     fields: [
-      { name: 'robot_controller_profile.kinematics', type: 'string', desc: '"Armatrix-Continuum-Snake-Arm".' },
+      { name: 'robot_controller_profile.kinematics', type: 'string', desc: '"Armatrix-Snake-Arm".' },
       { name: 'reach_envelope_max_mm', type: 'number', desc: 'Maximum reach of the arm: 3500 mm.' },
       { name: 'rapid_traverse_speed_mm_s', type: 'number', desc: 'Non-welding move speed between seams: 120 mm/s.' },
       { name: 'safe_plane_z_clearance_mm', type: 'number', desc: 'Clearance height for transit moves.' },
@@ -194,7 +194,7 @@ export default function DocsPage() {
             <SectionHead
               index="01"
               title="Overview"
-              intro="Rigid six-axis arms cannot thread past internal ribs, baffles or pipe bends. Armatrix continuum arms can, reaching up to 3500 mm into confined structures. This file gives them everything needed to weld once inside."
+              intro="Rigid six-axis arms cannot thread past internal ribs, baffles or pipe bends. Armatrix snake arms can, entering through manholes and access ports to reach deep into confined structures. This file gives them everything needed to weld once inside."
             />
             <dl className="grid md:grid-cols-3 border-t border-[#1D271C]">
               {[

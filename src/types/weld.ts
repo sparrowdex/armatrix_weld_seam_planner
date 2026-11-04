@@ -125,7 +125,7 @@ export interface WeldJobExport {
     } | null;
   };
   robot_controller_profile: {
-    kinematics: 'Armatrix-Continuum-Snake-Arm';
+    kinematics: 'Armatrix-Snake-Arm';
     reach_envelope_max_mm: number;
     rapid_traverse_speed_mm_s: number;
     safe_plane_z_clearance_mm: number;

@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Seams shorter than 2 mm were silently discarded on small parts.
+- Export `robot_controller_profile.kinematics` is now `Armatrix-Snake-Arm`, and the docs describe the arm with the specifications Armatrix publishes.
 
 ## [1.7.0] - 2026-11-01
 
