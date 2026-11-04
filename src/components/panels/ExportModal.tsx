@@ -54,14 +54,14 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
             <div>
               <div className="flex items-center gap-2">
                 <h2 style={{ fontFamily: 'Onest, sans-serif' }} className="text-sm font-bold text-white tracking-wide">
-                  EXPORT ROBOTIC WELD JOB JSON
+                  EXPORT WELD JOB
                 </h2>
                 <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-[#172616] text-[#22C55E] border border-[#233D22]">
                   v1.4.0 Schema
                 </span>
               </div>
               <p className="text-[11px] text-[#7E8F7D] mt-0.5">
-                Standardized trajectory payload consumed by Armatrix snake-arm kinematics solvers
+                Job file for the robot controller: seams, torch directions, waypoints and cycle time
               </p>
             </div>
           </div>
@@ -72,16 +72,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono rounded bg-[#141E14] hover:bg-[#1D2C1C] text-[#8EA28D] hover:text-white border border-[#223321] transition"
-              title="Open full schema specification in new tab"
+              title="Open the field-by-field documentation in a new tab"
             >
-              <span>Schema Documentation</span>
+              <span>Field documentation</span>
               <ExternalLink className="w-3.5 h-3.5 text-[#e97f01]" />
             </a>
 
             <button
               onClick={onClose}
               className="p-1.5 hover:bg-[#1C271B] rounded-lg text-[#7E8F7D] hover:text-white transition"
-              title="Close modal"
+              title="Close"
             >
               <X className="w-4 h-4" />
             </button>
@@ -100,7 +100,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
           <div className="px-4 py-2.5 bg-[#261305] border-t border-[#F59E0B]/50 text-[#FCD34D] text-xs font-mono flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-[#F59E0B] shrink-0" />
             <span>
-              NON-MANUFACTURABLE SEAMS DETECTED: One or more seams bridge open air with no substrate. Review before transferring to robot controller.
+              Some seams cross open air and cannot be welded. They are marked "executable": false and left out of the totals.
             </span>
           </div>
         )}

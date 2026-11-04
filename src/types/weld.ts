@@ -100,7 +100,8 @@ export interface WeldSeamExport {
 
 export interface WeldJobExport {
   schema_version: '1.4.0';
-  generator: 'Armatrix Autonomous Seam Planner v1.0';
+  /** App name and release version, e.g. "Armatrix Weld Seam Planner 1.9.0". */
+  generator: string;
   job_id: string;
   created_at: string;
   part: {

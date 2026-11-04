@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { REACH_ENVELOPE_MM } from '@/utils/reach';
+import { APP_NAME, APP_VERSION } from '@/appVersion';
 import { getEffectiveTorchVector } from '@/utils/torchKinematics';
 import { create } from 'zustand';
 import { PartMetadata, Vector3D, WeldParameters, WeldSeam, ViewportMode, WeldJobExport, WeldSeamExport, TorchNozzleType } from '@/types/weld';
@@ -592,7 +593,7 @@ export const useWeldStore = create<WeldState>((set, get) => ({
 
     const jobExport: WeldJobExport = {
       schema_version: '1.4.0',
-      generator: 'Armatrix Autonomous Seam Planner v1.0',
+      generator: `${APP_NAME} ${APP_VERSION}`,
       job_id: `ARMX-WELD-${Date.now().toString(36).toUpperCase()}`,
       created_at: new Date().toISOString(),
       part: {

@@ -16,7 +16,7 @@ const STEPS = [
   },
   {
     title: 'Find the seams',
-    body: 'Auto-detect creases from the mesh, or click two points to place a seam by hand. Paths over open air are flagged.',
+    body: 'Auto-detect finds inside corners and lines where parts meet, or click two points to place a seam by hand. Paths over open air are flagged.',
   },
   {
     title: 'Set the process',
@@ -33,14 +33,15 @@ const STEPS = [
 ];
 
 const EXPORT_POINTS = [
-  'Tool axis and travel direction per seam, exactly as simulated',
-  'Approach and retract standoffs that keep the torch clear of walls',
-  'Non-manufacturable seams flagged and excluded from the run',
-  'Cycle time split into arc, rapid traverse and interpass cooling',
+  'The torch direction and travel direction for every seam, exactly as simulated',
+  'Approach and retract points, so the torch moves straight in and out',
+  'Seams that cannot be welded are flagged and left out of the run',
+  'Cycle time split into welding, travel between seams and cooling',
 ];
 
 const JSON_SAMPLE = `{
   "seam_id": "SEAM-01",
+  "process": "MIG",
   "joint_type": "FILLET",
   "start_coordinate": [-26, 14, -31],
   "end_coordinate": [26, 14, -31],
@@ -48,7 +49,6 @@ const JSON_SAMPLE = `{
   "approach_point": [-26, 31.68, -13.32],
   "executable": true,
   "weld_parameters": {
-    "process": "MIG",
     "travel_speed_mm_s": 12,
     "current_amps": 180,
     "voltage_volts": 24

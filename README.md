@@ -1,6 +1,6 @@
-# Armatrix — Autonomous Robotic Weld Seam Planner
+# Armatrix — Weld Seam Planner
 
-An industrial CAD/CAM web platform engineered for **autonomous robotic weld seam planning**, tailored specifically to the operational constraints of **Armatrix's hyper-redundant snake-arm robots**.
+A browser-based tool for planning robotic welds on CAD parts, built around **Armatrix's snake-arm robots**. You load a part, mark the seams to weld, set the welding process, watch a simulated torch carry out the job, and export a job file for the robot's controller.
 
 Built by **Sreeja Das**.
 
@@ -13,108 +13,94 @@ Built by **Sreeja Das**.
 
 ---
 
-## 1. Project Overview & Operational Context
+## 1. Project Overview
 
-Armatrix builds snake-like robotic arms (3–5 m reach, 50–150 mm cross-section, real-time 24-DoF control) that enter confined, hazardous structures through existing manholes, nozzles and access ports, for shipbuilding and marine, oil and gas, and aerospace work. The arms are externally actuated, with no motors or electronics inside the arm body, so they can operate in explosive, flooded, irradiated and extreme-temperature environments where human welders cannot safely work. This planner uses the 3500 mm reach envelope from the assignment brief.
+Armatrix builds snake-like robotic arms (3–5 m reach, 50–150 mm cross-section, real-time 24-DoF control) that enter confined, hazardous structures through existing manholes, nozzles and access ports, for shipbuilding and marine, oil and gas, and aerospace work. The arms are externally actuated, with no motors or electronics inside the arm body, so they can work in explosive, flooded, irradiated and extreme-temperature environments where people cannot safely weld. This planner uses the 3500 mm reach from the assignment brief.
 
-Before an autonomous snake arm can weld inside a complex cavity, an engineer must:
-1. Ingest the structural CAD geometry (`.stl`).
-2. Identify seam trajectories and attack angles (surface normals).
-3. Specify welding parameters (MIG/TIG/Laser, travel speed, amperage, voltage, wire feed, shielding gas).
-4. Sequence seams to minimize thermal heat distortion and prevent internal arm self-collisions.
-5. Export a deterministic, machine-readable **Weld Job JSON** consumed by the robot's inverse kinematics (IK) motion controller.
+Before a robot can weld a part, someone has to:
+1. Load the part's CAD geometry (`.stl`).
+2. Decide where the seams are and which way the torch should point at each one.
+3. Choose the welding settings (process, travel speed, current, voltage, wire feed, shielding gas).
+4. Put the seams in a sensible order, so heat is spread out and the part does not warp.
+5. Hand the robot's controller a precise, machine-readable job file.
 
-This application provides an end-to-end, browser-based workflow fulfilling these operational requirements.
+This app covers all five steps in one place, in the browser.
 
 ![The landing page: "Plan every weld before the arm moves", with an animated line drawing of the L-bracket tracing its weld seams](docs/images/homepage.png)
 
 ---
 
-## 2. Core Features Built
+## 2. Features
 
-### 1. Robust 3D CAD Ingestion (.STL)
-* Supports both **Binary and ASCII STL** formats.
-* Custom file upload via the header's **Upload STL** file picker.
-* **Pre-bundled Industrial Benchmark Models** (Structural L-Bracket, Pipe T-Joint, Box Flange) for immediate out-of-the-box evaluation without needing external files.
-* Automatic geometric centering, ground-plane alignment, vertex normal re-computation, and bounding box telemetry (`W × H × D mm`, triangle count).
-* **Orientation control**: STL has no notion of "up", so Z-up exports can arrive lying on their side. Uploaded parts can be turned in 90° steps about X or Z (Shift+click turns the other way); the part re-seats on the table and the rotation is recorded in the export.
-* **Mesh integrity check**: vertices are welded by position and every edge is counted. A part is marked **Watertight** when every edge is shared by two triangles, or **Open mesh** (with the open-edge count) when the surface has holes that could make crease detection unreliable. Edges shared by more than two triangles, where separate bodies touch in a welded assembly, are reported but tolerated.
+### 1. Loading parts (STL)
+* Reads both **binary and ASCII** STL files, from the **Upload STL** button.
+* Three **built-in benchmark parts** (Structural L-Bracket, Pipe T-Joint, Box Flange) so the app can be tried without any files.
+* Every part is centred, placed on the fixture table and measured (`W × H × D mm` and triangle count).
+* **Orientation**: STL files do not record which way is up, so parts exported from tools that use Z as up can arrive lying on their side. Uploaded parts can be turned in 90° steps about X or Z (Shift+click turns the other way). The rotation is recorded in the export.
+* **Watertight check**: the app checks whether the part's surface is fully closed. A closed part shows **Watertight**; a part with holes shows **Open mesh**, because holes can confuse seam detection.
+* **Units hint**: a part smaller than 5 mm or larger than 50 m across is probably in the wrong units (for example metres instead of millimetres), and the app says so.
 
-### 2. Dual-Mode Seam Planning
-* **Autonomous Crease Detection**:
-  * Algorithmic dihedral angle crease detection analyzing adjacent triangle face normals across the mesh topology.
-  * Identifies 90° fillet and acute weld joints with automatic surface normal bisector calculation.
-  * **Pipe T-joint saddle**: generated from the analytic branch/header intersection curve `y(θ) = 36 + √(25² − z²)` as 12 segments of 30°. Every vertex lies on a facet edge of the branch mesh, and each segment gets its own torch normal: the bisector of the branch's outward radial and the header's outward surface normal.
-* **Air-gap substrate validation**: seams that bridge open space are flagged non-manufacturable while drawing, in the seam list and in the export (`air_gap_detected`).
-* **Interactive Point-to-Point Snapping**:
-  * Precision raycasting directly on the 3D mesh surface.
-  * Click Point 1 (Start) → Click Point 2 (End) to create calibrated weld bead paths.
-  * Automatic surface normal derivation at the hit face to establish the torch approach vector.
+### 2. Defining seams
+* **Auto-detect** looks for real weld joints on uploaded parts:
+  * **inside corners**, where two faces meet like the corner of a box seen from inside (a classic fillet weld), and
+  * **contact lines**, where one part sits on another, such as an upright plate standing on a base plate.
+  * Plain outside edges of a single solid piece are not reported, because there is nothing to join. Edges resting on the table are skipped, because the torch cannot reach underneath a part sitting on a table.
+* For the three **benchmark parts**, auto-detect uses seams placed by hand for those exact shapes, with clearance from walls already worked out. The pipe T-joint seam follows the real curve where the two pipes meet, as 12 short segments.
+* **Manual click-to-weld**: click a start point and an end point on the part. The cursor snaps to nearby corners, existing seam ends and straight lines along X, Y or Z.
+* **Air-gap check**: a seam that crosses open air (no metal underneath part of its path) is flagged as not weldable, while drawing, in the seam list and in the export.
 
-### 3. Comprehensive Welding Parameter Engineering
-* **Process Selection**: MIG (GMAW), TIG (GTAW), and Laser Welding.
-* **Joint Geometry**: Fillet, Butt, Lap, Corner, and Edge joints.
-* **Electrical & Motion Controls**:
-  * Travel Speed (`mm/s`)
-  * Welding Current (`Amperes`)
-  * Arc Voltage (`Volts`)
-  * Wire Feed Speed (`m/min`)
-  * Shielding Gas Flow (`L/min`)
-* **Torch Attack Angles**: Adjustable Lead Angle and Tilt Angle relative to the local surface normal vector.
-* **Standoff Clearance**: Configurable Approach Height and Retract Height in millimeters.
+### 3. Welding settings
+* **Process**: MIG, TIG or laser.
+* **Joint type**: fillet, butt, lap, corner or edge.
+* **Settings**: travel speed (`mm/s`), current (`A`), voltage (`V`), wire feed speed (`m/min`), shielding gas flow (`L/min`) and wire diameter.
+* **Torch angles**: tilt (sideways across the seam) and lead (forwards or backwards along the seam).
+* **Approach and retract distances**: how far back the torch starts before moving in, and how far it backs out afterwards.
 
-### 4. Thermal Distortion Management & Sequencing
-* Reorder seam execution order (Move Up / Move Down) to alternate weld passes across parts and balance thermal expansion.
-* **Interpass Cooling Delay**: Configurable cooling duration between seams to prevent thin metal buckling.
-* Reverse travel direction (swap Start ⇄ End coordinates) with a single click.
+### 4. Seam order and heat
+* Move seams up or down the list, or reverse a seam's direction, with one click.
+* **Optimize order** alternates seams from side to side so heat is spread across the part.
+* **Interpass cooling**: a pause between seams so the metal can cool before the next weld.
 
-### 5. High-Fidelity 3D Simulation Engine & 4-Waypoint Trajectory Pipeline
-* Binzel-style robotic gooseneck MIG torch (chrome gas nozzle, copper contact tip and wire stick-out at the arc point), scaled about 1:3 to fit the benchmark parts' gusset bays.
-* **The 4-Stage Collision-Free Trajectory Pipeline**:
+### 5. Simulation
+* A simplified robotic MIG torch (gooseneck, gas nozzle, contact tip and wire). It is modelled smaller than a full-size torch, about a third, so it fits between the benchmark bracket's gussets.
+* Each seam is welded in four moves:
 
 ```mermaid
 flowchart LR
-    A["1. Approach point<br/>blue dot in air"] -- "dashed standoff line" --> B["2. Arc ignition<br/>blue dot on metal"]
-    B -- "weld along the seam" --> C["3. Arc cutoff<br/>red dot on metal"]
-    C -- "dashed retract line" --> D["4. Retract point<br/>red dot in air"]
+    A["1. Approach point<br/>blue dot in air"] -- "moves straight in" --> B["2. Arc starts<br/>seam start"]
+    B -- "welds along the seam" --> C["3. Arc stops<br/>seam end"]
+    C -- "backs straight out" --> D["4. Retract point<br/>red dot in air"]
 ```
 
-```
-[1. Approach Point]        [2. Arc Ignition]              [3. Arc Cutoff]         [4. Retract Point]
-  (Blue Dot in Air)          (Blue Dot on Metal)            (Red Dot on Metal)       (Red Dot in Air)
-         ○ -------------------------> ● =========================> ● -------------------------> ○
-            Dashed Standoff Line        Active Seam Arc Travel        Dashed Retract Line
-```
+* Between seams the torch makes a fast move at 120 mm/s, from one seam's retract point to the next seam's approach point.
+* Approach and retract follow the torch's own direction, so the torch moves in and out in a straight line instead of sliding along the part.
+* While welding, the bead appears behind the torch, glows and cools, sparks fly off the arc (most for MIG, few for laser, almost none for TIG) and the plate darkens slightly near the weld before fading back.
+* Controls for play, pause, reset, stepping between seams and 1×, 2× or 5× speed. Optional arc sound, muted by default.
+* **Seams that cannot be welded are never faked**: Run All skips air-gap seams and says so, and simulating one on its own does a "dry run" with the arc off and no bead.
 
-* Animated simulation executing:
-  1. **Rapid Traverse**: Moves from previous retract point to next approach point at 120 mm/s.
-  2. **Safe Approach**: Descends along the surface normal vector to touch off at the seam start point.
-  3. **Active Arc Welding**: Travels along the seam depositing a metallic bead. Arc lighting is a blue-white arc column plus a warm molten-pool light, with smoothed flicker, arc-strike ramp-up and crater fade-out. Ballistic spatter particles fly off the arc and fall under gravity (heavy for MIG, light for laser, almost none for TIG).
-  4. **Retract**: Pulls outward along the surface normal to safe clearance height.
-* Simulation timeline HUD with Play/Pause/Reset, seam stepping, speed multipliers (1×, 2×, 5×), and phase status indicators.
-* **Non-manufacturable seams are never welded**: *Run All* skips air-gap seams and shows a notice. Simulating one on its own performs an arc-off **dry run** (no bead, no arc, never marked welded) so the user can see the invalid path.
+### 6. Reach, cycle time and display
+* **Reach check**: the part's size (corner to corner) is compared with the 3500 mm reach, showing *Within reach* or *Exceeds reach*.
+* **Cycle time**: arc time (seam length ÷ travel speed) + travel time between seams at 120 mm/s + cooling pauses.
+* Camera presets (ISO, Top, Front, Side) and display layers: fixture table, X-ray (see-through part), approach and retract vectors, wireframe and bounding box.
+* On-screen drawing aids (markers, seam lines, arrows, snapping) scale with the part, so very small and very large parts stay usable. The torch, bead and sparks always stay real size.
+* Collapsible side panels. When the parameters panel is collapsed, a small *seam in focus* card keeps the selected seam's settings visible.
+* Brand style taken from armatrix.com: orange `#E97F01` as the highlight colour, **Onest** for headings and labels, **42dot Sans** for body text.
 
-### 6. Armatrix Brand & Industrial Ergonomics
-* Armatrix brand system (from armatrix.com): Bright Discovery orange `#E97F01` used only as a signal, dark forest and revolution-green surfaces, **Onest** for headings and labels, **42dot Sans** for body text.
-* CAD HUD overlays, coordinate readouts, camera view presets (ISO, Top, Front, Side), and display layers (fixture table, ghost X-ray, approach vectors, facet wireframe, bounds).
-* **Reach check** computed from the loaded part: its bounding-box diagonal against the 3500 mm snake-arm envelope (*Within reach* / *Exceeds reach*).
-* Collapsible side panels with edge tabs. When the parameters panel is collapsed, a translucent *seam in focus* card keeps the selected seam's settings visible.
-
-### 7. Planner Controls
+### 7. Controls
 The keyboard button next to Export shows these in the app. A short guided tour runs on the first visit and can be replayed from there.
 
-The planner also runs on tablets for viewing, auto-detection, parameters, simulation and export. Manual click-to-weld needs a mouse, because drawing a seam relies on precise clicks and right-drag orbiting while a start point is anchored.
+The planner also works on tablets for viewing, auto-detect, settings, simulation and export. Manual click-to-weld needs a mouse, because drawing a seam uses precise clicks and right-drag to rotate the view.
 
 | Input | Action |
 | :--- | :--- |
-| Left or right drag | Orbit the camera. Right drag also works while drawing and keeps the anchored start point. |
+| Left or right drag | Rotate the view. Right drag also works while drawing and keeps the start point. |
 | Scroll | Zoom |
 | Click a seam | Select it and focus the camera on it |
 | Double-click a seam name | Rename it |
 | `Ctrl` + `Z` | Undo the last seam change |
 | `Delete` | Delete the selected seam |
-| `Esc` | Drop the anchored point, leave click-to-weld, or deselect |
-| Arrow keys | Orbit the view in 15° steps, including while drawing a seam |
+| `Esc` | Drop the start point, leave click-to-weld, or deselect |
+| Arrow keys | Rotate the view in 15° steps, including while drawing a seam |
 | `+` / `-` | Zoom in and out |
 | `F` | Frame the selected seam |
 | `Home` | Reset to the ISO view |
@@ -122,60 +108,72 @@ The planner also runs on tablets for viewing, auto-detection, parameters, simula
 
 ---
 
-## 3. Architecture & Key Design Decisions
+## 3. How It Is Built
 
 ```
 armatrix-weld-seam-planner/
 ├── src/
 │   ├── app/
-│   │   ├── globals.css         # Tailwind CSS styling & custom CAD scrollbars
-│   │   ├── layout.tsx          # App shell, metadata, and dark theme
-│   │   ├── page.tsx            # Launch page
-│   │   ├── planner/page.tsx    # Planner workbench layout & keyboard shortcuts
-│   │   └── docs/page.tsx       # Documentation page
+│   │   ├── page.tsx              # Landing page
+│   │   ├── planner/page.tsx      # Planner layout and keyboard shortcuts
+│   │   ├── docs/page.tsx         # Job file documentation page
+│   │   ├── layout.tsx            # App shell and page metadata
+│   │   └── globals.css           # Styles and shared UI building blocks
 │   ├── components/
 │   │   ├── viewport/
-│   │   │   └── ViewportCanvas.tsx # Three.js WebGL scene, OrbitControls, Raycaster, Torch 3D
+│   │   │   ├── ViewportCanvas.tsx    # 3D scene: part, seams, torch, simulation
+│   │   │   ├── ViewportOverlays.tsx  # On-screen labels, seam-in-focus card, banners
+│   │   │   └── torchModel.ts         # 3D model of the torch
 │   │   └── panels/
-│   │       ├── Header.tsx      # Benchmarks, STL upload, Camera presets, View toggles
-│   │       ├── SidebarLeft.tsx # Part telemetry, Seam sequence list, Auto-detect
-│   │       ├── SidebarRight.tsx# Welding parameters, Torch angles, Armatrix Kinematics
-│   │       ├── SimulationHUD.tsx# Playback transport, Phase badges, Speed controls
-│   │       └── ExportModal.tsx # Formatted JSON viewer & interactive schema documentation
+│   │       ├── Header.tsx            # Part picker, upload, view presets, display layers
+│   │       ├── SidebarLeft.tsx       # Part info, seam tools, seam list
+│   │       ├── SidebarRight.tsx      # Weld settings, torch angles, reach and cycle time
+│   │       ├── SimulationHUD.tsx     # Play, pause, speed and phase
+│   │       ├── ExportModal.tsx       # JSON viewer with copy and download
+│   │       ├── ShortcutsPanel.tsx    # Controls reference
+│   │       └── OnboardingTour.tsx    # First-visit guided tour
 │   ├── store/
-│   │   └── useWeldStore.ts     # Central Zustand reactive state & JSON export generator
+│   │   └── useWeldStore.ts       # App state and the JSON export
 │   ├── types/
-│   │   └── weld.ts             # Domain models (WeldSeam, Parameters, RobotExport)
+│   │   └── weld.ts               # Data types (seams, settings, export)
 │   └── utils/
-│       ├── seamDetector.ts     # Dihedral angle crease detection algorithm
-│       ├── substrateValidator.ts # Air-gap (no substrate) detection
-│       ├── meshIntegrity.ts    # Watertight / open-edge mesh check
-│       └── reach.ts            # Part vs 3500 mm reach envelope
-└── public/
-    └── models/                 # Pre-generated STL benchmark parts (bracket, pipe T-joint, box flange)
+│       ├── seamDetector.ts       # Auto-detect: inside corners and contact lines
+│       ├── substrateValidator.ts # Air-gap check
+│       ├── meshIntegrity.ts      # Watertight check
+│       ├── snapping.ts           # Snapping while drawing seams
+│       ├── torchKinematics.ts    # Torch direction from tilt and lead
+│       ├── reach.ts              # Reach check
+│       ├── partScale.ts          # Size of drawing aids relative to the part
+│       ├── partOrientation.ts    # 90° rotation of uploaded parts
+│       ├── weldVisuals.ts        # Bead shape, glow and heat tint
+│       ├── arcAudio.ts           # Arc sound
+│       └── keyboard.ts           # When hotkeys should be ignored
+├── public/models/                # Benchmark parts (bracket, pipe T-joint, box flange)
+├── test-stls/                    # Awkward files used for testing (see section 6)
+└── scripts/                      # Generators for the benchmark and test STLs
 ```
 
-### Why Next.js 16 + TypeScript?
-* **Zero-Friction Cloud Deployment**: One-command instant deployment to Vercel or any Node/Docker environment fulfilling the assignment's public live URL requirement.
-* **Strict Type Safety**: Welding vectors, normal orientations, and export JSON schemas are strictly validated at compile time, eliminating runtime undefined errors in the 3D loop.
+### Why Next.js and TypeScript?
+* **Easy to host**: deploys to Vercel straight from GitHub, which gives the public live link the brief asks for.
+* **Types catch mistakes early**: positions, directions and the export format are all typed, so many mistakes show up while building instead of at runtime.
 
-### Why Direct Three.js with React Wrappers?
-* Direct Three.js WebGL rendering inside a reactive `ViewportCanvas` container guarantees 60+ FPS performance even when handling complex STL meshes with tens of thousands of triangles.
-* Decouples the 60 FPS animation loop from React's component re-render tree, preventing UI stuttering during high-frequency raycasting and torch motion.
+### Why Three.js directly?
+* Three.js draws the 3D scene in the browser with WebGL. The animation runs in its own loop, separate from React, so the simulation stays smooth (typically 60 frames per second) while the panels update.
+* The scene only redraws while something is changing, so the app uses almost no graphics power when idle.
 
-### Why Zustand for State Management?
-* Ultra-lightweight and operates seamlessly outside the React render cycle. Three.js raycasting handlers can read and write state without causing unnecessary component thrashing.
+### Why Zustand for state?
+* A small state library that both the React panels and the 3D scene can read and update directly, without slowing each other down.
 
 ---
 
-## 4. Exported Weld Job JSON Schema
+## 4. Exported Weld Job JSON
 
-The exported JSON is formatted specifically for ingestion by robotic motion controllers and inverse kinematics (IK) solvers:
+The export is a single JSON file that describes the whole job for the robot's controller:
 
 ```json
 {
   "schema_version": "1.4.0",
-  "generator": "Armatrix Autonomous Seam Planner v1.0",
+  "generator": "Armatrix Weld Seam Planner 1.9.0",
   "job_id": "ARMX-WELD-MH82J9X",
   "created_at": "2026-10-30T14:15:00.000Z",
   "part": {
@@ -186,6 +184,7 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
       "y": 82.0,
       "z": 60.0
     },
+    "import_rotation_deg": { "x": 0, "z": 0 },
     "coordinate_frame": {
       "handedness": "right-handed",
       "up_axis": "+Y",
@@ -210,13 +209,13 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
     "total_weld_length_mm": 218.4,
     "estimated_active_weld_time_sec": 18.2,
     "estimated_traverse_time_sec": 2.4,
-    "estimated_cooling_delays_sec": 15.0,
-    "total_cycle_time_sec": 35.6
+    "estimated_cooling_delays_sec": 10.0,
+    "total_cycle_time_sec": 30.6
   },
   "seams": [
     {
       "seam_id": "SEAM-01",
-      "name": "Seam 1 (90.0 mm)",
+      "name": "Seam 1",
       "sequence_order": 1,
       "process": "MIG",
       "joint_type": "FILLET",
@@ -230,7 +229,7 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
       "travel_direction": [1.0, 0.0, 0.0],
       "executable": true,
       "torch_orientation": {
-        "lead_angle_deg": 10.0,
+        "lead_angle_deg": 0.0,
         "tilt_angle_deg": 45.0,
         "nozzle_type": "narrow"
       },
@@ -255,113 +254,112 @@ The exported JSON is formatted specifically for ingestion by robotic motion cont
 }
 ```
 
-### Field Definitions:
+### Field Definitions
+
+All positions are in millimetres, in the coordinate frame described by `part.coordinate_frame`.
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `schema_version` | String | Version identifier for backward compatibility with robot firmware. |
-| `generator` / `created_at` | String | Tool that produced the job and ISO-8601 creation timestamp. |
-| `job_id` | String | Unique tracking ID generated for the manufacturing session. |
-| `part.bounding_dimensions_mm` | Object | Overall `X, Y, Z` envelope to verify part fits inside the fixture. |
-| `part.filename` / `part.units` | String | Source part name and unit system (always `mm`). |
-| `part.import_rotation_deg` | Object | Quarter-turn rotation (`x`, `z` in degrees) applied to an uploaded STL to stand it upright before planning. All coordinates are after this rotation. |
-| `part.coordinate_frame` | Object | Right-handed, `+Y` up; origin at the part bounding-box centre in X/Z on the table surface (lowest Y). Every coordinate in the file is in this frame. |
-| `part.mesh_integrity` | Object \| null | `watertight` flag and `open_edges` count from the STL edge-manifold check. |
-| `robot_controller_profile` | Object | Snake-arm parameters (3500mm reach, rapid speed, safe clearance plane). |
-| `robot_controller_profile.tool_effector` | Object | Torch model and nozzle configuration the job was planned for. The model is a generic stand-in; the arm's real end-effector geometry and tool-centre-point offset belong to the controller's tool configuration. |
-| `job_summary` | Object | `total_seams`, `executable_seams` and `skipped_seam_ids`, then, for executable seams only: weld length, arc-on time, rapid traverse time (retract → next approach), interpass cooling (between passes, none after the final pass) and total cycle time. |
-| `seam_id` & `sequence_order` | String / Int | Unique identifier and execution order index for thermal distortion management. |
-| `name` / `length_mm` | String / Float | User-editable seam name and straight-line seam length in mm. |
-| `process` | Enum | `MIG`, `TIG`, or `LASER`. Directs the power source mode and wire feeder. |
-| `joint_type` | Enum | Joint classification (`FILLET`, `BUTT`, `LAP`, etc.) for adaptive weaving. |
-| `start_coordinate` / `end_coordinate` | Float[3] | 3D Cartesian coordinates in the part coordinate frame (`[X, Y, Z]` mm). |
-| `surface_normal` | Float[3] | Unit vector pointing outward from the joint; dictates the torch bisector angle. |
-| `approach_point` | Float[3] | Safe 3D coordinate at `start_coordinate + torch_axis * approach_distance`, where `torch_axis` is the surface normal rotated by the joint work-angle offset (about the seam) and the lead angle (along travel), exactly as simulated. The snake arm positions here prior to striking the arc to prevent collisions. |
-| `retract_point` | Float[3] | Safe 3D coordinate at `end_coordinate + torch_axis * retract_distance` (same torch axis). The torch pulls out here after extinguishing the arc before traversing. |
-| `torch_axis` | Float[3] | Unit tool-axis vector (from the weld point up the torch body) after tilt and lead are applied: the exact orientation the simulator uses, so the controller does not need to re-derive it from angles. |
-| `travel_direction` | Float[3] | Unit vector from `start_coordinate` to `end_coordinate`. Together with `torch_axis` it fully defines the tool frame. |
-| `executable` | Boolean | `false` for non-manufacturable seams; the controller must not run them. |
-| `torch_orientation` | Object | Lead (push/drag) and tilt angles in degrees relative to the seam vector, plus `nozzle_type` (`conical`, `narrow` or `laser`). |
-| `weld_parameters` | Object | Travel speed, amperage, voltage, wire feed speed, shielding gas flow, interpass cooling time and wire diameter (`wire_diameter_mm`, AWS ER70S-6). |
-| `air_gap_detected` | Boolean | `true` when the seam bridges open space with no metal underneath. The controller must reject these seams; the planner never welds them in simulation. |
-| `waypoints` | Float[][3] | Discretized 5mm trajectory spline coordinates for direct input to the inverse kinematics solver. |
+| `schema_version` | String | Version of this file format, so a controller knows which fields to expect. |
+| `generator` / `created_at` | String | The tool that made the file, and when (ISO-8601 time). |
+| `job_id` | String | Unique ID for this job. |
+| `part.filename` / `part.units` | String | Part name and units (always `mm`). |
+| `part.bounding_dimensions_mm` | Object | The part's overall size in X, Y and Z, for fixturing and reach checks. |
+| `part.import_rotation_deg` | Object | Any 90° turns applied to an uploaded part to stand it upright. All positions are after this rotation. |
+| `part.coordinate_frame` | Object | Defines the axes: right-handed, `+Y` is up, and the origin is the centre of the part's footprint on the table. A controller that uses Z as up applies one fixed rotation. |
+| `part.mesh_integrity` | Object \| null | Whether the part's surface is closed (`watertight`) and how many open edges it has. |
+| `robot_controller_profile` | Object | Arm settings used for planning: 3500 mm reach and 120 mm/s travel speed between seams. `safe_plane_z_clearance_mm` (40 mm) is passed on for the controller; the simulator does not use it. |
+| `robot_controller_profile.tool_effector` | Object | Torch and nozzle type the job was planned with. The model is a generic stand-in; the real torch's exact shape and offsets belong in the controller's own tool settings. |
+| `job_summary` | Object | Seam counts (`total_seams`, `executable_seams`, `skipped_seam_ids`), then for the seams that will actually be welded: total weld length, arc time, travel time between seams, cooling time (between seams, none after the last) and total cycle time. |
+| `seam_id` / `sequence_order` | String / Int | Seam ID and its position in the welding order. |
+| `name` / `length_mm` | String / Float | Seam name (editable in the app) and straight-line length. |
+| `process` | Enum | `MIG`, `TIG` or `LASER`. |
+| `joint_type` | Enum | `FILLET`, `BUTT`, `LAP`, `CORNER` or `EDGE`. Sets the default torch tilt and electrical settings. |
+| `start_coordinate` / `end_coordinate` | Float[3] | Where the seam starts and ends (`[X, Y, Z]`). |
+| `surface_normal` | Float[3] | Direction pointing straight out of the joint, before tilt and lead are applied. |
+| `torch_axis` | Float[3] | The direction the torch points, from the weld up along the torch body, with tilt and lead applied. This is exactly what the simulator used, so the controller does not have to work it out from the angles. |
+| `travel_direction` | Float[3] | Direction from the seam's start to its end. Together with `torch_axis` it fixes the torch's full orientation. |
+| `approach_point` | Float[3] | Where the torch starts before moving in: `start_coordinate` moved back along `torch_axis` by the approach distance (default 25 mm). |
+| `retract_point` | Float[3] | Where the torch backs out to after the weld: `end_coordinate` moved back along `torch_axis` by the retract distance (default 30 mm). |
+| `executable` | Boolean | `false` for seams that cannot be welded; the controller should skip them. |
+| `torch_orientation` | Object | Lead and tilt angles in degrees, and `nozzle_type` (`conical`, `narrow` or `laser`). |
+| `weld_parameters` | Object | Travel speed, current, voltage, wire feed speed, shielding gas flow, cooling pause before the next seam, and wire diameter (ER70S-6 mild-steel wire). |
+| `air_gap_detected` | Boolean | `true` when part of the seam crosses open air with no metal underneath. |
+| `waypoints` | Float[][3] | Points every 5 mm along the seam, from start to end, for the controller to follow. |
 
 ---
 
-## 5. Local Setup & Execution Guide
+## 5. Running Locally
 
 ### Prerequisites
-* **Node.js**: v18.0 or higher (Tested on Node v22)
-* **Package Manager**: `pnpm` (recommended), `npm`, or `yarn`
+* **Node.js** 20.9 or newer (tested on Node 22)
+* **pnpm** (or `npm` / `yarn`)
 
 ### Steps
 ```bash
-# 1. Clone repository
+# 1. Clone the repository
 git clone https://github.com/sparrowdex/armatrix_weld_seam_planner.git
 cd armatrix_weld_seam_planner
 
 # 2. Install dependencies
 pnpm install
 
-# 3. Generate benchmark 3D STL models (if needed)
-node scripts/generate_sample_stls.js
-
-# 4. Start local development server
+# 3. Start the development server
 pnpm run dev
 
-# 5. Open in browser
-# Navigate to http://localhost:3000
+# 4. Open http://localhost:3000
 ```
 
-### Production Build
-```bash
-# Build optimized production bundle
-pnpm run build
+The benchmark parts are already in `public/models/`. To regenerate them, run `node scripts/generate_sample_stls.js`.
 
-# Start production server
+### Production build
+```bash
+pnpm run build
 pnpm run start
 ```
 
+`pnpm run typecheck` checks the TypeScript types.
+
 ---
 
-## 6. How We Evaluated Operational Edge Cases
+## 6. Design Choices for Real Welding Cells
 
-1. **Confined Space Approach/Retract**: Traditional open-gantry Cartesian robots can approach a part from any arbitrary direction. Inside a pipe or narrow compartment, Armatrix's snake arm cannot do this. Every seam in our planner generates **explicit normal approach and retract vectors** ensuring the robot enters and leaves safely without scraping adjacent walls.
-2. **Thermal Distortion Optimization**: Thin structural plates warp if adjacent welds are performed continuously. Our planner provides instant sequence reordering and configurable interpass cooling delays.
-3. **Deterministic Waypoint Discretization**: Industrial robot controllers often experience kinematic singularities if given only sparse endpoints. We compute interpolated 5mm waypoint splines so the trajectory planner maintains constant travel speed along the seam.
+1. **Moving in and out safely**: inside a tank or a narrow compartment, a torch cannot swoop in from any direction. So every seam has an approach point and a retract point a few centimetres back along the torch's own direction. The torch moves straight in, welds, and backs straight out the same way, instead of sliding along nearby walls. (The planner does not check the rest of the arm for collisions; see Future Work.)
+2. **Limiting heat distortion**: welding heats the metal, and heat makes thin plates bend. Welding everything on one side in a row warps the part, so seams can be reordered to alternate sides (**Optimize order**), and a cooling pause can be added after each seam.
+3. **A fine path, not just two points**: besides the start and end of each seam, the export lists a point every 5 mm along it. That gives the controller a detailed path to follow at a steady speed, instead of having to fill in the line itself.
 
 ### Robustness Test Set
 
-Beyond the three benchmark parts, the planner was exercised with deliberately awkward uploads. They live in [`test-stls/`](test-stls/) and can be uploaded with **Upload STL**; `python scripts/generate_test_stls.py` regenerates all of them, including the 20 MB dense sphere that is not committed.
+Beyond the three benchmark parts, the planner was tested with deliberately awkward uploads. They are in [`test-stls/`](test-stls/) and can be loaded with **Upload STL**. `python scripts/generate_test_stls.py` recreates all of them, including a 20 MB dense sphere that is not committed.
 
 | File | What it tests | Result |
 | :--- | :--- | :--- |
-| `01_cube_corner_ascii.stl` | ASCII STL in unit-less coordinates (loads as 1.7 mm) | Loads and frames; amber units hint; auto-detect reports no joints (single solid) |
-| `02_bracket_binary.stl` | Binary STL, two separate bodies touching | Watertight; auto-detect finds the contact joints (root line where the upright meets the base) |
-| `03_open_tray_no_lid.stl` | Open surface with holes | Amber **Open mesh** badge with the open-edge count |
+| `01_cube_corner_ascii.stl` | ASCII STL with no units (loads as 1.7 mm) | Loads and frames; units hint; no joints found (single solid) |
+| `02_bracket_binary.stl` | Binary STL, two separate plates touching | Watertight; auto-detect finds the joint where the upright meets the base |
+| `03_open_tray_no_lid.stl` | Surface with holes | **Open mesh** badge with the number of open edges |
 | `04_flat_plate.stl` | Nothing to weld | "No weld joints found" message |
 | `05_tiny_4mm_cube.stl` | Very small part | Camera, snapping and drawing aids scale to the part; torch and bead stay real size |
-| `06_huge_5m_beam.stl` | Part beyond the arm's reach | **Exceeds reach**; fixture table and grid grow; drawing aids scale up |
-| `07_bracket_in_metres.stl` | Wrong export units | Units hint (part is 0.17 mm across) |
-| `08_bracket_z_up.stl` | Z-up export lying on its side | **Shift+click X 90°** stands it up; detection runs on the rotated part; rotation recorded in the export |
-| `09_sphere_curved.stl` | Curved single solid | No joints; a straight seam across the surface cuts through the part and is flagged as an air gap (dry run, no bead) |
-| `10_dense_sphere_400k.stl` *(generated)* | 400k triangles, 20 MB | Part appears immediately; outline and mesh check follow (about 0.6 s); wireframe built on demand |
-| `11_not_really_an_stl.stl` | Text file renamed to `.stl` | In-app "couldn't be read as an STL" message; app keeps running |
+| `06_huge_5m_beam.stl` | Part bigger than the arm's reach | **Exceeds reach**; fixture table and grid grow; drawing aids scale up |
+| `07_bracket_in_metres.stl` | Exported in the wrong units | Units hint (the part is 0.17 mm across) |
+| `08_bracket_z_up.stl` | Exported with Z as up, so it lies on its side | **Shift+click X 90°** stands it up; detection uses the rotated part; rotation recorded in the export |
+| `09_sphere_curved.stl` | Curved single solid | No joints; a straight seam across the curve passes through the inside, so it is flagged as an air gap (dry run, no bead) |
+| `10_dense_sphere_400k.stl` *(generated)* | 400,000 triangles, 20 MB | The part appears straight away; the outline and watertight check follow (about 0.6 s); wireframe built only when switched on |
+| `11_not_really_an_stl.stl` | Text file renamed to `.stl` | In-app "couldn't be read as an STL" message; the app keeps working |
 | `12_empty.stl` | Empty file | Same in-app message |
 
 ---
 
 ## 7. Future Work
 
-Deliberately left out of this version to stay within the brief, but natural next steps:
+Left out on purpose to stay within the brief, but natural next steps:
 
-* **Accounts and saved projects**: sign-in, a project library per user, and saved planning sessions (part, seams, parameters) so work can be resumed or shared with a cell operator.
-* **Job versioning**: keep a history of exported weld jobs per part, with diffs between versions, so a controller can always be traced back to the plan it ran.
-* **Units and orientation on import**: detect or ask for units (mm, m, inch) and up axis (Z-up vs Y-up) when an STL is uploaded.
-* **Curved seam paths**: true polyline/spline seams instead of chained straight segments, for saddles and contoured joints.
-* **Arm-aware reach**: place the snake-arm base and entry point, then check reach and approach clearance per seam rather than against the part envelope.
-* **Collision checking for the whole torch path**, including approach, retract and traverse moves, not just the seam itself.
-* **Direct controller hand-off**: push a job to the arm controller (for example over a ROS 2 action) instead of downloading a file.
+* **Accounts and saved projects**: sign in, keep a library of parts and plans, and share them with a cell operator.
+* **Job history**: keep earlier versions of each exported job, so every robot run can be traced back to the plan it used.
+* **Automatic units and orientation**: detect or ask for the units and the up axis when an STL is uploaded (rotation is currently manual).
+* **Curved seams**: seams that follow curves directly, instead of being split into short straight pieces.
+* **Arm-aware reach**: place the snake arm's base and entry point, then check reach and clearance for each seam, not just the part's overall size.
+* **Collision checking for the whole move**, including approach, retract and travel between seams, not just the seam itself.
+* **Sending jobs straight to the robot** (for example over ROS 2) instead of downloading a file.
 
 ---
 

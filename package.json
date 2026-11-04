@@ -1,7 +1,7 @@
 {
   "name": "armatrix-weld-seam-planner",
-  "version": "1.0.0",
-  "description": "Autonomous Robotic Weld Seam Planner for Armatrix",
+  "version": "1.9.0",
+  "description": "Browser-based weld seam planner for Armatrix snake-arm robots",
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",

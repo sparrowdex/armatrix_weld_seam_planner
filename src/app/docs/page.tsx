@@ -21,7 +21,7 @@ const FIELD_GROUPS: { title: string; fields: Field[] }[] = [
     title: 'Job and part',
     fields: [
       { name: 'schema_version', type: 'string', desc: 'Schema version, currently "1.4.0".' },
-      { name: 'generator · created_at', type: 'string', desc: 'Tool that produced the job and an ISO-8601 timestamp.' },
+      { name: 'generator · created_at', type: 'string', desc: 'App name and version that made the job (e.g. "Armatrix Weld Seam Planner 1.9.0"), and when.' },
       { name: 'job_id', type: 'string', desc: 'Unique job identifier, e.g. "ARMX-WELD-MH82J9X".' },
       { name: 'part.filename · part.units', type: 'string', desc: 'Source part name; units are always "mm".' },
       { name: 'part.bounding_dimensions_mm', type: '{ x, y, z }', desc: 'Workpiece envelope, used for fixturing and reach checks.' },
@@ -36,7 +36,7 @@ const FIELD_GROUPS: { title: string; fields: Field[] }[] = [
       { name: 'robot_controller_profile.kinematics', type: 'string', desc: '"Armatrix-Snake-Arm".' },
       { name: 'reach_envelope_max_mm', type: 'number', desc: 'Maximum reach of the arm: 3500 mm.' },
       { name: 'rapid_traverse_speed_mm_s', type: 'number', desc: 'Non-welding move speed between seams: 120 mm/s.' },
-      { name: 'safe_plane_z_clearance_mm', type: 'number', desc: 'Clearance height for transit moves.' },
+      { name: 'safe_plane_z_clearance_mm', type: 'number', desc: 'Transit clearance height (40 mm), passed on for the controller. The simulator does not use it.' },
       { name: 'tool_effector', type: 'object', desc: 'Torch model and nozzle configuration the job was planned for.' },
     ],
   },
@@ -47,12 +47,12 @@ const FIELD_GROUPS: { title: string; fields: Field[] }[] = [
       { name: 'sequence_order', type: 'number', desc: 'Execution order, 1-based, as arranged for heat balance.' },
       { name: 'start_coordinate · end_coordinate', type: '[x, y, z]', desc: 'Seam end points in the part frame (mm).' },
       { name: 'length_mm', type: 'number', desc: 'Straight-line seam length.' },
-      { name: 'surface_normal', type: '[x, y, z]', desc: 'Unit joint normal: the fillet bisector or plate normal.' },
-      { name: 'torch_axis', type: '[x, y, z]', desc: 'Unit tool axis (weld point toward torch body) after tilt and lead: exactly what the simulator used.' },
-      { name: 'travel_direction', type: '[x, y, z]', desc: 'Unit vector from start to end. With torch_axis it fully defines the tool frame.' },
+      { name: 'surface_normal', type: '[x, y, z]', desc: 'Direction pointing straight out of the joint, before tilt and lead are applied.' },
+      { name: 'torch_axis', type: '[x, y, z]', desc: 'The direction the torch points (from the weld up the torch body) with tilt and lead applied: exactly what the simulator used.' },
+      { name: 'travel_direction', type: '[x, y, z]', desc: 'Direction from the seam start to its end. Together with torch_axis it fixes the torch orientation.' },
       { name: 'approach_point', type: '[x, y, z]', desc: 'start_coordinate + torch_axis × approach distance (default 25 mm).' },
       { name: 'retract_point', type: '[x, y, z]', desc: 'end_coordinate + torch_axis × retract distance (default 30 mm).' },
-      { name: 'waypoints', type: '[x, y, z][]', desc: 'Seam path sampled every 5 mm for the inverse kinematics solver.' },
+      { name: 'waypoints', type: '[x, y, z][]', desc: 'Points every 5 mm along the seam, for the controller to follow.' },
       { name: 'executable · air_gap_detected', type: 'boolean', desc: 'executable is false when the seam bridges open space. The controller must skip it.' },
     ],
   },
@@ -85,10 +85,10 @@ const FIELD_GROUPS: { title: string; fields: Field[] }[] = [
 
 const MOTION = [
   { title: 'Rapid traverse', body: 'From the previous retract point to this seam’s approach point at 120 mm/s, arc off.' },
-  { title: 'Approach', body: 'Along torch_axis from approach_point down to start_coordinate. Shielding gas pre-flows.' },
+  { title: 'Approach', body: 'Move in along torch_axis from approach_point to start_coordinate.' },
   { title: 'Arc on and weld', body: 'Follow the waypoints at travel speed with the torch held on torch_axis.' },
-  { title: 'Arc off', body: 'At end_coordinate the crater is filled and the arc is extinguished.' },
-  { title: 'Retract', body: 'Back out along torch_axis to retract_point, clear of walls, then wait interpass_delay_sec.' },
+  { title: 'Arc off', body: 'At end_coordinate the arc stops.' },
+  { title: 'Retract', body: 'Back out along torch_axis to retract_point, then pause for interpass_delay_sec before the next seam.' },
 ];
 
 const PYTHON_EXAMPLE = `import json
@@ -200,7 +200,7 @@ export default function DocsPage() {
               {[
                 {
                   k: 'Safe entry and exit',
-                  v: 'Approach and retract points sit out along the torch axis, so the arm never drags the torch along a wall.',
+                  v: 'Approach and retract points sit back along the torch direction, so the torch moves straight in and out instead of sliding along the part.',
                 },
                 {
                   k: 'Heat-balanced order',
@@ -208,7 +208,7 @@ export default function DocsPage() {
                 },
                 {
                   k: 'Ready for IK',
-                  v: 'Each seam has a full tool frame and 5 mm waypoints, so the solver does not have to infer anything.',
+                  v: 'Each seam carries the exact torch direction and a point every 5 mm, so the controller does not have to work them out.',
                 },
               ].map((item, i) => (
                 <div key={item.k} className={`py-6 md:pr-6 ${i > 0 ? 'md:pl-6 md:border-l border-t md:border-t-0 border-[#1D271C]' : ''}`}>

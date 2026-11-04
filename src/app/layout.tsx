@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Armatrix | Autonomous Robotic Weld Seam Planner',
-  description: 'CAD/CAM Weld Seam Planning & Motion Control for Armatrix Snake-Arm Robots',
+  title: 'Armatrix | Weld Seam Planner',
+  description: 'Plan, simulate and export robotic weld jobs for Armatrix snake-arm robots, in the browser.',
   icons: {
     icon: '/images/logo/armatrix-symbol.svg',
   },

@@ -1,10 +1,26 @@
 # Changelog
 
-All notable changes to the Armatrix Autonomous Weld Seam Planner project are documented in this file.
+All notable changes to the Armatrix Weld Seam Planner are documented in this file. The app version is in `package.json`; the export file format has its own `schema_version`.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [1.9.0] - 2026-11-04
+
+### Added
+- **Robustness test set**: 11 awkward STL files in `test-stls/` (plus a generator, `scripts/generate_test_stls.py`) with their results documented in the README.
+- README links to the live planner and the demo video, with screenshots of the planner and the landing page.
+
+### Changed
+- README, docs page, landing page and export window rewritten in plain language, keeping only claims the app actually backs up.
+- Export `robot_controller_profile.kinematics` is now `Armatrix-Snake-Arm` and the torch model is a generic stand-in; the arm is described with the specifications Armatrix publishes.
+- Export `generator` now reads `Armatrix Weld Seam Planner <version>`, using the app version from `package.json`. The file format is unchanged (schema 1.4.0).
+- Browser tab title and description simplified.
+
+### Fixed
+- Setup instructions now ask for Node.js 20.9 or newer (required by Next.js 16), not Node 18.
+- README JSON example made consistent with the real export (lead angle, cooling between seams only).
 
 ## [1.8.0] - 2026-11-01
 
@@ -26,7 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Seams shorter than 2 mm were silently discarded on small parts.
-- Export `robot_controller_profile.kinematics` is now `Armatrix-Snake-Arm`, and the docs describe the arm with the specifications Armatrix publishes.
 
 ## [1.7.0] - 2026-11-01
 
